@@ -58,7 +58,7 @@ class StopGateTests(unittest.TestCase):
         (self.gate / name).write_text(json.dumps(rep, ensure_ascii=False), encoding="utf-8")
         return h
 
-    def run_hook(self, text, active=False, codex=False, transcript=True, user=True, session=None, user_stamp=True):
+    def run_hook(self, text, active=False, codex=False, transcript=True, user=True, session=None, user_stamp=True, extra_rows=None):
         payload = {"stop_hook_active": active}
         if session:
             payload["session_id"] = session
@@ -68,6 +68,7 @@ class StopGateTests(unittest.TestCase):
             if user_stamp:
                 row["timestamp"] = iso(self.user_time)
             rows.append(row)
+        rows.extend(extra_rows or [])
         rows.append({"message": {"role": "assistant", "content": [{"type": "text", "text": text}]}})
         if codex:
             payload.update({"turn_id": "t1", "last_assistant_message": text, "transcript_path": None})
@@ -259,6 +260,27 @@ class StopGateTests(unittest.TestCase):
         self.assertBlock(self.run_hook(self.block(BROKEN), user=False))
 
     # ---- v12：三层判定（本轮报告 / 钩子代跑完整稿 / 局部与操作命令打回）----
+    def test_v141_tool_result_row_after_report_is_not_user_message(self):
+        # 真实 transcript：作者跑 check_prompt 后的 tool_result 行也是 role=user，时间晚于报告；不能把它当本轮用户消息
+        self.light(PROMPT)
+        late = {"timestamp": iso(self.now - 10), "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
+        code, out, err = self.run_hook("```text\n" + PROMPT + "\n```\n" + self.check_line(PROMPT), extra_rows=[late])
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("代跑", out)
+
+    def test_v141_hook_feedback_row_is_not_user_message(self):
+        self.light(PROMPT)
+        fb = {"timestamp": iso(self.now - 10), "message": {"role": "user", "content": "Stop hook feedback:\naigc-video 放行钩子：第 1 份提示词……"}}
+        code, out, err = self.run_hook("```text\n" + PROMPT + "\n```\n" + self.check_line(PROMPT), extra_rows=[fb])
+        self.assertEqual(code, 0, err)
+
+    def test_v141_real_user_message_after_report_still_stale(self):
+        self.light(PROMPT)
+        newer = {"timestamp": iso(self.now - 10), "message": {"role": "user", "content": [{"type": "text", "text": "再改一下第二镜"}]}}
+        code, out, err = self.run_hook("```text\n" + PROMPT + "\n```\n", extra_rows=[newer])
+        self.assertEqual(code, 2)
+        self.assertIn("早于本轮用户消息", err)
+
     def test_v12_plain_reply_without_transcript_is_silent(self):
         code, out, err = self.run_hook("好的，明白了。", codex=True)
         self.assertEqual(code, 0, err)

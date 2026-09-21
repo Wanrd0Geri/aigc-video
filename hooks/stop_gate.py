@@ -25,7 +25,7 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
 
 判定：
   1. 取最后一条助手消息（优先 last_assistant_message，否则读 transcript_path）。两者都拿不到 → 无法验收，阻止一次。
-  2. 从 transcript 里取最后一条 user 消息的时间 T_user（`timestamp` ISO 字段；该条没有时间字段就退回 transcript 文件 mtime）。
+  2. 从 transcript 里取最后一条**用户真正打的**消息的时间 T_user（跳过 role=user 的工具返回行和钩子自己的拦截提示；`timestamp` ISO 字段；该条没有时间字段就退回 transcript 文件 mtime）。
   3. 按上面的契约取出所有交付单元，各自算 SHA-256，然后走**三层判定**：
      第 1 层｜有本轮报告 → 通过。在 AIGC_GATE_DIR（默认 ~/.aigc-video-gate）里找 ready=true 且 delivered_sha256 或
        checked_sha256 相等的报告（全套的 verify_delivery 报告，或轻量路径 check_prompt --report 写的 kind="light" 报告；
@@ -218,6 +218,28 @@ def entry_role(obj):
     return m.get("role") if isinstance(m, dict) else None
 
 
+HOOK_FEEDBACK_MARKS = ("Stop hook feedback", "aigc-video 放行钩子", "aigc-video 守门")
+
+
+def is_real_user_message(obj):
+    """只有用户真正打的那条才算"本轮用户消息"。
+    Claude Code 的 transcript 里工具返回（tool_result）也是 role=user 的行，钩子自己上一次的拦截提示也会以
+    user 身份出现；这两类都发生在作者跑完检查之后，拿它们的时间去和报告比，会把本轮刚生成的报告误判成"早于本轮"。"""
+    if entry_role(obj) != "user":
+        return False
+    m = obj.get("message", obj)
+    content = m.get("content") if isinstance(m, dict) else None
+    if isinstance(content, list):
+        if any(isinstance(c, dict) and c.get("type") == "tool_result" for c in content):
+            return False
+        if not any(isinstance(c, dict) and c.get("type") in ("text", "image") for c in content):
+            return False
+    text = entry_text(obj).lstrip()
+    if any(text.startswith(mark) or mark in text[:80] for mark in HOOK_FEEDBACK_MARKS):
+        return False
+    return True
+
+
 def entry_text(obj):
     m = obj.get("message", obj)
     content = m.get("content", []) if isinstance(m, dict) else []
@@ -231,7 +253,7 @@ def last_user_time(rows, path):
     if rows is None:
         return None
     for obj in reversed(rows):
-        if entry_role(obj) != "user":
+        if not is_real_user_message(obj):
             continue
         m = obj.get("message", obj)
         stamp = obj.get("timestamp") or (m.get("timestamp") if isinstance(m, dict) else None)
