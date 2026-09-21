@@ -8,11 +8,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "stop_gate.py"
-PROMPT = "主体：一只黑色哑光陶杯。\n场景：陶杯直立在灰色桌面上，杯子和桌面全程静止。\n风格：写实产品摄影。\n情节：\n生成一段6秒的单镜产品视频。\n镜头1（0-6秒）：摄影机沿直线平稳缓推，杯子逐渐放大。\n结尾：不添加字幕，不添加背景音乐。"
+# 四段新壳：主体 / 场景 / 风格 / 情节，固定句是整份提示词的最后一行，不设结尾标题
+PROMPT = "主体：一只黑色哑光陶杯。\n场景：陶杯直立在灰色桌面上，杯子和桌面全程静止。\n风格：写实产品摄影。\n情节：\n生成一段6秒的单镜产品视频。\n镜头1（0-6秒）：摄影机沿直线平稳缓推，杯子逐渐放大。\n全片不添加BGM，不添加字幕。"
+# 结尾区：固定句上面还有一条必要否定句
+PROMPT_WITH_TAIL = PROMPT.replace("全片不添加BGM，不添加字幕。", "不出现第二只陶杯。\n全片不添加BGM，不添加字幕。")
+# 五段旧壳（结尾标题 + 旧固定句）：钩子代跑时应当按 --format 五段 推断
+FIVE_SECTION = PROMPT.replace("全片不添加BGM，不添加字幕。", "结尾：不添加字幕，不添加背景音乐。")
 PARTIAL = "镜头2（4-8秒）：固定胸口以上近景，青年说：“银杭到了。”。"
 EDIT_CMD = "编辑@视频1，将青年的衣服替换为黑色外套，保留原动作、时长和摄影。"
-# 会被 check_prompt 查出错误的完整稿（缺固定句）：用来测"钩子代跑不通过"的分支
-BROKEN = PROMPT.replace("结尾：不添加字幕，不添加背景音乐。", "结尾：画面在杯口停住。")
+# 会被 check_prompt 查出错误的完整稿（固定句不在最后一行）：用来测"钩子代跑不通过"的分支
+BROKEN = PROMPT + "\n画面最后在杯口停住。"
 REQ = "b" * 64
 
 
@@ -47,7 +52,7 @@ class StopGateTests(unittest.TestCase):
         """轻量路径的 check_prompt --report 报告。"""
         h = digest(body)
         rep = {"kind": "light", "ready": ready, "checked_sha256": h, "delivered_sha256": h,
-               "task": "生成", "format": "五段", "partial": False, "errors": [], "warnings": [],
+               "task": "生成", "format": "四段", "partial": False, "errors": [], "warnings": [],
                "labels": [], "locks": 0, "baseline_sha256": None,
                "created_at": self.fresh if created is None else created, "session_id": session}
         (self.gate / name).write_text(json.dumps(rep, ensure_ascii=False), encoding="utf-8")
@@ -196,7 +201,7 @@ class StopGateTests(unittest.TestCase):
         self.assertAllow(self.run_hook(head + self.block(PROMPT) + "例外：镜 1 未加额外道具，因为 6 秒装不下。"))
 
     def test_missing_closing_still_recognized(self):
-        self.assertBlock(self.run_hook(self.block(PROMPT.replace("不添加字幕，不添加背景音乐。", ""))))
+        self.assertBlock(self.run_hook(self.block(PROMPT.replace("全片不添加BGM，不添加字幕。", ""))))
 
     def test_plain_full_draft_recognized(self):
         self.assertBlock(self.run_hook(BROKEN))
@@ -292,7 +297,7 @@ class StopGateTests(unittest.TestCase):
         """没有报告 + 缺固定句的完整稿：代跑查出错误，阻止并列出错误原文。"""
         code, _, err = self.run_hook(self.block(BROKEN))
         self.assertEqual(code, 2)
-        self.assertIn("缺少固定句", err); self.assertIn("--report", err)
+        self.assertIn("固定句不在正文最后一行", err); self.assertIn("--report", err)
 
     def test_v12_no_report_partial_blocked_asks_baseline(self):
         """没有报告 + 局部镜头：钩子没有父稿，代跑没有意义，提示带 --baseline 自己跑。"""
@@ -332,13 +337,26 @@ class StopGateTests(unittest.TestCase):
         code, out, _ = self.run_hook(self.block(BROKEN), codex=True)
         self.assertEqual(code, 0)
         d = json.loads(out)
-        self.assertEqual(d["decision"], "block"); self.assertIn("缺少固定句", d["reason"])
+        self.assertEqual(d["decision"], "block"); self.assertIn("固定句不在正文最后一行", d["reason"])
 
     def test_v12_self_run_six_section_draft_allows(self):
         """六段旧壳完整稿：钩子按概述段推断成六段来代跑，不被外壳规则误伤。"""
-        six = PROMPT.replace("场景：", "概述：生成一段6秒的单镜产品视频。\n场景：").replace(
+        six = FIVE_SECTION.replace("场景：", "概述：生成一段6秒的单镜产品视频。\n场景：").replace(
             "情节：\n生成一段6秒的单镜产品视频。\n", "情节：\n")
         self.assertAllowWithNote(self.run_hook(self.block(six)), "代跑")
+
+    def test_v13_self_run_five_section_draft_allows(self):
+        """五段旧壳完整稿：钩子按结尾段推断成五段来代跑，旧固定句不被新口径误伤。"""
+        self.assertAllowWithNote(self.run_hook(self.block(FIVE_SECTION)), "代跑")
+
+    def test_v13_self_run_four_section_with_tail_zone_allows(self):
+        """四段新壳 + 结尾区（否定句在固定句上面一行）：代跑通过。"""
+        self.assertAllowWithNote(self.run_hook(self.block(PROMPT_WITH_TAIL)), "代跑")
+
+    def test_v13_closing_not_last_line_blocked(self):
+        """固定句不是最后一行的四段稿：代跑打回。"""
+        code, _, err = self.run_hook(self.block(PROMPT + "\n杯口的高光停住。"))
+        self.assertEqual(code, 2); self.assertIn("固定句不在正文最后一行", err)
 
 
 if __name__ == "__main__":

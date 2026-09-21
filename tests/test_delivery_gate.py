@@ -58,7 +58,7 @@ class DeliveryTests(unittest.TestCase):
 
     def test_multiple_partial_middle_tail_rejected(self):
         parent=self.d/'parent.txt';parent.write_text(BASE)
-        for tail in ['结尾：\nvoice.m4a\n','不添加字幕，不添加背景音乐。\n']:
+        for tail in ['结尾：\nvoice.m4a\n','全片不添加BGM，不添加字幕。\n']:
             body='镜头1（0-6秒）：人物走到窗前。\n'+tail+'镜头2（6-12秒）：人物停下，轻纱飘动。\n'
             self.assertEqual(self.checker(body,['--baseline',str(parent),'--partial','--total','12'])[0],1)
 
@@ -68,8 +68,9 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(self.checker(text.replace('I am ready.','Iamready.'),['--lock','I am ready.','--total','12'])[0],1)
 
     def test_new_generation_locked_five_negatives(self):
+        # 四段新壳：结尾区 = 正文末尾连续的否定行 + 固定句那一行
         text=(ROOT/'tests/check_cases/five_negatives.txt').read_text()
-        lock=text.split('结尾：\n')[1].strip()
+        lock='\n'.join(text.splitlines()[-5:]).strip()
         self.assertEqual(self.checker(text,['--lock',lock,'--total','12'])[0],0)
         self.assertEqual(self.checker(text,['--total','12'])[0],1)
 
@@ -166,7 +167,7 @@ class DeliveryTests(unittest.TestCase):
         code,res=self.gate(); self.assertEqual(code,1); self.assertTrue(any('已撤销' in e for e in res['errors']))
 
     def test_negative_exception_duplicates_and_fragments_rejected(self):
-        text=BASE.replace('结尾：\n','结尾：不出现水印。不出现现代物品。不出现重复人物。不出现多余道具。不出现反光。\n')
+        text=BASE.replace('全片不添加BGM，不添加字幕。','不出现水印。\n不出现现代物品。\n不出现重复人物。\n不出现多余道具。\n不出现反光。\n全片不添加BGM，不添加字幕。')
         for sentences in (['不出现水印。','不出现水印。'],['水','印']):
             self.setup_gate(text)
             self.req['negative_exception']=[{'sentence':s,'reason':'单元测试：该句防具体对象，无等价正向写法'} for s in sentences]

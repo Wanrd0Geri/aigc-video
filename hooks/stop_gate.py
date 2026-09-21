@@ -17,7 +17,7 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
 交付单元的契约（钩子只按这个契约认东西，SKILL 第 ⑨ 步、quality-gate.md、hooks/README.md 写的是同一套）：
   - 成品一律放 ```text 代码块（无语言标签、```prompt 同等对待）；这些代码块里像提示词的内容都要验收。
   - 引用旧稿用 ```quote，概念草案用 ```draft，工具输出用 ```diff/```json/```bash/```sh：一律不验收，也不受"原样粘贴"约束。
-  - 代码块之外的纯文本同样扫描：完整稿（≥3 个段落标题，五段新壳与六段旧壳都算）、局部镜头（镜头标题）、操作命令（@视频N 附近有
+  - 代码块之外的纯文本同样扫描：完整稿（≥3 个段落标题，四段新壳与五段 / 六段旧壳都算）、局部镜头（镜头标题）、操作命令（@视频N 附近有
     编辑/延长/续写/衔接/替换/删除/增加）都算交付单元，不管回复里有没有合法代码块。表头、例外说明、变更摘要、
     待你定的问题写在代码块外，不会被当成提示词。
   - 算哈希前先删掉单元里的"交付校验通过（正文 xxxxxxxx｜需求 xxxxxxxx）"和首尾空行，再按 verify_delivery
@@ -33,7 +33,8 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
        时两者相等。找到了就通过。报告存在但早于本轮 / 属于别的会话 → 直接阻止（旧稿冒充本轮），不代跑。
      第 2 层｜没有报告，单元是**完整稿**（≥3 个段落标题）→ 钩子自己跑一遍 scripts/check_prompt.py（把规范化后的正文写进
        临时文件；任务类型按正文推断：命令区或 @视频 附近有"向后延长/向前延长/续写"→ 延长，有"无缝衔接"→ 衔接，
-       有 编辑@视频/替换/删除/增加 且出现 @视频 → 编辑，否则 生成；有概述段时按六段旧壳检查）。
+       有 编辑@视频/替换/删除/增加 且出现 @视频 → 编辑，否则 生成；外壳按标题推断：有概述段 → 六段旧壳，
+       只有结尾段 → 五段旧壳，两者都没有 → 不传 --format，用脚本默认的四段新壳）。
        钩子不知道素材集合、逐字锁、总时长和父稿，所以不传 --labels / --lock / --total / --baseline。
        有错误 → 阻止并把错误原文列给模型，要求修好后自己跑 `check_prompt.py --report <目录>/<时间戳>.json` 再交付；
        无错误 → 放行，但用 systemMessage 说明"这份稿由钩子代跑机械检查通过……作者本轮没有自己跑检查"。
@@ -80,7 +81,7 @@ SELF_RUN_NOTE = ("aigc-video 守门：这份稿由钩子代跑机械检查通过
 
 
 def is_full_draft(body):
-    """完整稿：至少 3 个段落标题（五段新壳与六段旧壳都算）。局部镜头和操作命令不是。"""
+    """完整稿：至少 3 个段落标题（四段新壳与五段 / 六段旧壳都算）。局部镜头和操作命令不是。"""
     return len(SECTION.findall(body)) >= 3
 
 
@@ -107,8 +108,11 @@ def run_checker(body):
             fh.write(body + "\n")
             tmp = fh.name
         cmd = [sys.executable, "-X", "utf8", str(CHECKER), "--prompt", tmp, "--task", infer_task(body)]
+        # 外壳按标题推断：有概述段 = 六段旧壳；只有结尾段 = 五段旧壳；都没有就不传，用脚本默认的四段新壳
         if re.search(r"(?m)^\s*概述\s*[：:]", body):
             cmd += ["--format", "六段"]
+        elif re.search(r"(?m)^\s*结尾\s*[：:]", body):
+            cmd += ["--format", "五段"]
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         return "unavailable", [f"代跑 check_prompt.py 失败：{exc}"]
@@ -147,8 +151,9 @@ def normalize(body):
 
 
 def looks_like_prompt(body):
+    # 固定句：新句"全片不添加BGM，不添加字幕"与旧句"不添加字幕，不添加背景音乐"都认
     return bool(SHOT_HEAD.search(body) or len(SECTION.findall(body)) >= 3 or OPERATION.search(body)
-                or ("不添加字幕" in body and "不添加背景音乐" in body))
+                or ("不添加字幕" in body and ("不添加背景音乐" in body or "BGM" in body)))
 
 
 def plain_looks_like_prompt(body):
