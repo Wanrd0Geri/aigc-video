@@ -1,0 +1,84 @@
+# aigc-video 换机安装与同步指南（给另一台电脑上的 AI 助手看）
+
+你正在帮用户 Gerry 在一台新电脑上装好 `aigc-video` 这个 skill，并让它和 GitHub 保持同步。按顺序做，每步做完要验证；本文档里的路径不要改。
+
+## 0 这套东西的结构（先理解再动手）
+
+- **唯一来源**：私有仓库 `https://github.com/Wanrd0Geri/aigc-video`。
+- **本机唯一副本**：`~/Documents/Codex/aigc-video`，从仓库克隆。
+- **两个宿主的 skills 目录都是软链**：`~/.claude/skills/aigc-video` 和 `~/.codex/skills/aigc-video` → 指向本机副本。两边读同一份文件，经验库 `references/lessons/seedance-2.5.md` 也是同一份。
+- **禁止**：在 skills 目录里放拷贝；用 `git clone` 覆盖软链；手工改软链指向；`git pull` 之外的方式"更新"。
+- **同步动作**：改完文件或写入经验后运行 `bash ~/Documents/Codex/aigc-video/scripts/sync.sh 一句备注`（提交 → 拉取 → 推送）。两台电脑之间不自动同步，在哪台改就在哪台跑；换到另一台用之前先跑一次。
+
+## 1 前置条件
+
+- Python 3（`python3 --version`）。
+- ffmpeg（`ffmpeg -version`；没有就 `brew install ffmpeg`），成片抽帧用。
+- git、GitHub CLI `gh`（没有就 `brew install gh`）。
+- 网络：这台电脑访问 GitHub 是否需要代理，先测 `curl -sI https://github.com --max-time 10`。超时就要代理；用户笔记本上的代理是 `http://127.0.0.1:7897`，新电脑端口可能不同，问用户。
+
+## 2 登录 GitHub（私有仓库，必须登录）
+
+让用户自己在终端跑（不要替用户输入账号密码或验证码）：
+
+```bash
+gh auth login -h github.com -p https -w
+```
+
+需要代理时前面加 `HTTPS_PROXY=http://127.0.0.1:<端口> HTTP_PROXY=http://127.0.0.1:<端口>`。它会显示一个 8 位一次性码，用户在浏览器 `https://github.com/login/device` 输入并授权。验证：`gh auth status` 显示 `Logged in to github.com account Wanrd0Geri`。
+
+## 3 克隆并挂载
+
+```bash
+git clone https://github.com/Wanrd0Geri/aigc-video ~/Documents/Codex/aigc-video && bash ~/Documents/Codex/aigc-video/install.sh
+```
+
+`install.sh` 会：在 `~/.claude/skills` 和 `~/.codex/skills` 各建一条软链 `aigc-video` 指向克隆目录；那里原本有真实目录的话先搬到 `~/Documents/Codex/skill-backups/` 再建软链。
+
+验证：
+
+```bash
+ls -l ~/.claude/skills/aigc-video ~/.codex/skills/aigc-video
+cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tail -1 && python3 -X utf8 tests/test_delivery_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_stop_gate.py 2>&1 | tail -1
+```
+
+期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；三行分别是 `84/84 通过`、`OK`、`OK`（数字随版本增加，只要没有失败）。
+
+## 4 挂守门钩子（Claude Code；可选但推荐）
+
+钩子配置不在仓库里，每台电脑单独挂。它在模型交付提示词时自动核对：有本轮检查报告就放行；没有报告的完整稿由钩子代跑 `scripts/check_prompt.py`，有错打回、无错放行并提示"作者未自己跑检查"；局部镜头和操作命令没报告则打回。第二次仍不过会放行并附警告，不会死锁。
+
+编辑 `~/.claude/settings.json`：在 `hooks.Stop` 数组里**追加**一项（用户已有别的 Stop 钩子时不要替换、不要删）；没有 `hooks` 或 `Stop` 键就新建：
+
+```json
+{"hooks": [{"type": "command", "command": "python3 -X utf8 $HOME/.claude/skills/aigc-video/hooks/stop_gate.py", "timeout": 30}]}
+```
+
+改之前先备份 settings.json。验证（临时目录，不污染真实报告目录）：
+
+```bash
+T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的。","stop_hook_active":false}' | AIGC_GATE_DIR=$T python3 -X utf8 ~/.claude/skills/aigc-video/hooks/stop_gate.py; echo "exit=$?"
+```
+
+期望：输出 `{}` 或无输出，`exit=0`。更多用例见 `hooks/README.md` 的验证清单。Codex 侧的钩子按 `hooks/README.md` 里 Codex 一节配置，那部分只按官方文档写过、没有真实验证，装完要自测。
+
+## 5 日常同步
+
+- 改了任何文件、或用 `scripts/log_lesson.py` 写了经验：`bash ~/Documents/Codex/aigc-video/scripts/sync.sh 备注`。
+- 开始用之前想拿到另一台电脑的改动：同样跑 `sync.sh`（它先拉后推）。
+- `sync.sh` 默认走 `http://127.0.0.1:7897` 代理；这台电脑不需要或端口不同：`AIGC_NO_PROXY=1 bash scripts/sync.sh`，或先 `export HTTPS_PROXY=...` 再跑。
+- 拉取时报冲突：只会发生在两台电脑改了同一行。经验库冲突时保留双方条目、编号只递增（可用 `scripts/merge_lessons.py` 按编号合并），改完 `git add -A && git rebase --continue` 再 `git push`。不要用 `--force`。
+
+## 6 常见错误
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| `gh auth login` 卡住后报 `operation timed out` | 终端没走代理 | 命令前加 `HTTPS_PROXY=... HTTP_PROXY=...` |
+| `git clone` 报 403 或要密码 | 没登录或登录的不是 Wanrd0Geri | 重做第 2 步 |
+| skills 目录里已有 `aigc-video` 真实目录 | 旧版拷贝 | 直接跑 `install.sh`，它会备份后换成软链 |
+| 钩子每次都拦、提示"没有本轮检查报告" | 交付的是局部镜头/操作命令且没跑 `check_prompt.py --report` | 按提示带 `--baseline`（局部再加 `--partial`）跑一次并 `--report` 到 `~/.aigc-video-gate/<时间戳>.json` |
+| 两边经验编号撞号 | 两台电脑离线各记了一条 | `merge_lessons.py` 合并，后写的改成下一个编号 |
+
+## 7 做完后报告给用户
+
+一句话说清：软链指向哪里、三套测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
