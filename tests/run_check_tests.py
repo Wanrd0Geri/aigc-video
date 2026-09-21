@@ -113,6 +113,17 @@ CASES = [
     ("四段生成稿情节段开头有总览句：只提醒", "four_section_overview_warning.txt", ["--total", "12"], 0),
     ("动作过密只提醒", "dense_beats.txt", ["--total", "12"], 0),
     ("B17 修订稿锁定 5 条否定只提醒", "five_negatives.txt", ["--baseline", str(C / "five_negatives.txt"), "--lock", "不出现第二个人。\n不出现文字水印。\n不出现多余武器。\n不出现现代物品。\n全片不添加BGM，不添加字幕。", "--total", "12"], 0),
+    # ---- v17 A：要求清单 --asks（多轮任务从第二版起维护）----
+    ("要求清单 2 条有效全部有落点：通过", "asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_ok.txt")], 0),
+    ("要求清单有一条在正文里没落点：拦下", "asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_missing.txt")], 1),
+    ("要求清单里那条已标撤回：不再核对，通过", "asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_withdrawn.txt")], 0),
+    ("要求清单列数不对 / 状态不是有效或撤回：拦下", "asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_bad_format.txt")], 1),
+    ("要求清单文件不存在：参数错误", "asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_不存在.txt")], 2),
+    # ---- v17 B：改稿不丢句（消失句与长度稀释都只提醒，不拦）----
+    ("父稿两句在新稿里消失：只提醒不拦", "revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt"), "--total", "12"], 0),
+    ("只改一句：通过", "revise_one_sentence.txt", ["--baseline", str(C / "revise_parent.txt"), "--total", "12"], 0),
+    ("新稿比父稿长 30%：只提醒不拦", "revise_padded.txt", ["--baseline", str(C / "revise_parent.txt"), "--total", "12"], 0),
+    ("局部替换丢了一句：只提醒不拦", "revise_partial_shot2.txt", ["--baseline", str(C / "revise_parent.txt"), "--partial", "--total", "12"], 0),
     ("样例：打斗 12 秒", "../sample-combat-12s.txt", ["--total", "12", "--labels", "图片1,图片2,图片3"], 0),
     ("样例：对话 12 秒", "../sample-dialogue-12s.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
 ]
@@ -127,20 +138,34 @@ for name, f, args, want in CASES:
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} | exit {p.returncode} (期望 {want}) | errors={d.get('errors', [])[:2]}")
 # 弱运镜与密度提醒必须真的出现在 warnings 里
-WARN_CASES = [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), ("dense_two_per_second.txt", "节拍"),
-              ("four_section_overview_warning.txt", "总览句"),
-              ("at_refs_in_new_draft.txt", "新稿不写 @"), ("asset_bound_twice.txt", "都写了职责"),
-              ("cross_section_dup.txt", "跨段重复"), ("style_has_sequence.txt", "风格段里有时序")]
-for f, key in WARN_CASES:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12"], text=True, capture_output=True)
+WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节拍"), ("dense_two_per_second.txt", [], "节拍"),
+              ("four_section_overview_warning.txt", [], "总览句"),
+              ("at_refs_in_new_draft.txt", [], "新稿不写 @"), ("asset_bound_twice.txt", [], "都写了职责"),
+              ("cross_section_dup.txt", [], "跨段重复"), ("style_has_sequence.txt", [], "风格段里有时序"),
+              # v17 B：父稿句子消失、局部替换里消失、长度稀释
+              ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "在新稿里消失"),
+              ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")],
+               "「镜头缓缓推近到胸口高度」「后景虚化成一片柔光」"),
+              ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "被本轮修改的对象直接替代"),
+              ("revise_partial_shot2.txt", ["--baseline", str(C / "revise_parent.txt"), "--partial"],
+               "「后景虚化成一片柔光」"),
+              ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长 30%")]
+for f, extra, key in WARN_CASES:
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 触发“{key}”提醒 |", [w for w in d["warnings"] if key in w][:1])
-# 反面：干净的稿不许被这几条提醒误伤（镜头性格词、各绑一次、不写 @）
+# 反面：干净的稿不许被这几条提醒误伤（镜头性格词、各绑一次、不写 @；改一句不算消失、没变长不报稀释）
 NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿不写 @"),
                  ("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "都写了职责"),
                  ("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "跨段重复"),
                  ("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "风格段里有时序"),
-                 ("style_clean.txt", [], "风格段里有时序")]
+                 ("style_clean.txt", [], "风格段里有时序"),
+                 # v17 B：只改一句不算消失；局部替换只换一个词也不算；没变长不报稀释
+                 ("revise_one_sentence.txt", ["--baseline", str(C / "revise_parent.txt")], "在新稿里消失"),
+                 ("revise_one_sentence.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长"),
+                 ("partial_shot2.txt", ["--baseline", str(C / "control_valid.txt"), "--partial"], "在新稿里消失"),
+                 ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt")], "在新稿里消失"),
+                 ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -157,12 +182,47 @@ for args, want_n, label in [([], 1, "镜内否定：提醒 1 条"),
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {label} | exit {p.returncode} | {hits}")
 # summary 里四段用"镜内否定提醒 N 句"，旧壳仍用"自写否定计数 N 条"；一行里不放全角括号（钩子正则按「）」截断）
-for f, args, needle in [("inline_negative.txt", ["--total", "12"], "镜内否定提醒 1 句"),
-                        ("control_valid.txt", ["--total", "12"], "镜内否定提醒 0 句"),
-                        ("five_section_four_negatives.txt", ["--format", "五段", "--total", "12"], "自写否定计数 4 条")]:
+SUMMARY_CASES = [("inline_negative.txt", ["--total", "12"], "镜内否定提醒 1 句"),
+                 ("control_valid.txt", ["--total", "12"], "镜内否定提醒 0 句"),
+                 ("five_section_four_negatives.txt", ["--format", "五段", "--total", "12"], "自写否定计数 4 条"),
+                 # v17 A：要求清单进 summary
+                 ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_ok.txt")], "要求清单 2 条有效全部有落点"),
+                 ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_withdrawn.txt")], "要求清单 2 条有效全部有落点"),
+                 ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_missing.txt")], "要求清单 3 条有效，1 条没有落点"),
+                 ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_bad_format.txt")], "要求清单格式错误")]
+for f, args, needle in SUMMARY_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
-    d = json.loads(p.stdout); ok = needle in d["summary"]; fails += 0 if ok else 1
+    d = json.loads(p.stdout); ok = needle in d["summary"] and "（" not in d["summary"][d["summary"].index("（") + 1:]
+    fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} summary 含“{needle}” |", d["summary"])
+
+# ---- v17 A：错误措辞与撤回条目；B：已由 A 报的那一句不重复报 ----
+ASK_DETAIL_CASES = [
+    ("没落点的错误写清编号、原话、关键词与两条出路", "asks_draft.txt", ["--asks", str(C / "asks_missing.txt")], "errors",
+     "要求 R3「头在镜头前摇晃时焦点在头和衣服之间切换」在正文里没有落点（关键词：焦点/移焦）；要么补回，要么用户明确撤回后在清单里标撤回"),
+    ("撤回条目在 checked 行里点名", "asks_draft.txt", ["--asks", str(C / "asks_withdrawn.txt")], "checked",
+     "要求清单 2 条有效全部有落点，1 条已标撤回：R3"),
+    ("列数不对报格式错误", "asks_draft.txt", ["--asks", str(C / "asks_bad_format.txt")], "errors", "列数不对"),
+    ("状态不是有效 / 撤回报格式错误", "asks_draft.txt", ["--asks", str(C / "asks_bad_format.txt")], "errors",
+     "状态不是「有效」或「撤回（时间＋用户原话）」"),
+    ("消失的句子已被 A 的错误覆盖：不重复报", "revise_dropped_two.txt",
+     ["--baseline", str(C / "revise_parent.txt"), "--asks", str(C / "asks_lost_overlap.txt")], "warnings",
+     "父稿有 1 句在新稿里消失：「后景虚化成一片柔光」"),
+]
+for name, f, args, field, needle in ASK_DETAIL_CASES:
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *args], text=True, capture_output=True)
+    d = json.loads(p.stdout); hit = [x for x in d[field] if needle in x]; ok = bool(hit); fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {name} |", hit[:1] or d[field])
+
+# --report 里记 asks_checked（没给 --asks 时是 null）
+with tempfile.TemporaryDirectory() as tmp:
+    for args, want in [(["--asks", str(C / "asks_ok.txt")], 2), ([], None)]:
+        rp = pathlib.Path(tmp) / f"asks{want}.json"
+        subprocess.run([sys.executable, str(S), "--prompt", str(C / "asks_draft.txt"), "--total", "12",
+                        "--report", str(rp), *args], text=True, capture_output=True)
+        rep = json.loads(rp.read_text(encoding="utf-8"))
+        ok = "asks_checked" in rep and rep["asks_checked"] == want; fails += 0 if ok else 1
+        print(("PASS" if ok else "FAIL"), f"| --report 的 asks_checked = {want} |", rep.get("asks_checked", "缺字段"))
 
 # ---- --report：写出的 JSON 要能被 hooks/stop_gate.py 直接用 ----
 def hook_digest(text):
@@ -346,7 +406,8 @@ ok = p.returncode == 0
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| lint_cases 当前案例库通过 |", (p.stdout or p.stderr).strip()[:160])
 
-TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + 3 + len(REPORT_CASES)
+TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES)
+         + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1)
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

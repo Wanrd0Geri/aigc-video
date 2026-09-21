@@ -15,7 +15,8 @@
 ## 用法
 
 - 写新提示词：说清人物、场景、动作、时长、素材（按上传顺序说明每张图 / 视频 / 音频是什么）。想先看分镜就说"先看分镜"，会先收到一张能改的镜头表；否则直接得到可粘贴进即梦的提示词代码块，下方一行质量放行结果。
-- 改现有提示词 / 操作命令：贴原稿，说要改什么；延长、编辑、衔接、白模、宫格等直接说任务。
+- 改现有提示词 / 操作命令：贴原稿，说要改什么；延长、编辑、衔接、白模、宫格等直接说任务。改稿只动引出问题的那一句或那一段，不重写整段；检查时带上父稿（`--baseline`），父稿有、新稿没有的句子会被列出来提醒，新稿比父稿长 15% 以上也会提醒——新增控制要有对应的删减或合并。
+- 多轮任务：从第二版起工作目录里维护一份要求清单 `asks.txt`（一行一条：`编号 | 你提出的时间 | 你的原话摘录 | 落点关键词 | 有效或撤回`）。每收到你一条消息先更新清单再改稿；交付前用 `check_prompt.py --asks asks.txt` 机械核对**全部历史要求**还在不在正文里，缺一条报错误。要放弃某条会先问你，你不发话就原样保留；表头会多一行"保留：R1、R2、R4（R3 已按你 03:41 的要求撤回）"。
 - 输入「自检」：对最近一份提示词做质检。
 - 输入「整理经验」：跑一遍经验库体检，得到一份候选清单（哪几条被案例反复引用、哪几条像是能合并、哪几条互相修正、哪个分类太胖），每条一句人话，你挑要升级成规则、合并还是保留；不点头不动库。
 - 回传视频或截图 + 你的评价：得到逐句兑现表、归因、最小修法和一条待审观察；你说"写入经验库"才写进 `references/lessons/seedance-2.5.md`。
@@ -35,7 +36,7 @@ references/
   review/                    自检、成片诊断、改稿规则
   lessons/                   经验库（写前必读、诊断后必写）
 scripts/
-  check_prompt.py            格式、素材、时码及锁定检查
+  check_prompt.py            格式、素材、时码及锁定检查；`--asks asks.txt` 核对要求清单，`--baseline` 另报父稿消失的句子与长度稀释
   verify_delivery.py         实际重跑检查，核对需求、专业审查和最终导出；--response 直接生成可粘贴的成品文件，--response-mode prompt-only 只出代码块不带交付行
   extract_frames.sh          抽帧 + 切镜检测 + 拼图
   log_lesson.py              追加经验条目（--topic 必须是 `分类/主题`，脚本强制）
@@ -47,9 +48,9 @@ hooks/
   stop_gate.py               Stop 钩子（Claude Code 与 Codex 通用）：三层判定——本轮报告（verify 或 check_prompt --report）对得上就放行；没报告的完整稿由钩子代跑 check_prompt，有错拦下、无错放行并提示"作者未自己跑检查"；局部镜头与操作命令没报告则拦下
   README.md                  两个宿主的装法、能拦什么、真实宿主验证清单
 tests/cases.md               端到端用例
-tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检（115 项）
+tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检（166 项）
 tests/test_delivery_gate.py  verify_delivery 放行行为回归（42 项）
-tests/test_stop_gate.py      stop_gate 判定回归（59 项）
+tests/test_stop_gate.py      stop_gate 判定回归（61 项）
 ```
 
 ## hooks/（可选）

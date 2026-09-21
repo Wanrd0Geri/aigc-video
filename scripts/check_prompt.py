@@ -6,7 +6,7 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 用法：
   python3 check_prompt.py --prompt 稿.txt [--task 生成|编辑|延长|衔接] [--total 秒] [--untimed] [--labels 图1,图2,视频1]
                           [--baseline 父稿.txt] [--format 四段|五段|六段|继承] [--partial] [--lock "台词"]... [--unchanged 1,3]
-                          [--save-checked 合成稿.txt] [--report 报告.json]
+                          [--asks asks.txt] [--save-checked 合成稿.txt] [--report 报告.json]
 
 两个维度分开表示：
   --task      最终命令的性质：生成（默认）/ 编辑 / 延长 / 衔接。决定时码规则和必填词。
@@ -43,6 +43,19 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
   除非 --negative-exception 逐句点名超出的必要否定（每句与结尾段里一条独立否定条款整句一致，重复声明和片段不计数）；
   修订与操作命令给警告，须由最终专业审查裁定。
 
+--asks：多轮任务的要求清单（纯文本，一行一条，`#` 开头是注释）。列是
+  `编号 | 用户提出时间 | 用户原话摘录 | 落点关键词 | 状态`；落点关键词里组之间用「；」、组内同义词用「|」，
+  每组至少命中一个才算有落点；状态只有 `有效` 和 `撤回（时间＋用户原话）` 两种。因为关键词列自己也用 `|`，
+  切列的口径是"前三列 + 最后一列固定，中间全部归关键词列"。每条 `有效` 的要求都要在正文里找到落点
+  （引号内台词也算正文），任一关键词组没命中就报**错误**；列数不对、状态不是有效 / 撤回也报错误。
+  撤回只能由用户原话触发，作者不得自行撤回——脚本只核对清单与正文是否对得上，不判断撤回是否属实。
+
+--baseline 还会做两件"改稿不丢句"的机械提醒（都只是提醒，不阻断）：
+  ① 父稿与新稿按句号、分号、问号、感叹号和换行切句（引号内不切），去空白比对，**父稿有、新稿没有的句子**列出来
+     （最多 10 句，超出只报数量）；被改写成相近说法的那一句算"被本轮修改的对象直接替代"，不算消失。
+     `--partial` 时只比对被替换的那几个镜头。消失的句子里如果含某条已经报"没有落点"的要求的关键词，不重复报。
+  ② 新稿字数（去空白）比父稿多 15% 以上时提醒长度稀释；无父稿不报。
+
 --report：把这次机械检查的结果另存一份 JSON（`kind: "light"`，目录不存在会自动建），给 hooks/stop_gate.py 的守门用。
   报告里 delivered_sha256 = 实际交付出去的那段正文的哈希（非 --partial 时与 checked_sha256 相同），
   checked_sha256 = 实际检查的完整稿哈希（--partial 时是放回父稿合成后的稿）；两者都按"按行拆分再用换行拼回"规范化，
@@ -54,7 +67,7 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 （非 --partial 时即 checked_sha256 前 8 位），必须来自真实运行结果，可与报告、工具日志和正文核对；哈希不是执行签名或质量证明。
 脚本只报告机械结果；最终交付还须运行 verify_delivery.py 核对专业审查及警告裁定。
 """
-import argparse, hashlib, json, os, re, sys, time
+import argparse, difflib, hashlib, json, os, re, sys, time
 from pathlib import Path
 
 CJK_NUM = "零一二三四五六七八九十百"
@@ -118,6 +131,13 @@ TAIL_ZONE_LINE = re.compile(r"^\s*(?:不|禁止|无|保持|全片)|^\s*要求延
 NEG_SENT_RE = re.compile(r"^(不出现|不添加|不得|不要|不能|不许|不可|禁止|避免)")
 DIALOGUE_RE = re.compile(r"“[^”]*”|\"[^\"\n]*\"|「[^」]*」|『[^』]*』|\{[^}]*\}")
 CJK_MAP = {c: i for i, c in enumerate("零一二三四五六七八九")}
+# 改稿不丢句：切句只认句号、分号、问号、感叹号和换行；引号内不切。
+SENT_END = "。；;？?！!"
+QUOTE_OPEN = {"“": "”", "「": "」", "『": "』", "\"": "\""}
+# 父稿句子与新稿某句的相似度到这条线，就算"被本轮修改的对象直接替代"（改写过的那一句），不算消失。
+SENT_SIMILAR = 0.6
+# 长度稀释：新稿去空白字数超过父稿这个倍数就提醒。
+LENGTH_BUDGET = 1.15
 
 
 def cjk_to_int(s):
@@ -341,6 +361,96 @@ def synthesize(baseline_lines, cand_lines, errors, unchanged_ids):
     return out
 
 
+def parse_asks(path):
+    """要求清单：一行一条 `编号 | 时间 | 用户原话摘录 | 落点关键词 | 状态`，`#` 开头是注释。
+    关键词列自己也用 `|` 分同义词，所以切列口径是"前三列 + 最后一列固定，中间全部归关键词列"。
+    返回 (条目列表, 格式错误列表)。"""
+    rows, errs, seen = [], [], {}
+    for no, raw in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 5:
+            errs.append(f"要求清单第 {no} 行列数不对，应为 5 列「编号 | 用户提出时间 | 用户原话摘录 | 落点关键词 | 状态」："
+                        f"{line[:40]}")
+            continue
+        rid, when, quote, status = parts[0], parts[1], parts[2], parts[-1]
+        keys = "|".join(parts[3:-1])
+        if status.startswith("有效"):
+            active = True
+        elif status.startswith("撤回"):
+            active = False
+        else:
+            errs.append(f"要求清单第 {no} 行状态不是「有效」或「撤回（时间＋用户原话）」：{status[:40]}")
+            continue
+        if not rid or not quote:
+            errs.append(f"要求清单第 {no} 行缺编号或用户原话摘录：{line[:40]}")
+            continue
+        if rid in seen:
+            errs.append(f"要求清单编号重复：{rid} 出现在第 {seen[rid]} 行和第 {no} 行")
+            continue
+        seen[rid] = no
+        groups = [[w.strip() for w in g.split("|") if w.strip()] for g in re.split(r"[；;]", keys) if g.strip()]
+        if active and not groups:
+            errs.append(f"要求清单第 {no} 行「{rid}」是有效状态却没有写落点关键词")
+            continue
+        rows.append({"id": rid, "when": when, "quote": quote, "groups": groups, "active": active, "status": status})
+    return rows, errs
+
+
+def ask_excerpt(quote, limit=20):
+    """错误里引用用户原话的头一句，最多 limit 字；截断了就加省略号。"""
+    q = quote.strip()
+    head = re.split(r"[，,。.；;！!？?、]", q)[0][:limit]
+    return head + "……" if head != q else head
+
+
+def split_sentences(text):
+    """按句号、分号、问号、感叹号和换行切句；引号内不切。返回原文句子（去首尾空白，空句丢弃）。"""
+    out, buf, closer = [], [], None
+    for ch in text:
+        if closer is not None:
+            buf.append(ch)
+            if ch == closer:
+                closer = None
+            continue
+        if ch in QUOTE_OPEN:
+            closer = QUOTE_OPEN[ch]
+            buf.append(ch)
+            continue
+        if ch in SENT_END or ch == "\n":
+            s = "".join(buf).strip()
+            if s:
+                out.append(s)
+            buf = []
+            continue
+        buf.append(ch)
+    s = "".join(buf).strip()
+    if s:
+        out.append(s)
+    return out
+
+
+def lost_sentences(old_text, new_text):
+    """父稿有、新稿没有的句子（去空白比对）。被改写成相近说法的不算消失。"""
+    new_norm = [re.sub(r"\s+", "", s) for s in split_sentences(new_text)]
+    new_set = set(new_norm)
+    lost = []
+    for s in split_sentences(old_text):
+        n = re.sub(r"\s+", "", s)
+        if not n or n in new_set:
+            continue
+        if any(difflib.SequenceMatcher(None, n, m).ratio() >= SENT_SIMILAR for m in new_norm):
+            continue
+        lost.append(s)
+    return lost
+
+
+def nonspace_len(text):
+    return len(re.sub(r"\s", "", text))
+
+
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--prompt", required=True)
@@ -353,6 +463,9 @@ def main():
     ap.add_argument("--partial", action="store_true")
     ap.add_argument("--lock", action="append", default=[])
     ap.add_argument("--unchanged", default="")
+    ap.add_argument("--asks", default=None,
+                    help="多轮任务的要求清单文件（工作目录下 asks.txt）：一行一条 `编号 | 用户提出时间 | 用户原话摘录 | 落点关键词 | 状态`；"
+                         "每条「有效」的要求都要在正文里有落点，缺一条报错误")
     ap.add_argument("--save-checked", default=None)
     ap.add_argument("--report", default=None, help="把机械检查结果另存为 JSON（kind=light），供 hooks/stop_gate.py 守门核对；有错误也写（ready=false）")
     ap.add_argument("--negative-exception", default="", help="要逐句点名的必要否定句本身，多句用“；”分开。四段稿：点名的镜内否定句不再提醒（其余每句给一条提醒）；五段 / 六段 / 继承旧稿：每句必须与结尾段里一条独立否定条款整句一致，数量要覆盖超出 4 条预算的部分。最终放行仍须审查")
@@ -371,6 +484,8 @@ def main():
         bail("--format 继承 需要 --baseline 父稿")
     if any(not lk.strip() for lk in a.lock):
         bail("--lock 不能是空文字")
+    if a.asks and not Path(a.asks).is_file():
+        bail(f"--asks 指定的要求清单找不到：{a.asks}")
 
     raw = open(a.prompt, encoding="utf-8").read()
     cand_lines = raw.splitlines()
@@ -679,6 +794,52 @@ def main():
             warnings.append(f"镜头数与父稿不同：父稿 {len(b_heads)}，新稿 {len(heads)}；确认是授权的结构改动")
         checked.append("父稿已加载")
 
+    # --- 要求清单：每条「有效」的要求都要在正文里有落点（引号内台词也算正文）---
+    asks_rows, asks_active, asks_missing_words = [], 0, set()
+    asks_checked = None
+    if a.asks:
+        asks_rows, asks_fmt_errs = parse_asks(a.asks)
+        errors.extend(asks_fmt_errs)
+        active_rows = [r for r in asks_rows if r["active"]]
+        asks_active = len(active_rows)
+        asks_checked = asks_active
+        asks_bad = []
+        for row in active_rows:
+            miss = [g for g in row["groups"] if not any(w in text for w in g)]
+            if not miss:
+                continue
+            asks_bad.append(row["id"])
+            asks_missing_words.update(w for g in miss for w in g)
+            errors.append(f"要求 {row['id']}「{ask_excerpt(row['quote'])}」在正文里没有落点"
+                          f"（关键词：{'；'.join('/'.join(g) for g in miss)}）；"
+                          f"要么补回，要么用户明确撤回后在清单里标撤回")
+        withdrawn = [r["id"] for r in asks_rows if not r["active"]]
+        if not asks_fmt_errs and not asks_bad:
+            checked.append(f"要求清单 {asks_active} 条有效全部有落点"
+                           + (f"，{len(withdrawn)} 条已标撤回：{'、'.join(withdrawn)}" if withdrawn else ""))
+
+    # --- 改稿不丢句：父稿有、新稿没有的句子（提醒）；长度稀释（提醒）---
+    if revision:
+        if a.partial:
+            b_body = {h[2]: "\n".join(body) for (h, body, _t) in shot_blocks(baseline_lines, b_heads) if h[2] is not None}
+            p_ids = [h[2] for h in parse_heads(cand_lines) if h[2] is not None]
+            old_side = "\n".join(b_body[i] for i in p_ids if i in b_body)
+            new_side = "\n".join(cand_lines)
+        else:
+            old_side, new_side = baseline_text, text
+        lost = lost_sentences(old_side, new_side)
+        # 已经由要求清单报"没有落点"的那条要求，它的关键词句不重复报
+        lost = [s for s in lost if not any(w in s for w in asks_missing_words)]
+        if lost:
+            shown = "".join(f"「{s[:30]}」" for s in lost[:10])
+            more = f"（只列前 10 句）" if len(lost) > 10 else ""
+            warnings.append(f"父稿有 {len(lost)} 句在新稿里消失：{shown}{more}；"
+                            f"每句须归入三类之一——用户要求删 / 被本轮修改的对象直接替代 / 与本轮修改冲突——否则恢复")
+        old_n, new_n = nonspace_len(old_side), nonspace_len(new_side)
+        if old_n and new_n > old_n * LENGTH_BUDGET:
+            warnings.append(f"新稿比父稿长 {round((new_n - old_n) / old_n * 100)}%（{old_n}→{new_n} 字）；"
+                            f"修改不堆砌：新增控制要有对应的删减或合并")
+
     # --- 每镜动态词扫描（提醒）---
     for k, (h, body_lines, _t) in enumerate(blocks):
         body = "\n".join(body_lines)
@@ -808,6 +969,13 @@ def main():
     else:
         parts.append("素材集合未核对")
     parts.append(neg_note)
+    if a.asks:
+        if asks_fmt_errs:
+            parts.append("要求清单格式错误")
+        elif asks_bad:
+            parts.append(f"要求清单 {asks_active} 条有效，{len(asks_bad)} 条没有落点")
+        else:
+            parts.append(f"要求清单 {asks_active} 条有效全部有落点")
     parts.append(f"待裁定提醒 {len(warnings)} 条")
     parts.append(f"sha {delivered_sha[:8]}")
     summary = ("check_prompt 通过" if not errors else f"check_prompt 有 {len(errors)} 处错误") + "（" + "｜".join(parts) + "）"
@@ -817,7 +985,8 @@ def main():
         "stats": {"shots": len(heads), "heading_style": sorted(styles), "total_seconds": timed[-1][4] if timed else None,
                   "labels_used": sorted(used), "chars": len(text)},
         "input_sha256": sha(raw), "baseline_sha256": sha(baseline_text) if baseline_text is not None else None,
-        "checked_sha256": checked_sha, "delivered_sha256": delivered_sha, "summary": summary,
+        "checked_sha256": checked_sha, "delivered_sha256": delivered_sha, "asks_checked": asks_checked,
+        "summary": summary,
         "limits": "只检查文本不变量；不验证画面语义、素材内容或成片效果；检查后改过的稿必须重跑",
     }
     if a.report:
@@ -830,6 +999,7 @@ def main():
             "task": task, "format": fmt, "partial": bool(a.partial),
             "errors": errors, "warnings": warnings,
             "labels": sorted(x.strip() for x in a.labels.split(",") if x.strip()), "locks": len(a.lock),
+            "asks_checked": asks_checked,
             "baseline_sha256": sha(baseline_text) if baseline_text is not None else None,
             "summary": summary,
             "created_at": time.time(), "session_id": os.environ.get("AIGC_SESSION_ID") or None,
