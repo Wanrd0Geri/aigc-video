@@ -276,6 +276,50 @@ ok = p.returncode == 0
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| lint_lessons 当前经验库通过 |", (p.stdout or p.stderr).strip()[:160])
 
-TOTAL = len(CASES) + 3 + 2 + 3 + len(REPORT_CASES) + len(LESSON_CASES) + 4
+# ---- 案例库体检：可复用点必须落到经验编号或标成样板 ----
+LINTC = ROOT / "scripts" / "lint_cases.py"
+CASES_MD = ROOT / "references" / "cases" / "my-cases.md"
+
+
+def case_md(bullets, rel="L001"):
+    return ("# 临时案例库\n\n## 索引\n\n"
+            "| 编号 | 日期 | 任务类型 | 时长 | 素材形态 | 题材关键词 | 什么时候选它 | 成片 | 可复用点 |\n"
+            "|---|---|---|---|---|---|---|---|---|\n"
+            "| M001 | 2026-09-22 | 图生单镜 | 5s | 图1 | 测试 | 测试时选它 | a.mp4 | 无 |\n\n"
+            "## 条目\n\n### M001 ｜ 2026-09-22 ｜ 图生单镜 ｜ 5 秒\n\n"
+            "素材：@图片1 = 测试\n成片文件名：a.mp4\n我的评价：好\n"
+            f"关联经验：{rel}\n\n可复用点：\n{bullets}\n\n"
+            "提示词原文（需要抄句式时再读）：\n\n```text\n主体：测试。\n```\n")
+
+
+CASE_LINT_CASES = [
+    ("lint_cases 一条知识一条样板：通过", case_md("- 每镜几句、先写什么后写什么（样板）\n- 「那句句式」 → L001"), 0, "通过"),
+    ("lint_cases 可复用点没编号也没标样板：拦下", case_md("- 「那句句式」写得真好"), 1, "既没有"),
+    ("lint_cases 引用经验库里没有的编号：拦下", case_md("- 「那句句式」 → L999"), 1, "不存在"),
+    ("lint_cases 关联经验为空：拦下", case_md("- 「那句句式」 → L001", rel=""), 1, "关联经验"),
+]
+with tempfile.TemporaryDirectory() as tmp:
+    d = pathlib.Path(tmp)
+    lf = d / "lessons.md"
+    lf.write_text("# 临时经验库\n\n" + BASE_ENTRY, encoding="utf-8")
+    for i, (name, body, want_code, needle) in enumerate(CASE_LINT_CASES):
+        cf = d / f"cases{i}.md"
+        cf.write_text(body, encoding="utf-8")
+        p = run([LINTC, "--file", cf, "--lessons", lf])
+        why = []
+        if p.returncode != want_code:
+            why.append(f"退出码 {p.returncode}（期望 {want_code}）")
+        if needle not in (p.stdout + p.stderr):
+            why.append(f"输出里没有“{needle}”")
+        fails += 0 if not why else 1
+        print(("PASS" if not why else "FAIL"), f"| {name} |", "；".join(why) or "ok")
+
+# lint_cases：当前案例库必须干净（每条可复用点有编号或标样板，编号真的存在，索引对得上）
+p = run([LINTC, "--file", CASES_MD, "--lessons", LESSONS])
+ok = p.returncode == 0
+fails += 0 if ok else 1
+print(("PASS" if ok else "FAIL"), "| lint_cases 当前案例库通过 |", (p.stdout or p.stderr).strip()[:160])
+
+TOTAL = len(CASES) + 3 + 2 + 3 + len(REPORT_CASES) + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)
