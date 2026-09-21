@@ -9,8 +9,13 @@ merge_lessons.py — 把另一份经验库（通常是安装位）里的新条�
 
 规则：--from 里有、--into 里没有的 L 编号 → 置信度写成"未试（合并待审）"追加到 --into 末尾；
       两边都有但内容不同的编号 → 不动，打印出来由人判断（候选版可能有意改写了那条）。
+      来源里只要有条目的主题列缺合法 `分类/主题` 前缀 → 整次合并拒绝，退出码 1，列出违规编号；
+      不静默接受，先去来源里把前缀补上再合。
 """
 import argparse, os, re, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lint_lessons import cats_hint, topic_error  # 12 个分类的唯一代码副本在 lint_lessons.py（与 README 同步）
 
 LINE = re.compile(r"^(L\d{3})\s*\|", re.M)
 SECTION = "## 七、诊断新增"
@@ -37,6 +42,18 @@ def main():
     dst_path = os.path.expanduser(a.dst)
     dst = open(dst_path, encoding="utf-8").read()
     se, de = entries(src), entries(dst)
+    bad = []
+    for k in sorted(se):
+        parts = se[k].split(" | ")
+        if len(parts) != 9:
+            bad.append(f"{k}：不是九字段条目（实际 {len(parts)} 段）")
+            continue
+        err = topic_error(parts[2])
+        if err:
+            bad.append(f"{k}：{err}")
+    if bad:
+        sys.exit("来源经验库有条目的主题列不合法，拒绝合并（先在来源里补成 `分类/主题` 再合）：\n  "
+                 + "\n  ".join(bad) + "\n" + cats_hint())
     new = [k for k in sorted(se) if k not in de]
     diff = [k for k in sorted(se) if k in de and se[k] != de[k]]
     print(f"来源 {len(se)} 条，目标 {len(de)} 条；新增 {len(new)} 条：{new}；两边都有但不同 {len(diff)} 条：{diff}（未裁定；保留目标内容，不代表冲突已解决）")

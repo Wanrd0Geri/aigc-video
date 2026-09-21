@@ -37,15 +37,16 @@ scripts/
   check_prompt.py            格式、素材、时码及锁定检查
   verify_delivery.py         实际重跑检查，核对需求、专业审查和最终导出；--response 直接生成可粘贴的成品文件，--response-mode prompt-only 只出代码块不带交付行
   extract_frames.sh          抽帧 + 切镜检测 + 拼图
-  log_lesson.py              追加经验条目
-  merge_lessons.py           合并另一份经验库里的新条目（按 L 编号，不覆盖已有条目）
+  log_lesson.py              追加经验条目（--topic 必须是 `分类/主题`，脚本强制）
+  merge_lessons.py           合并另一份经验库里的新条目（按 L 编号，不覆盖已有条目；来源缺分类前缀拒绝合并）
+  lint_lessons.py            经验库体检：分类前缀合法 + L 编号连续（回归测试里有一项调用）
 hooks/
   stop_gate.py               Stop 钩子（Claude Code 与 Codex 通用）：三层判定——本轮报告（verify 或 check_prompt --report）对得上就放行；没报告的完整稿由钩子代跑 check_prompt，有错拦下、无错放行并提示"作者未自己跑检查"；局部镜头与操作命令没报告则拦下
   README.md                  两个宿主的装法、能拦什么、真实宿主验证清单
 tests/cases.md               端到端用例
-tests/run_check_tests.py     check_prompt 回归（84 项）
-tests/test_delivery_gate.py  verify_delivery 放行行为回归（41 项）
-tests/test_stop_gate.py      stop_gate 判定回归（52 项）
+tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制（110 项）
+tests/test_delivery_gate.py  verify_delivery 放行行为回归（42 项）
+tests/test_stop_gate.py      stop_gate 判定回归（56 项）
 ```
 
 ## hooks/（可选）
@@ -58,7 +59,7 @@ tests/test_stop_gate.py      stop_gate 判定回归（52 项）
 
 ## 质量交付
 
-交付分两档（见 SKILL.md「流程分级」）：默认的**轻量路径**适用于绝大多数情况——新稿、改稿、成片反馈后的修改、操作命令，六域与落点核对在头脑里做完，跑一次 `scripts/check_prompt.py`，无错误、警告已裁定就交付，代码块外带一行机械检查结果，不产生放行报告。**全套路径**只在全新 L3 稿的第一版、你说"严格审"、或事先约定了审核节点时启用：按 `references/review/quality-gate.md` 完成原始需求、六域专业审查、警告裁定与本版绑定，最多派一次新上下文的独立复核，并由 `scripts/verify_delivery.py` 放行。提示词正文及生成回执原样取自 response 文件。允许在代码块外写必要表头、问题、例外和变更摘要；这些说明不得混入可复制提示词。用户只要提示词时省略外部说明，内部检查不变。用户只要提示词时用 `--response-mode prompt-only`，成品只有代码块。检查器未执行、执行失败、版本不符、专业问题未解决、必要独立复核未完成时，不标成已验收成稿。机械检查通过不单独等于可交付。新稿也可用 --lock；全套路径里那一次独立复核必须在新上下文做（Claude Code 用 Agent 子代理，Codex 开新会话），且最多一次，复核后的修复由作者自查、重跑放行，不派第二轮。
+交付分两档（见 SKILL.md「流程分级」）：默认的**轻量路径**适用于绝大多数情况——新稿、改稿、成片反馈后的修改、操作命令，六域与落点核对在头脑里做完，跑一次 `scripts/check_prompt.py`，无错误、警告已裁定就交付，代码块外带一行机械检查结果，不产生放行报告。**全套路径**只在你说"严格审"、或事先约定了审核节点时启用（复杂稿和第一版都不自动触发，默认同样走轻量路径）：按 `references/review/quality-gate.md` 完成原始需求、六域专业审查、警告裁定与本版绑定，最多派一次新上下文的独立复核，并由 `scripts/verify_delivery.py` 放行。提示词正文及生成回执原样取自 response 文件。允许在代码块外写必要表头、问题、例外和变更摘要；这些说明不得混入可复制提示词。用户只要提示词时省略外部说明，内部检查不变。用户只要提示词时用 `--response-mode prompt-only`，成品只有代码块。检查器未执行、执行失败、版本不符、专业问题未解决、必要独立复核未完成时，不标成已验收成稿。机械检查通过不单独等于可交付。新稿也可用 --lock；全套路径里那一次独立复核必须在新上下文做（Claude Code 用 Agent 子代理，Codex 开新会话），且最多一次，复核后的修复由作者自查、重跑放行，不派第二轮。
 
 ## 当前用户偏好
 
@@ -73,3 +74,5 @@ tests/test_stop_gate.py      stop_gate 判定回归（52 项）
 - 组员：直接克隆即可使用，不用登录；要往仓库推改动需要仓库所有者加为协作者，否则用 fork + Pull Request。
 - 换机器：`git clone https://github.com/Wanrd0Geri/aigc-video ~/Documents/Codex/aigc-video && bash ~/Documents/Codex/aigc-video/install.sh`，再按 `hooks/README.md` 挂钩子。
 - 不要在 skills 目录里另放一份拷贝，也不要 `git clone` 覆盖软链；拉取用 `git pull`。
+
+**维护者改 skill 的地方**：改动在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里做，三套测试跑过之后再合并到 main，然后在 `~/Documents/Codex/aigc-video` 跑 `bash scripts/sync.sh 备注`。main 是安装位（两个宿主的 skills 都软链到它），改到一半的文件不会影响正在使用的会话。

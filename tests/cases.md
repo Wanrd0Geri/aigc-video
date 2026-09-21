@@ -21,7 +21,7 @@
 | F | 向后延长 @视频1 5 秒 | 四段外壳；情节段开头的命令区（第一个镜头标题之前）有"向后延长@视频1"与官方约束句，末尾只有固定句那一行；情节从尾帧状态起、只写新增段；check_prompt 通过 |
 | H1 | 新稿 + 用户给了一句必须逐字出现的对白（"我不走。"） | 对白逐字进正文且 requirements 的 exact_locks 收录原句；check_prompt 带 --lock 通过；若做了同音替换则 pronunciation 有完整逐字映射、原台词保留在需求里；表头"锁定"行写出这句台词 |
 | H2 | 近景对话镜，但用户要求看到"他一脚踩住对方的鞋尖" | 发现可见性冲突（近景装不下脚部接触）并只在这一处锁定冲突上集中问一次，给两种改法（扩景别 / 拆一镜给脚部）让用户选；不自作主张改掉用户锁定的景别，也不假装两件事都拍到了 |
-| H3 | 复杂打斗 + 特效 + 镜内光源变化的三镜稿 | 属于全新 L3 第一版，走全套路径：complex=true；独立复核在新上下文做**一次**（Claude Code 用 Agent 子代理 / Codex 新会话），independent.json 有 context 且 saw_author_review=false、reviewer≠author；作者不得自己换个名字补一份；复核后的修复由作者完成，改动点交回**同一个复核者**（Claude Code 用 SendMessage 续用同一子代理 / Codex 同一会话）只核验修复点及其关联影响，由它出具绑定最终正文哈希的新 independent.json，再重跑 verify_delivery；不做第二次全量复核，作者不得自己改写复核记录的哈希或结论；同一稿之后的修改回到轻量路径 |
+| H3 | 复杂打斗 + 特效 + 镜内光源变化的三镜稿 | **默认走轻量路径**（复杂度和"第一版"都不触发全套）：头脑里做完六域与矛盾核对，跑一次 `check_prompt.py --report` 就交付，不建 requirements.json、不派复核。**用户说了"严格审"才走全套**：complex=true；独立复核在新上下文做**一次**（Claude Code 用 Agent 子代理 / Codex 新会话），independent.json 有 context 且 saw_author_review=false、reviewer≠author；作者不得自己换个名字补一份；复核后的修复由作者完成，改动点交回**同一个复核者**（Claude Code 用 SendMessage 续用同一子代理 / Codex 同一会话）只核验修复点及其关联影响，由它出具绑定最终正文哈希的新 independent.json，再重跑 verify_delivery；核验修复时只有"没修好"和"修复引入新矛盾"两类进 unresolved，其它新发现写 suggestions、不阻断放行；不做第二次全量复核，作者不得自己改写复核记录的哈希或结论；同一稿之后的修改回到轻量路径 |
 | H4 | 镜头环绕人物一圈，场景里有一盏固定的壁灯 | 光源按世界方位锁定（固定在人物斜后方、不随镜头移动），另写它在画面里随环绕从哪侧移到哪侧（L061）；不写"光从画面左侧射来"这类会随镜头转的画面方位断言 |
 | H5 | 用户明说"这镜就要一动不动的静止画面" | camera 该镜 mode=fixed 且 source 引用用户原话；不为满足默认偏好偷加微推、微摇或呼吸感；正文里也不出现"极其缓慢、几乎不可察觉"这类冒充运镜的措辞 |
 | H6 | 五镜父稿，只改第 2、4 镜的运镜，其余不动 | 用 --task 修订 --baseline --partial --unchanged 1,3,5；只交付第 2、4 镜完整单元；未受影响镜头逐字不变；camera 数组仍覆盖合成完整稿全部五镜，未改的两镜写 mode=preserved 并引用父稿 |

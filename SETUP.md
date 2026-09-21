@@ -42,7 +42,7 @@ ls -l ~/.claude/skills/aigc-video ~/.codex/skills/aigc-video
 cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tail -1 && python3 -X utf8 tests/test_delivery_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_stop_gate.py 2>&1 | tail -1
 ```
 
-期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；三行分别是 `84/84 通过`、`OK`、`OK`（数字随版本增加，只要没有失败）。
+期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；三行分别是 `110/110 通过`、`OK`、`OK`（数字随版本增加，只要没有失败）。
 
 ## 4 挂守门钩子（Claude Code；可选但推荐）
 
@@ -82,3 +82,7 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 ## 7 做完后报告给用户
 
 一句话说清：软链指向哪里、三套测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
+
+## 8 维护 skill 本身（改 skill 的人看）
+
+改 skill 的文件在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里改，三套测试跑过之后再合并到 main 并 `sync.sh`。main 是安装位，改到一半的文件不会影响正在使用的会话。

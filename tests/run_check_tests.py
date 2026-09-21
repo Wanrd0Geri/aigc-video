@@ -194,6 +194,88 @@ with tempfile.TemporaryDirectory() as tmp:
         fails += 0 if not why else 1
         print(("PASS" if not why else "FAIL"), f"| {name} |", "；".join(why) or "ok")
 
-TOTAL = len(CASES) + 3 + 2 + 3 + len(REPORT_CASES)
+# ---- 经验库分类前缀：log_lesson 写入强制、merge_lessons 合并强制、lint_lessons 体检 ----
+LOG = ROOT / "scripts" / "log_lesson.py"
+MERGE = ROOT / "scripts" / "merge_lessons.py"
+LINT = ROOT / "scripts" / "lint_lessons.py"
+LESSONS = ROOT / "references" / "lessons" / "seedance-2.5.md"
+BASE_ENTRY = "L001 | 2026-09-21 | 通用/占位 | 现象 | 写法A → 效果 | — | 结论 | 未试 | 来源\n"
+
+
+def run(cmd):
+    return subprocess.run([sys.executable, *map(str, cmd)], text=True, capture_output=True)
+
+
+with tempfile.TemporaryDirectory() as tmp:
+    d = pathlib.Path(tmp)
+    lf = d / "lessons.md"
+    lf.write_text("# 临时经验库\n\n" + BASE_ENTRY, encoding="utf-8")
+    common = ["--phenomenon", "现象", "--a", "写法A → 效果", "--conclusion", "结论",
+              "--confidence", "未试", "--source", "来源 2026-09-21"]
+    LESSON_CASES = [
+        ("log_lesson 合规前缀：写入成功", [LOG, "--file", lf, "--topic", "景别与画外/画外人物", *common], 0, "L002"),
+        ("log_lesson 无前缀：拒绝、不写入", [LOG, "--file", lf, "--topic", "画外人物", *common], 1, "没有分类前缀"),
+        ("log_lesson 分类不在 12 个里：拒绝、不写入", [LOG, "--file", lf, "--topic", "打斗场面/接触", *common], 1, "不在 12 个分类里"),
+    ]
+    for name, cmd, want_code, needle in LESSON_CASES:
+        before = lf.read_text(encoding="utf-8")
+        p = run(cmd)
+        why = []
+        if p.returncode != want_code:
+            why.append(f"退出码 {p.returncode}（期望 {want_code}）")
+        if needle not in (p.stdout + p.stderr):
+            why.append(f"输出里没有“{needle}”")
+        after = lf.read_text(encoding="utf-8")
+        if want_code == 0 and after == before:
+            why.append("合规条目没写进文件")
+        if want_code != 0 and after != before:
+            why.append("不合规却动了文件")
+        fails += 0 if not why else 1
+        print(("PASS" if not why else "FAIL"), f"| {name} |", "；".join(why) or "ok")
+
+    # merge_lessons：来源里有无前缀条目 → 整次拒绝，目标文件不动
+    src = d / "src.md"
+    src.write_text("# 来源\n\n" + BASE_ENTRY
+                   + "L003 | 2026-09-21 | 没前缀的主题 | 现象 | 写法A → 效果 | — | 结论 | 未试 | 来源\n",
+                   encoding="utf-8")
+    before = lf.read_text(encoding="utf-8")
+    p = run([MERGE, "--from", src, "--into", lf])
+    why = []
+    if p.returncode != 1:
+        why.append(f"退出码 {p.returncode}（期望 1）")
+    if "L003" not in p.stderr or "没有分类前缀" not in p.stderr:
+        why.append("stderr 没有列出违规编号与原因")
+    if lf.read_text(encoding="utf-8") != before:
+        why.append("拒绝合并却动了目标文件")
+    fails += 0 if not why else 1
+    print(("PASS" if not why else "FAIL"), "| merge_lessons 来源含无前缀条目：拒绝合并 |", "；".join(why) or "ok")
+
+    # merge_lessons：来源条目全部合规 → 正常合并
+    src2 = d / "src2.md"
+    src2.write_text("# 来源\n\n" + BASE_ENTRY
+                    + "L003 | 2026-09-21 | 操作命令/延长 | 现象 | 写法A → 效果 | — | 结论 | 已试 | 来源\n",
+                    encoding="utf-8")
+    p = run([MERGE, "--from", src2, "--into", lf])
+    ok = p.returncode == 0 and "L003" in lf.read_text(encoding="utf-8")
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), "| merge_lessons 来源全部合规：正常合并 |", (p.stdout or p.stderr).strip()[:80])
+
+    # lint_lessons：编号断档要报出来
+    bad = d / "bad.md"
+    bad.write_text("# 临时\n\n" + BASE_ENTRY
+                   + "L005 | 2026-09-21 | 通用/占位 | 现象 | 写法A → 效果 | — | 结论 | 未试 | 来源\n",
+                   encoding="utf-8")
+    p = run([LINT, "--file", bad])
+    ok = p.returncode == 1 and "编号不连续" in p.stderr
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), "| lint_lessons 编号断档：拦下 |", "ok" if ok else p.stderr.strip()[:120])
+
+# lint_lessons：当前经验库必须干净（前缀合法 + 编号连续）
+p = run([LINT, "--file", LESSONS])
+ok = p.returncode == 0
+fails += 0 if ok else 1
+print(("PASS" if ok else "FAIL"), "| lint_lessons 当前经验库通过 |", (p.stdout or p.stderr).strip()[:160])
+
+TOTAL = len(CASES) + 3 + 2 + 3 + len(REPORT_CASES) + len(LESSON_CASES) + 4
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

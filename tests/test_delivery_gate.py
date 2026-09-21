@@ -171,6 +171,9 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(self.gate(independent)[0],1)  # 看过作者结论也不算独立
         independent['context']={'kind':'subagent','id':'unit-subagent-1','saw_author_review':False}
         self.assertEqual(self.gate(independent)[0],0)
+        # 核验修复那一轮的可选建议：suggestions 不进 unresolved，脚本不认识这个字段也不该拦
+        independent['suggestions']=[{'point':'镜1 第二句','suggestion':'可以再给一个落点','reason':'可读性'}]
+        self.assertEqual(self.gate(independent)[0],0)
 
     def test_camera_fixed_by_design_is_rejected(self):
         self.setup_gate(BASE.replace('摄影机向右缓移，门框向左错开。','摄影机固定在门框正前方。'))
