@@ -15,7 +15,9 @@ CASES = [
     ("四段固定句不在最后一行：拦下", "B09_nonterminal_closing.txt", ["--total", "12"], 1),
     ("四段固定句被拆开：拦下", "B08_reversed_closing.txt", ["--total", "12"], 1),
     ("四段固定句同一行后接否定：拦下", "closing_same_line_extra.txt", ["--total", "12"], 1),
-    ("四段结尾区两条否定 + 固定句：通过", "two_negatives_ok.txt", ["--total", "12"], 0),
+    ("四段末尾放否定句：拦下（末尾只留固定句）", "tail_negatives_blocked.txt", ["--total", "12"], 1),
+    ("四段否定写在镜内：通过（逐句提醒）", "inline_negative.txt", ["--total", "12"], 0),
+    ("四段镜内否定用 --negative-exception 点名：通过且不再提醒", "inline_negative.txt", ["--total", "12", "--negative-exception", "不出现第二个白猿。"], 0),
     ("六段新稿无父稿：默认四段会拦", "six_section_new.txt", ["--total", "12"], 1),
     ("六段新稿显式 --format 六段 通过", "six_section_new.txt", ["--format", "六段", "--total", "12"], 0),
     ("五段旧稿显式 --format 五段 通过", "five_section_old.txt", ["--format", "五段", "--total", "12"], 0),
@@ -25,11 +27,12 @@ CASES = [
     ("六段父稿修订改成新固定句：未授权迁移，拦下", "six_section_new_closing.txt", ["--baseline", str(C / "six_section_new.txt"), "--total", "12"], 1),
     ("五段父稿修订仍是五段旧句：通过", "five_section_revised.txt", ["--baseline", str(C / "five_section_old.txt"), "--total", "12"], 0),
     ("五段父稿修订成四段新句：未授权迁移，拦下", "five_section_migrated.txt", ["--baseline", str(C / "five_section_old.txt"), "--total", "12"], 1),
-    ("四段延长：必填词在情节段开头、约束句在结尾区，通过", "extend_ok.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 0),
+    ("四段延长：必填词与约束句都在命令区，通过", "extend_ok.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 0),
     ("四段延长：情节段开头缺必填词", "extend_five_missing_command.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 1),
     ("四段延长：约束句写在固定句之后", "extend_constraint_after_closing.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 1),
-    ("四段延长：约束句写在结尾区之外", "extend_constraint_misplaced.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 1),
-    ("四段编辑：必填词在情节段开头，通过", "edit_ok.txt", ["--task", "编辑", "--labels", "视频1,图片1"], 0),
+    ("四段延长：约束句写在末尾固定句之前", "extend_constraint_at_tail.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 1),
+    ("四段编辑：必填句都在命令区，通过", "edit_ok.txt", ["--task", "编辑", "--labels", "视频1,图片1"], 0),
+    ("四段编辑：“保持…”句写在末尾固定句之前", "edit_keep_at_tail.txt", ["--task", "编辑", "--labels", "视频1,图片1"], 1),
     ("时间空隙", "timeline_gap.txt", ["--total", "12"], 1),
     ("时间空隙 + 情节段开头含“增加”", "timeline_gap_with_increase.txt", ["--total", "12"], 1),
     ("总时长错 + 情节段开头含“增加”", "timeline_wrong_total_with_increase.txt", ["--total", "12"], 1),
@@ -44,8 +47,9 @@ CASES = [
     ("台词外的“像上次”仍拦", "ref_wording_outside_dialogue.txt", ["--total", "12"], 1),
     ("未声明素材", "labels_two_used.txt", ["--total", "12", "--labels", "图片1"], 1),
     ("素材声明匹配", "labels_two_used.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
-    ("结尾区 4 条否定（合算）通过", "four_negatives_ok.txt", ["--total", "12"], 0),
-    ("结尾区 5 条否定拦下", "five_negatives.txt", ["--total", "12"], 1),
+    ("五段旧壳结尾段 4 条否定（合算）通过", "five_section_four_negatives.txt", ["--format", "五段", "--total", "12"], 0),
+    ("五段旧壳结尾段 5 条否定拦下", "five_section_five_negatives.txt", ["--format", "五段", "--total", "12"], 1),
+    ("四段旧式结尾（4 条否定 + 固定句）：末尾只留固定句，拦下", "legacy_tail_four_negatives.txt", ["--total", "12"], 1),
     ("修改标记泄露", "marker_leak.txt", ["--total", "12"], 1),
     ("修订继承旧壳（无结尾标题、旧固定句）", "inherit_old_changed.txt", ["--task", "生成", "--baseline", str(C / "inherit_old_source.txt"), "--total", "12"], 0),
     ("旧写法 --task 修订 仍可用", "inherit_old_changed.txt", ["--task", "修订", "--baseline", str(C / "inherit_old_source.txt"), "--total", "12"], 0),
@@ -87,12 +91,12 @@ CASES = [
     ("Q02b 两镜局部段合法", "Q02b_partial_two_shots_ok.txt", ["--baseline", str(C / "control_valid.txt"), "--partial", "--total", "12"], 0),
     ("Q05 六段全空（显式六段）", "Q05_empty_sections.txt", ["--format", "六段", "--total", "12"], 1),
     ("Q05b 镜头只有标题", "Q05b_empty_shot.txt", ["--total", "12"], 1),
-    ("结尾区五条否定：按句声明例外后放行", "five_negatives.txt", ["--total", "12", "--negative-exception", "不出现现代物品。"], 0),
-    ("结尾区五条否定：例外句不在结尾区里", "five_negatives.txt", ["--total", "12", "--negative-exception", "不出现猫。"], 1),
-    ("结尾区五条否定：只写理由不点句仍拦", "five_negatives.txt", ["--total", "12", "--negative-exception", "质量需要"], 1),
-    ("g02 例外重复同一句不计数", "six_negatives.txt", ["--total", "12", "--negative-exception", "不出现水印。；不出现水印。"], 1),
-    ("g03 例外写成片段不计数", "six_negatives.txt", ["--total", "12", "--negative-exception", "水；印"], 1),
-    ("六条否定：两条独立整句例外放行", "six_negatives.txt", ["--total", "12", "--negative-exception", "不出现水印。；不出现反光。"], 0),
+    ("五段结尾段五条否定：按句声明例外后放行", "five_section_five_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "不出现现代物品。"], 0),
+    ("五段结尾段五条否定：例外句不在结尾段里", "five_section_five_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "不出现猫。"], 1),
+    ("五段结尾段五条否定：只写理由不点句仍拦", "five_section_five_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "质量需要"], 1),
+    ("g02 例外重复同一句不计数", "five_section_six_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "不出现水印。；不出现水印。"], 1),
+    ("g03 例外写成片段不计数", "five_section_six_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "水；印"], 1),
+    ("六条否定：两条独立整句例外放行", "five_section_six_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "不出现水印。；不出现反光。"], 0),
     ("密度：每秒 2 拍也提醒（只提醒）", "dense_two_per_second.txt", ["--total", "12"], 0),
     ("弱运镜措辞只提醒", "weak_motion.txt", ["--total", "12"], 0),
     ("动作过密只提醒", "dense_beats.txt", ["--total", "12"], 0),
@@ -115,6 +119,24 @@ for f, key in [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), 
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12"], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 触发“{key}”提醒 |", [w for w in d["warnings"] if key in w][:1])
+
+# ---- 四段稿的否定提醒：镜内一条给一条提醒；--negative-exception 点名后不再提醒 ----
+for args, want_n, label in [([], 1, "镜内否定：提醒 1 条"),
+                            (["--negative-exception", "不出现第二个白猿。"], 0, "点名后：提醒 0 条")]:
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / "inline_negative.txt"), "--total", "12", *args],
+                       text=True, capture_output=True)
+    d = json.loads(p.stdout)
+    hits = [w for w in d["warnings"] if w.startswith("否定句：")]
+    ok = p.returncode == 0 and len(hits) == want_n
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {label} | exit {p.returncode} | {hits}")
+# summary 里四段用"镜内否定提醒 N 句"，旧壳仍用"自写否定计数 N 条"；一行里不放全角括号（钩子正则按「）」截断）
+for f, args, needle in [("inline_negative.txt", ["--total", "12"], "镜内否定提醒 1 句"),
+                        ("control_valid.txt", ["--total", "12"], "镜内否定提醒 0 句"),
+                        ("five_section_four_negatives.txt", ["--format", "五段", "--total", "12"], "自写否定计数 4 条")]:
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
+    d = json.loads(p.stdout); ok = needle in d["summary"]; fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {f} summary 含“{needle}” |", d["summary"])
 
 # ---- --report：写出的 JSON 要能被 hooks/stop_gate.py 直接用 ----
 def hook_digest(text):
@@ -172,6 +194,6 @@ with tempfile.TemporaryDirectory() as tmp:
         fails += 0 if not why else 1
         print(("PASS" if not why else "FAIL"), f"| {name} |", "；".join(why) or "ok")
 
-TOTAL = len(CASES) + 3 + len(REPORT_CASES)
+TOTAL = len(CASES) + 3 + 2 + 3 + len(REPORT_CASES)
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "stop_gate.py"
 # 四段新壳：主体 / 场景 / 风格 / 情节，固定句是整份提示词的最后一行，不设结尾标题
 PROMPT = "主体：一只黑色哑光陶杯。\n场景：陶杯直立在灰色桌面上，杯子和桌面全程静止。\n风格：写实产品摄影。\n情节：\n生成一段6秒的单镜产品视频。\n镜头1（0-6秒）：摄影机沿直线平稳缓推，杯子逐渐放大。\n全片不添加BGM，不添加字幕。"
-# 结尾区：固定句上面还有一条必要否定句
-PROMPT_WITH_TAIL = PROMPT.replace("全片不添加BGM，不添加字幕。", "不出现第二只陶杯。\n全片不添加BGM，不添加字幕。")
+# 必要否定句写在镜内（v13.1：末尾只有固定句那一行）
+PROMPT_WITH_INLINE_NEG = PROMPT.replace("杯子逐渐放大。", "杯子逐渐放大。不出现第二只陶杯。")
 # 五段旧壳（结尾标题 + 旧固定句）：钩子代跑时应当按 --format 五段 推断
 FIVE_SECTION = PROMPT.replace("全片不添加BGM，不添加字幕。", "结尾：不添加字幕，不添加背景音乐。")
 PARTIAL = "镜头2（4-8秒）：固定胸口以上近景，青年说：“银杭到了。”。"
@@ -88,7 +88,7 @@ class StopGateTests(unittest.TestCase):
         return f"交付校验通过（正文 {h[:8]}｜需求 {req[:8]}）"
 
     def check_line(self, h):
-        return f"check_prompt 通过（1 镜｜0-6 连续｜素材集合未核对｜自写否定计数 1 条｜待裁定提醒 1 条｜sha {h[:8]}）"
+        return f"check_prompt 通过（1 镜｜0-6 连续｜素材集合未核对｜镜内否定提醒 1 句｜待裁定提醒 1 条｜sha {h[:8]}）"
 
     def assertAllowWithNote(self, res, needle):
         self.assertEqual(res[0], 0, res[2])
@@ -349,9 +349,15 @@ class StopGateTests(unittest.TestCase):
         """五段旧壳完整稿：钩子按结尾段推断成五段来代跑，旧固定句不被新口径误伤。"""
         self.assertAllowWithNote(self.run_hook(self.block(FIVE_SECTION)), "代跑")
 
-    def test_v13_self_run_four_section_with_tail_zone_allows(self):
-        """四段新壳 + 结尾区（否定句在固定句上面一行）：代跑通过。"""
-        self.assertAllowWithNote(self.run_hook(self.block(PROMPT_WITH_TAIL)), "代跑")
+    def test_v13_self_run_four_section_with_inline_negative_allows(self):
+        """四段新壳 + 镜内否定句（末尾只有固定句）：代跑通过。"""
+        self.assertAllowWithNote(self.run_hook(self.block(PROMPT_WITH_INLINE_NEG)), "代跑")
+
+    def test_v131_self_run_four_section_tail_negative_blocked(self):
+        """四段新壳把否定句写在固定句上面一行：代跑打回。"""
+        tail = PROMPT.replace("全片不添加BGM，不添加字幕。", "不出现第二只陶杯。\n全片不添加BGM，不添加字幕。")
+        code, _, err = self.run_hook(self.block(tail))
+        self.assertEqual(code, 2); self.assertIn("末尾只留固定句", err)
 
     def test_v13_closing_not_last_line_blocked(self):
         """固定句不是最后一行的四段稿：代跑打回。"""

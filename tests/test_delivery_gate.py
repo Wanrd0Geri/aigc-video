@@ -67,12 +67,23 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(self.checker(text,['--lock','I am ready.','--total','12'])[0],0)
         self.assertEqual(self.checker(text.replace('I am ready.','Iamready.'),['--lock','I am ready.','--total','12'])[0],1)
 
-    def test_new_generation_locked_five_negatives(self):
-        # 四段新壳：结尾区 = 正文末尾连续的否定行 + 固定句那一行
-        text=(ROOT/'tests/check_cases/five_negatives.txt').read_text()
+    def test_old_shell_locked_five_negatives(self):
+        # 五段旧壳：结尾段仍走 4 条否定预算，用户逐字锁的否定不占预算
+        text=(ROOT/'tests/check_cases/five_section_five_negatives.txt').read_text()
         lock='\n'.join(text.splitlines()[-5:]).strip()
-        self.assertEqual(self.checker(text,['--lock',lock,'--total','12'])[0],0)
-        self.assertEqual(self.checker(text,['--total','12'])[0],1)
+        self.assertEqual(self.checker(text,['--format','五段','--lock',lock,'--total','12'])[0],0)
+        self.assertEqual(self.checker(text,['--format','五段','--total','12'])[0],1)
+
+    def test_four_section_tail_must_hold_only_closing(self):
+        # 四段新壳（v13.1）：末尾只留固定句，末尾的否定句即便被 --lock 锁住也拦
+        tail=BASE.replace('全片不添加BGM，不添加字幕。','不出现第二个人。\n全片不添加BGM，不添加字幕。')
+        code,d=self.checker(tail,['--lock','不出现第二个人。','--total','12'])
+        self.assertEqual(code,1); self.assertTrue(any('末尾只留固定句' in e for e in d['errors']))
+        # 同一句写进镜内：通过，只留一条提醒
+        inline=BASE.replace('门框向左错开。','门框向左错开。不出现第二个人。')
+        code,d=self.checker(inline,['--total','12'])
+        self.assertEqual(code,0,d['errors'])
+        self.assertEqual(len([w for w in d['warnings'] if w.startswith('否定句：')]),1)
 
     def test_empty_shot_and_section_rejected(self):
         for text in [BASE.replace('一位穿灰衣的成年人。',''), BASE.replace('人物从门口走到窗前，衣摆轻晃。摄影机向右缓移，门框向左错开。','')]:
@@ -167,7 +178,7 @@ class DeliveryTests(unittest.TestCase):
         code,res=self.gate(); self.assertEqual(code,1); self.assertTrue(any('已撤销' in e for e in res['errors']))
 
     def test_negative_exception_duplicates_and_fragments_rejected(self):
-        text=BASE.replace('全片不添加BGM，不添加字幕。','不出现水印。\n不出现现代物品。\n不出现重复人物。\n不出现多余道具。\n不出现反光。\n全片不添加BGM，不添加字幕。')
+        text=BASE.replace('门框向左错开。','门框向左错开。不出现水印。不出现现代物品。不出现重复人物。不出现多余道具。不出现反光。')
         for sentences in (['不出现水印。','不出现水印。'],['水','印']):
             self.setup_gate(text)
             self.req['negative_exception']=[{'sentence':s,'reason':'单元测试：该句防具体对象，无等价正向写法'} for s in sentences]

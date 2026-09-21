@@ -13,28 +13,32 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
   --baseline  给了父稿就是修订：默认 --format 继承（父稿有什么标题、什么顺序，新稿必须一样），
               并检查 --lock 锁定文字逐字保留、--unchanged 镜头逐字未改。
   --format    新稿默认 四段（主体 / 场景 / 风格 / 情节），不设概述段、也不设结尾标题：固定句
-              “全片不添加BGM，不添加字幕。”直接写成整份提示词的最后一行，其他必要否定句写在它上面的几行。
+              “全片不添加BGM，不添加字幕。”是整份提示词的最后一行，而且末尾只有它这一行——
+              它前面一行必须是普通正文（镜头内容或命令句），不能再有否定句、约束句、“保持…”句。
               五段（…… / 结尾）和六段（…… / 概述 / …… / 结尾）只留给旧稿显式检查；有 --baseline 时默认 继承。
   （旧写法 --task 修订 仍接受：按父稿的命令区——六段父稿看概述段，四段与五段父稿看情节段开头——判断它是生成 / 编辑 / 延长 / 衔接。）
 
---partial：稿只含被改的镜头。要求：只有镜头块，没有结尾区和固定句；镜号不重复且都在父稿里；时码区间与父稿一致；
+--partial：稿只含被改的镜头。要求：只有镜头块，没有固定句和末尾收尾行；镜号不重复且都在父稿里；时码区间与父稿一致；
   不在 --unchanged 里。脚本把它放回父稿合成完整稿再检查，JSON 里 input_sha256 / baseline_sha256 / checked_sha256 分开给，
   --save-checked 可以把实际检查的合成稿存下来。
 
-结尾区（四段稿的收尾位置，替代旧稿的 `结尾：` 段）：正文末尾连续的、每行都是否定或约束句的那几行——行首是
-  `不` / `禁止` / `无` / `全片不添加`，或延长命令的官方约束句 `要求延长自然、动作衔接流畅，禁止生硬切镜、禁止物体凭空出现`——
-  最后一行必须是固定句。否定预算、--negative-exception 逐句核对、延长的官方约束句都按这个区域算。
-  五段 / 六段 / 继承旧稿仍按 `结尾：` 段算。
+四段稿的收尾（v13.1）：末尾只有固定句一行，它上面不再另设收尾区域。倒数第二行匹配
+  `^不|^禁止|^无|^保持|^全片|^要求延长自然` 就报错——必要的否定句写进相应镜头的正文，操作命令的必填句写进
+  情节段开头的命令区（`情节：` 之后、第一个镜头标题之前）。五段 / 六段旧稿仍按 `结尾：` 段，继承模式按父稿。
 
 固定检查：镜号从 1 连续不重复；时码不留空隙不重叠；固定句逐字恰好一次、不拆开、结束整份提示词——四段新稿用
   “全片不添加BGM，不添加字幕。”，五段 / 六段旧稿用旧句“不添加字幕，不添加背景音乐。”，继承模式按父稿用的那一句；
   新稿四段标题各恰好一次且顺序对（或显式检查旧五段 / 六段、继承父稿标题）；素材只用 @图片N/@视频N/@音频N；
   无文件名（含紧邻中文）、路径、UUID；引用性措辞（不扫台词与锁定文字）；内部术语与修改标记；
-  操作类必填词（四段与五段稿看情节段开头，六段稿看概述段）与官方约束句（写在结尾区固定句之前）逐项齐全。
+  操作类必填词与官方必填句——四段稿全部在情节段开头的命令区，六段旧稿在概述段与结尾段，五段旧稿按父稿，
+  继承模式命令区与结尾段都接受。
 启发式扫描（空词、静止、景别、焦点落点、弱运镜措辞、动作密度）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
 用户实测（L064）模型多会加速完成密动作，但这是经验线索不是通过保证，仍要按动作依赖与可读性判断。
-结尾自写否定预算：用户逐字锁不计入；新稿超过 4 条报错，除非 --negative-exception 逐句点名超出的必要否定：每句必须与结尾区里一条独立否定条款整句一致，
-重复声明和片段不计数；修订与操作命令给警告，须由最终专业审查裁定。
+否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外）里句首是
+  `不出现|不添加|不得|不要|不能|不许|不可|禁止|避免` 的句子逐句给**提醒**（不是错误）；用 --negative-exception 逐句点名的不再提醒。
+  “没有”“无”不当否定句抓。五段 / 六段 / 继承旧稿仍用结尾段预算：用户逐字锁不计入，新稿超过 4 条报错，
+  除非 --negative-exception 逐句点名超出的必要否定（每句与结尾段里一条独立否定条款整句一致，重复声明和片段不计数）；
+  修订与操作命令给警告，须由最终专业审查裁定。
 
 --report：把这次机械检查的结果另存一份 JSON（`kind: "light"`，目录不存在会自动建），给 hooks/stop_gate.py 的守门用。
   报告里 delivered_sha256 = 实际交付出去的那段正文的哈希（非 --partial 时与 checked_sha256 相同），
@@ -92,8 +96,10 @@ CLOSING_SPEC = {
 CLOSING_ANY_RE = re.compile(r"不添加字幕|不添加背景音乐|不添加\s*BGM")
 EXTEND_REQUIRED = ["延长自然", "动作衔接流畅", "禁止生硬切镜", "禁止物体凭空出现"]
 EXTEND_CONSTRAINT = "要求延长自然、动作衔接流畅，禁止生硬切镜、禁止物体凭空出现"
-# 结尾区的行：否定句、约束句、固定句；从正文末尾连续向上取
-TAIL_ZONE_LINE = re.compile(r"^\s*(?:不|禁止|无|保持|全片)|^\s*要求延长自然")  # 结尾区行：否定/约束句，含操作命令的"保持…"与"全片…"必填句
+# 收尾行：否定句、约束句、"保持…"句、固定句。四段稿里固定句上面一行不许是这种行；旧壳稿用它从正文末尾连续向上取结尾段。
+TAIL_ZONE_LINE = re.compile(r"^\s*(?:不|禁止|无|保持|全片)|^\s*要求延长自然")
+# 四段稿逐句提醒用：句首的否定词。"没有""无"不抓（误报太多）。
+NEG_SENT_RE = re.compile(r"^(不出现|不添加|不得|不要|不能|不许|不可|禁止|避免)")
 DIALOGUE_RE = re.compile(r"“[^”]*”|\"[^\"\n]*\"|「[^」]*」|『[^』]*』|\{[^}]*\}")
 CJK_MAP = {c: i for i, c in enumerate("零一二三四五六七八九")}
 
@@ -141,8 +147,8 @@ def is_tail_line(ln):
 
 
 def tail_zone_bounds(lines):
-    """四段口径的结尾区：正文末尾连续的否定 / 约束行（最后一行应当是固定句）。
-    返回左闭右开区间 (start, end)；没有结尾区时 start == end。"""
+    """旧壳口径的结尾段位置：正文末尾连续的否定 / 约束行（最后一行应当是固定句）。
+    四段新稿（v13.1）末尾只有固定句，不走这里。返回左闭右开区间 (start, end)；没有时 start == end。"""
     end = len(lines)
     while end > 0 and not lines[end - 1].strip():
         end -= 1
@@ -155,7 +161,7 @@ def tail_zone_bounds(lines):
 
 
 def shot_blocks(lines, heads, tail_start=None):
-    """[(head, body_lines, tail_lines)]；最后一块在 结尾：、固定句或结尾区第一行切开，切开后的部分是全局尾部。"""
+    """[(head, body_lines, tail_lines)]；最后一块在 结尾：、固定句或旧壳结尾段第一行切开，切开后的部分是全局尾部。"""
     if tail_start is None:
         tail_start = tail_zone_bounds(lines)[0]
     blocks = []
@@ -194,6 +200,20 @@ def norm_shot(lines):
 
 def strip_dialogue(text):
     return DIALOGUE_RE.sub("“”", text)
+
+
+def negative_sentences(text, closing_re, locks):
+    """四段口径：全文里句首是否定词的句子，逐句列出（固定句、引号内台词、用户逐字锁不算）。"""
+    t = strip_dialogue(text)
+    for lk in sorted(locks, key=len, reverse=True):
+        t = t.replace(lk, "")
+    t = closing_re.sub("", t)
+    out = []
+    for raw in re.split(r"[。！？!?；;\n]", t):
+        s = raw.strip()
+        if s and NEG_SENT_RE.match(s):
+            out.append(s)
+    return out
 
 
 def operation_text(text):
@@ -244,7 +264,7 @@ def synthesize(baseline_lines, cand_lines, errors, unchanged_ids):
     c_blocks = shot_blocks(cand_lines, c_heads)
     for h, _body, tail in c_blocks:
         if "".join(tail).strip():
-            errors.append(f"局部镜头 {h[2]} 后有结尾区或固定句，不能丢弃；结尾有改动请交付全稿")
+            errors.append(f"局部镜头 {h[2]} 后有固定句或收尾行，不能丢弃；收尾有改动请交付全稿")
     for sid in c_ids:
         if sid in unchanged_ids:
             errors.append(f"镜头 {sid} 被标为未改（--unchanged），局部替换段却改了它")
@@ -283,7 +303,7 @@ def main():
     ap.add_argument("--unchanged", default="")
     ap.add_argument("--save-checked", default=None)
     ap.add_argument("--report", default=None, help="把机械检查结果另存为 JSON（kind=light），供 hooks/stop_gate.py 守门核对；有错误也写（ready=false）")
-    ap.add_argument("--negative-exception", default="", help="超预算的必要否定句本身，多句用“；”分开；每句必须逐字出现在结尾区（旧稿的结尾段），数量要覆盖超出部分；最终放行仍须审查")
+    ap.add_argument("--negative-exception", default="", help="要逐句点名的必要否定句本身，多句用“；”分开。四段稿：点名的镜内否定句不再提醒（其余每句给一条提醒）；五段 / 六段 / 继承旧稿：每句必须与结尾段里一条独立否定条款整句一致，数量要覆盖超出 4 条预算的部分。最终放行仍须审查")
     a = ap.parse_args()
 
     def bail(msg):
@@ -335,7 +355,8 @@ def main():
         else:
             checked.append(f"镜号 1-{len(ids)} 连续")
     first_head = heads[0][0] if heads else None
-    blocks = shot_blocks(lines, heads)
+    # 四段稿末尾只有固定句：镜头块只在固定句那一行切开，写在镜内的否定句仍属于那一镜的正文。
+    blocks = shot_blocks(lines, heads, len(lines) if fmt == "四段" else None)
     for h, body, _tail in blocks:
         first = re.split(r"[:：]", body[0], maxsplit=1)
         content = (first[1] if len(first) == 2 else "") + "\n" + "\n".join(body[1:])
@@ -387,7 +408,7 @@ def main():
         if unexpected:
             hints = []
             if "结尾" in unexpected and fmt == "四段":
-                hints.append("新稿不设结尾标题，固定句直接写在最后一行，其他必要否定句写在它上面的几行")
+                hints.append("新稿不设结尾标题，末尾只有固定句一行；必要的否定句写进相应镜头的正文，操作命令的必填句写进情节段开头的命令区")
             if "概述" in unexpected and fmt in ("四段", "五段"):
                 hints.append("新稿不设概述段，总览信息写进情节段开头或删除（时长、风格、镜头数在情节段和风格段已有，不重复）")
             tip = "；确实要检查旧稿请显式加 --format 五段 或 --format 六段" if hints else ""
@@ -411,22 +432,30 @@ def main():
         b_hdrs = headers_of(baseline_lines, parse_heads(baseline_lines))
         if hdrs != b_hdrs:
             errors.append(f"外壳没有继承父稿：父稿标题 {b_hdrs}，新稿标题 {hdrs}；修订默认继承父稿外壳，不为通过检查迁移格式；"
-                          f"要换成新标准（四段：无结尾标题、固定句写成最后一行）须本次明确授权并加 --format 四段")
+                          f"要换成新标准（四段：无结尾标题、末尾只有固定句那一行）须本次明确授权并加 --format 四段")
         else:
             checked.append(f"外壳与父稿一致：{b_hdrs}")
 
     # --- 操作类必填词 ---
     overview = operation_text(text)
-    command_location = "概述段" if re.search(r"^\s*概述[：:]", text, re.M) else "情节段开头（第一个镜头标题之前）"
-    # 结尾位置：旧壳看 `结尾：` 段，四段新稿看正文末尾的结尾区（连续的否定 / 约束行，最后一行是固定句）
+    command_zone = "情节段开头的命令区（情节：之后、第一个镜头标题之前）"
+    command_location = "概述段" if re.search(r"^\s*概述[：:]", text, re.M) else command_zone
+    # 必填句的落点：四段新稿一律在命令区；五段 / 六段旧稿在结尾段；继承模式两处都接受（按父稿）
     m_tail = re.search(r"结尾[：:](.*)$", text, re.S)
-    zone_start, zone_end = tail_zone_bounds(lines)
-    if m_tail:
+    zone_start, zone_end = (len(lines), len(lines)) if fmt == "四段" else tail_zone_bounds(lines)
+    if fmt == "四段":
+        tail_text, tail_name, has_tail = "", "末尾", False
+    elif m_tail:
         tail_text, tail_name, has_tail = m_tail.group(1), "结尾段", True
     elif zone_start < zone_end:
-        tail_text, tail_name, has_tail = "\n".join(lines[zone_start:zone_end]), "结尾区", True
+        tail_text, tail_name, has_tail = "\n".join(lines[zone_start:zone_end]), "结尾段", True
     else:
-        tail_text, tail_name, has_tail = text[-400:], "结尾区", False
+        tail_text, tail_name, has_tail = text[-400:], "结尾段", False
+    # 四段只认命令区；继承模式命令区或结尾段都行；旧壳只认结尾段
+    required_zone = overview if fmt == "四段" else (overview + "\n" + tail_text if fmt == "继承" else tail_text)
+    misplaced_hint = ("操作命令的必填句写在情节段开头的命令区，末尾只留固定句" if fmt == "四段"
+                      else f"操作命令的官方约束句要写在末尾固定句之前（{tail_name}），不能写在别处或固定句之后")
+    zone_name = command_zone if fmt == "四段" else (f"命令区或{tail_name}" if fmt == "继承" else tail_name)
     if task == "延长":
         if not any(w in overview for w in ["向后延长", "向前延长", "续写", "延续"]):
             errors.append(f"延长命令的{command_location}缺少必填词：向后延长 / 向前延长 / 续写")
@@ -434,14 +463,13 @@ def main():
             errors.append(f"延长命令要在{command_location}直接写 @视频N")
         if "参考@视频" in overview:
             errors.append("延长命令不能写成“参考@视频N”，会被判为参考任务")
-        miss = [w for w in EXTEND_REQUIRED if w not in tail_text]
+        miss = [w for w in EXTEND_REQUIRED if w not in required_zone]
         if miss and all(w in text for w in EXTEND_REQUIRED):
-            errors.append(f"延长命令的官方约束句要写在末尾固定句之前（{tail_name}），不能写在别处或固定句之后："
-                          f"{EXTEND_CONSTRAINT}")
+            errors.append(f"{misplaced_hint}；延长的官方约束句要整句写在{zone_name}：{EXTEND_CONSTRAINT}")
         elif miss:
-            errors.append(f"延长命令的{tail_name}官方约束句不完整，缺：{miss}（应为：{EXTEND_CONSTRAINT}）")
+            errors.append(f"延长命令的{zone_name}官方约束句不完整，缺：{miss}（应为：{EXTEND_CONSTRAINT}）")
         else:
-            checked.append(f"延长必填词齐全，官方约束句在{tail_name}固定句之前")
+            checked.append(f"延长必填词齐全，官方约束句在{zone_name}")
     if task == "编辑":
         if not any(w in overview for w in ["编辑", "替换", "删除", "去掉", "增加", "加上", "修改", "改成", "移除"]):
             errors.append(f"编辑命令的{command_location}缺少必填词：编辑 / 替换 / 删除 / 增加 / 修改")
@@ -449,19 +477,22 @@ def main():
             errors.append(f"编辑命令要在{command_location}直接写 @视频N")
         if re.search(r"参考@视频\d+", overview) and not re.search(r"编辑@视频\d+", overview):
             errors.append("编辑命令不能只写“参考@视频N”，要直接写“编辑@视频N”")
-        if not any(w in text for w in ["唯一编辑母版", "唯一母版", "编辑母版"]):
-            errors.append("编辑命令没有声明唯一编辑母版（@视频N是唯一编辑母版，负责……）")
-        if not any(w in text for w in ["保持", "不变"]):
-            errors.append("编辑命令没有写保持内容")
+        must = overview if fmt == "四段" else text
+        if not any(w in must for w in ["唯一编辑母版", "唯一母版", "编辑母版"]):
+            errors.append("编辑命令没有在" + (command_zone if fmt == "四段" else "稿里")
+                          + "声明唯一编辑母版（@视频N是唯一编辑母版，负责……）")
+        if not any(w in must for w in ["保持", "不变"]):
+            errors.append("编辑命令的“保持…不变”句" + (f"要写在{command_zone}，末尾只留固定句" if fmt == "四段" else "没有写"))
         if not errors or not any("编辑命令" in e for e in errors):
-            checked.append("编辑必填词、母版与保持内容齐全")
+            checked.append("编辑必填词、母版与保持内容齐全" + ("，都在命令区" if fmt == "四段" else ""))
     if task == "衔接":
-        if not any(w in text for w in ["无缝衔接", "衔接起来", "无缝转场"]):
-            errors.append("衔接命令缺少“无缝衔接”")
-        if "不修改" not in text:
-            errors.append("衔接命令没有写“不修改@视频1和@视频2”")
+        must = overview if fmt == "四段" else text
+        if not any(w in must for w in ["无缝衔接", "衔接起来", "无缝转场"]):
+            errors.append("衔接命令缺少“无缝衔接”" + (f"（写在{command_zone}）" if fmt == "四段" else ""))
+        if "不修改" not in must:
+            errors.append("衔接命令没有写“不修改@视频1和@视频2”" + (f"（写在{command_zone}）" if fmt == "四段" else ""))
         else:
-            checked.append("衔接必填词齐全")
+            checked.append("衔接必填词齐全" + ("，都在命令区" if fmt == "四段" else ""))
 
     # --- 固定句：逐字一次、不拆开、结束整份提示词 ---
     if fmt == "四段":
@@ -498,11 +529,20 @@ def main():
     elif not m_last:
         errors.append(f"固定句不在正文最后一行；它之后不能再另起一行写内容（规范句：{want}）")
     elif strict_end and (last_line[:m_last.start()].strip() or last_line[m_last.end():].strip(" 。.；;")):
-        errors.append(f"固定句所在行还有别的内容；固定句要单独成行结束整份提示词，其他否定句每句一行写在它上面（规范句：{want}）")
+        errors.append(f"固定句所在行还有别的内容；固定句要单独成行结束整份提示词，末尾不写别的句子（规范句：{want}）")
     elif fmt in ("五段", "六段") and m_tail and not closing_re.search(m_tail.group(1)):
         errors.append("固定句没有放在 结尾： 段里")
     else:
         checked.append(f"固定句逐字一次且是最后一行（{want}）")
+
+    # --- 四段稿：末尾只有固定句一行，它前面一行必须是普通正文 ---
+    if fmt == "四段" and m_last and len(nonblank) >= 2:
+        prev = nonblank[-2].strip()
+        if TAIL_ZONE_LINE.search(prev):
+            errors.append(f"末尾只留固定句：倒数第二行是否定 / 约束 / “保持…”句「{prev[:40]}」；"
+                          f"必要的否定句写进相应镜头的正文，操作命令的必填句写进{command_zone}")
+        else:
+            checked.append("末尾只有固定句一行，它前面是正文")
 
     # --- 素材 ---
     used = {}
@@ -615,9 +655,28 @@ def main():
         if "焦点" in body and ("合实" in body or "散开" in body or "失焦" in body) and not re.search(r"焦点[^。；\n]{0,30}(落在|停在|移到|转到|回到|在)[^。；\n]{0,12}(上|里|处)", body):
             warnings.append(f"{tag} 焦点变化没有实物落点，写清每段焦点落在哪个部位或物件上")
 
-    # --- 结尾否定句计数（四段看结尾区，旧壳看结尾段）：新稿硬拦，修订与操作命令只提醒 ---
+    # --- 否定句：四段稿全文逐句提醒（默认预算 0 条自写否定）；旧壳与继承稿仍用结尾段预算 ---
     neg = 0
-    if has_tail:
+    exc_raw = [s.strip().rstrip("。；;") for s in a.negative_exception.replace(";", "；").split("；") if s.strip()]
+    exc = list(dict.fromkeys(exc_raw))  # 去重
+    neg_note = f"自写否定计数 {neg} 条"
+    if fmt == "四段":
+        found = negative_sentences(text, closing_re, a.lock)
+        named = [s for s in found if s.rstrip("。；;") in exc]
+        rest = [s for s in found if s.rstrip("。；;") not in exc]
+        neg = len(rest)
+        for s in rest:
+            warnings.append(f"否定句：{s[:40]}；确认是特殊情况且无正向写法，否则改成要什么"
+                            f"（能改成正向的写进主体、场景、风格或镜内）")
+        stray = [s for s in exc if not any(x.rstrip("。；;") == s for x in found)]
+        if stray:
+            errors.append(f"--negative-exception 点名的句子在稿里找不到；要与镜内那一句整句一致，不能是片段或不存在的句子：{stray}")
+        if named:
+            checked.append(f"镜内否定 {len(named)} 句已用 --negative-exception 逐句点名")
+        if not found:
+            checked.append("全稿没有自写否定句，末尾只有固定句")
+        neg_note = f"镜内否定提醒 {neg} 句"  # summary 一行里不写全角括号：Stop 钩子的检查行正则按「）」截断
+    elif has_tail:
         counted = tail_text.replace("禁止项", "")
         # 用户原文锁不参与自写否定预算；它们仍接受存在性和语义冲突审查。
         for lk in sorted(a.lock, key=len, reverse=True):
@@ -630,8 +689,6 @@ def main():
             msg = f"{tail_name}否定句 {neg} 条，超过上限 4（固定句合算 1 条；操作类官方约束句不计）；能改成正向的搬到主体、场景、风格或镜内"
             # 结尾里独立的否定条款（按句号/分号切开，去掉固定句与操作约束句）
             clauses = {c.strip().rstrip("。；;") for c in re.split(r"[。；;\n]", counted) if re.match(r"^\s*(不|禁止|别)", c.strip())}
-            exc_raw = [s.strip().rstrip("。；;") for s in a.negative_exception.replace(";", "；").split("；") if s.strip()]
-            exc = list(dict.fromkeys(exc_raw))  # 去重
             exc_bad = [s for s in exc if s not in clauses]
             if task == "生成" and not revision:
                 if exc and not exc_bad and len(exc) >= neg - 4:
@@ -646,6 +703,7 @@ def main():
                 warnings.append(msg + "；必须审查必要性，用户锁定的否定不删")
         elif neg == 4:
             warnings.append(f"{tail_name}否定句已到上限 4，确认每条都没有正向写法")
+        neg_note = f"自写否定计数 {neg} 条"
 
     # --- 跨段重复句 ---
     secs = {}
@@ -676,7 +734,7 @@ def main():
         parts.append(f"素材 {a.labels} " + ("匹配" if declared == set(used) else "不匹配"))
     else:
         parts.append("素材集合未核对")
-    parts.append(f"自写否定计数 {neg} 条")
+    parts.append(neg_note)
     parts.append(f"待裁定提醒 {len(warnings)} 条")
     parts.append(f"sha {delivered_sha[:8]}")
     summary = ("check_prompt 通过" if not errors else f"check_prompt 有 {len(errors)} 处错误") + "（" + "｜".join(parts) + "）"
