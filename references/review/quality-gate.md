@@ -49,7 +49,7 @@ requirements.json 在写稿前建立，字段如下（JSON 是内部数据）：
 }
 ```
 
-- labels 按真实上传顺序，无素材明确写 []。assets 每份一条 `{ "label": "图片1", "status": "read", "role": "只负责衣服", "evidence": "实际读取记录与相关可见事实" }`；读不到标 missing，不能放行。
+- labels 按真实上传顺序，无素材明确写 []；写 `图1` 或旧写法 `图片1` 都行，脚本会归一成 `图N / 视频N / 音频N` 再与正文核对。assets 每份一条 `{ "label": "图1", "status": "read", "role": "只负责衣服", "evidence": "实际读取记录与相关可见事实" }`；读不到标 missing，不能放行。
 - 精确文字用 exact_locks，新稿无需伪造父稿。语义要求须进入 requirements，不能把故事、动作、结果只留在原始请求里不核对。锁定列表由原请求建立，不从成稿倒推。**source 只能引本次对话的原请求、有效补充或真实父稿**：持久记忆、旧项目文件、以前会话里的设定不能当 requirement 的 source，除非用户在本次对话里确认过（那就引用用户本次确认的那句话）；没确认的设定留在表头"待你定"行，不进 requirements、不进 exact_locks。
 - 修订时提供真实 --baseline；可用 unchanged 数组，如 `[1,3]`。局部段用 --partial，review 的 quote 与哈希对应放回父稿后的完整稿。
 - 用户明确无时码或 UI 控时长时 untimed=true，仍由专业审查判断动作/对白容量；未写时码不自动意味着偷省检查。

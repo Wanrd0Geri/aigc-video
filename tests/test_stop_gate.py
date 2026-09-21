@@ -16,6 +16,8 @@ PROMPT_WITH_INLINE_NEG = PROMPT.replace("杯子逐渐放大。", "杯子逐渐�
 FIVE_SECTION = PROMPT.replace("全片不添加BGM，不添加字幕。", "结尾：不添加字幕，不添加背景音乐。")
 PARTIAL = "镜头2（4-8秒）：固定胸口以上近景，青年说：“银杭到了。”。"
 EDIT_CMD = "编辑@视频1，将青年的衣服替换为黑色外套，保留原动作、时长和摄影。"
+# v16：提示词里不写 @，操作命令写成"编辑视频1……"；识别仍要求动词邻近
+EDIT_CMD_NO_AT = "编辑视频1，把上衣换成黑色，保留原动作、时长和摄影。"
 # 会被 check_prompt 查出错误的完整稿（固定句不在最后一行）：用来测"钩子代跑不通过"的分支
 BROKEN = PROMPT + "\n画面最后在杯口停住。"
 REQ = "b" * 64
@@ -159,6 +161,15 @@ class StopGateTests(unittest.TestCase):
     def test_n02b_plain_edit_command_with_report_passes(self):
         self.report(EDIT_CMD)
         self.assertAllow(self.run_hook(EDIT_CMD))
+
+    def test_v16_plain_edit_command_without_at_is_operation(self):
+        """不带 @ 的纯文本操作命令（编辑视频1，……）同样是交付单元：没有报告按第 3 层打回。"""
+        code, _, err = self.run_hook(EDIT_CMD_NO_AT)
+        self.assertEqual(code, 2); self.assertIn("--baseline", err)
+
+    def test_v16_plain_edit_command_without_at_with_report_passes(self):
+        self.report(EDIT_CMD_NO_AT)
+        self.assertAllow(self.run_hook(EDIT_CMD_NO_AT))
 
     def test_n03_wrong_body_hash_receipt_blocked(self):
         self.report(PROMPT)

@@ -155,7 +155,8 @@ def evaluate(args):
     prompt_hash, req_hash = digest(full), digest(req_text)
     if mechanical.get('checked_sha256') != prompt_hash:
         errors.append('机械检查正文与语义审查正文不一致')
-    if set(mechanical.get('stats', {}).get('labels_used', [])) != set(labels):
+    # 素材集合按 check_prompt 的归一键比对：需求里写 图片1 还是 图1 都对得上（键一律是 图N / 视频N / 音频N）
+    if set(mechanical.get('stats', {}).get('labels_used', [])) != {check_prompt.norm_label(x) for x in labels}:
         errors.append('实际素材集合与需求不一致（含明确无素材的情况）')
     if rev.get('prompt_sha256') != prompt_hash or rev.get('requirements_sha256') != req_hash:
         errors.append('审查记录对应的正文或需求版本已过期')

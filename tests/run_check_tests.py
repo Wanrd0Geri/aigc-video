@@ -32,6 +32,17 @@ CASES = [
     ("四段延长：约束句写在固定句之后", "extend_constraint_after_closing.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 1),
     ("四段延长：约束句写在末尾固定句之前", "extend_constraint_at_tail.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 1),
     ("四段编辑：必填句都在命令区，通过", "edit_ok.txt", ["--task", "编辑", "--labels", "视频1,图片1"], 0),
+    # ---- v16：素材写 图N / 视频N / 音频N（不写 @），每份只绑一次；风格段只写画面质感 ----
+    ("四段新稿不写 @、各绑一次：通过且无相关提醒", "no_at_refs.txt", ["--total", "12", "--labels", "图1,图2,音频1"], 0),
+    ("四段新稿写了 @：通过但提醒不写 @", "at_refs_in_new_draft.txt", ["--total", "12", "--labels", "图1,图2,音频1"], 0),
+    ("素材在两段都写职责：通过但提醒", "asset_bound_twice.txt", ["--total", "12", "--labels", "图1,图4"], 0),
+    ("跨段重复长句：通过但提醒", "cross_section_dup.txt", ["--total", "12"], 0),
+    ("风格段含时序与俯冲：通过但提醒", "style_has_sequence.txt", ["--total", "12"], 0),
+    ("风格段只有质感与镜头性格：通过", "style_clean.txt", ["--total", "12"], 0),
+    ("编辑命令不写 @（编辑视频1）：通过", "edit_no_at.txt", ["--task", "编辑", "--labels", "视频1,图1"], 0),
+    ("--labels 短写法 图1,图2：通过", "labels_short_form.txt", ["--total", "12", "--labels", "图1,图2"], 0),
+    ("--labels 长写法 图片1,图片2 归一后同样匹配", "labels_short_form.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
+    ("旧夹具的 @ 写法仍然通过（只多一条提醒）", "labels_two_used.txt", ["--total", "12", "--labels", "图1,图2"], 0),
     ("四段编辑：“保持…”句写在末尾固定句之前", "edit_keep_at_tail.txt", ["--task", "编辑", "--labels", "视频1,图片1"], 1),
     ("时间空隙", "timeline_gap.txt", ["--total", "12"], 1),
     ("时间空隙 + 情节段开头含“增加”", "timeline_gap_with_increase.txt", ["--total", "12"], 1),
@@ -116,11 +127,24 @@ for name, f, args, want in CASES:
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} | exit {p.returncode} (期望 {want}) | errors={d.get('errors', [])[:2]}")
 # 弱运镜与密度提醒必须真的出现在 warnings 里
-WARN_CASES = [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), ("dense_two_per_second.txt", "节拍"), ("four_section_overview_warning.txt", "总览句")]
+WARN_CASES = [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), ("dense_two_per_second.txt", "节拍"),
+              ("four_section_overview_warning.txt", "总览句"),
+              ("at_refs_in_new_draft.txt", "新稿不写 @"), ("asset_bound_twice.txt", "都写了职责"),
+              ("cross_section_dup.txt", "跨段重复"), ("style_has_sequence.txt", "风格段里有时序")]
 for f, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12"], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 触发“{key}”提醒 |", [w for w in d["warnings"] if key in w][:1])
+# 反面：干净的稿不许被这几条提醒误伤（镜头性格词、各绑一次、不写 @）
+NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿不写 @"),
+                 ("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "都写了职责"),
+                 ("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "跨段重复"),
+                 ("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "风格段里有时序"),
+                 ("style_clean.txt", [], "风格段里有时序")]
+for f, extra, key in NO_WARN_CASES:
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
+    d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {f} 不触发“{key}”提醒 |", hit[:1] or "ok")
 
 # ---- 四段稿的否定提醒：镜内一条给一条提醒；--negative-exception 点名后不再提醒 ----
 for args, want_n, label in [([], 1, "镜内否定：提醒 1 条"),
@@ -322,6 +346,7 @@ ok = p.returncode == 0
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| lint_cases 当前案例库通过 |", (p.stdout or p.stderr).strip()[:160])
 
-TOTAL = len(CASES) + len(WARN_CASES) + 2 + 3 + len(REPORT_CASES) + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
+TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + 3 + len(REPORT_CASES)
+         + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1)
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

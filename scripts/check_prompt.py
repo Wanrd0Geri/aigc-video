@@ -4,7 +4,7 @@
 check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改稿，不验证画面语义）。
 
 用法：
-  python3 check_prompt.py --prompt 稿.txt [--task 生成|编辑|延长|衔接] [--total 秒] [--untimed] [--labels 图片1,图片2,视频1]
+  python3 check_prompt.py --prompt 稿.txt [--task 生成|编辑|延长|衔接] [--total 秒] [--untimed] [--labels 图1,图2,视频1]
                           [--baseline 父稿.txt] [--format 四段|五段|六段|继承] [--partial] [--lock "台词"]... [--unchanged 1,3]
                           [--save-checked 合成稿.txt] [--report 报告.json]
 
@@ -28,11 +28,14 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 
 固定检查：镜号从 1 连续不重复；时码不留空隙不重叠；固定句逐字恰好一次、不拆开、结束整份提示词——四段新稿用
   “全片不添加BGM，不添加字幕。”，五段 / 六段旧稿用旧句“不添加字幕，不添加背景音乐。”，继承模式按父稿用的那一句；
-  新稿四段标题各恰好一次且顺序对（或显式检查旧五段 / 六段、继承父稿标题）；素材只用 @图片N/@视频N/@音频N；
+  新稿四段标题各恰好一次且顺序对（或显式检查旧五段 / 六段、继承父稿标题）；
   无文件名（含紧邻中文）、路径、UUID；引用性措辞（不扫台词与锁定文字）；内部术语与修改标记；
   操作类必填词与官方必填句——四段稿全部在情节段开头的命令区，六段旧稿在概述段与结尾段，五段旧稿按父稿，
   继承模式命令区与结尾段都接受。
-启发式扫描（空词、静止、景别、焦点落点、弱运镜措辞、动作密度）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
+素材引用：`@图片N`、`图片N`、`图N`、`@视频N`、`视频N`、`@音频N`、`音频N` 一律归一成键 `图N` / `视频N` / `音频N`
+  （`--labels` 写 `图1` 或 `图片1` 都行，同样归一）；声明集合、首次出现位置、操作命令必填词都按归一后的键核对。
+  **提示词里不写 @**（软件里粘贴后再 @ 出来）：四段新稿出现 @ 引用时提醒一次；继承模式按父稿（父稿用 @ 就不提醒）。
+启发式扫描（空词、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
 用户实测（L064）模型多会加速完成密动作，但这是经验线索不是通过保证，仍要按动作依赖与可读性判断。
 否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外）里句首是
   `不出现|不添加|不得|不要|不能|不许|不可|禁止|避免` 的句子逐句给**提醒**（不是错误）；用 --negative-exception 逐句点名的不再提醒。
@@ -69,13 +72,26 @@ SECTION_LABELS = SIX_SECTION_LABELS  # 识别用全集（含旧六段的概述�
 FORMAT_LABELS = {"四段": FOUR_SECTION_LABELS, "五段": FIVE_SECTION_LABELS, "六段": SIX_SECTION_LABELS}
 KNOWN_HEADER = re.compile(r"^\s*(主体|概述|场景|风格|情节|结尾)\s*[：:]")
 BARE_HEADER = re.compile(r"^\s*([^\s：:（(【]{1,8})\s*[：:]\s*$")
-LABEL_RE = re.compile(r"(@?)(图片|视频|音频|图)\s*(\d+)")
+LABEL_RE = re.compile(r"(@?)(图片|视频|音频|图)\s?(\d+)")
+LABEL_FULL_RE = re.compile(r"^@?(图片|视频|音频|图)\s?(\d+)$")
+ASSET_KIND = {"图片": "图", "图": "图", "视频": "视频", "音频": "音频"}
+# 素材绑定动词：一句里同时出现素材与这些词，就算这一段"写了这份素材的职责"。
+# 情节里的纯指代（没有绑定动词）不算。词表可调。
+BIND_VERBS = ["用于", "定义", "采用", "参考", "只负责", "负责", "提供", "作为"]
+# 风格段只写画面质感与镜头性格（画风与渲染、材质与表面、光的质感与层次、焦段景深手持还是稳定）。
+# 下面两组词出现在风格段就提醒：时序属于镜内，具体运镜路径与动作也属于镜内。两组词表可调。
+STYLE_SEQUENCE_WORDS = ["先", "随即", "接着", "然后", "紧接着", "最后", "开场", "收尾时", "第一秒", "之后"]
+STYLE_MOVE_WORDS = ["推近", "推进", "后拉", "拉远", "横移", "环绕", "升降", "跟随", "俯冲", "甩",
+                    "横扫", "扑向", "蹬", "抓", "砸", "扑下", "后退下降"]
+# 镜头性格词不算运镜路径（手持、跟拍感、浅景深）；这些片段扫描前先挖掉，免得"优先"里的"先"之类误报。
+STYLE_SAFE_WORDS = ["优先", "手持", "跟拍感", "跟拍", "浅景深", "大景深", "焦段"]
+PUNCT_RE = re.compile(r"[\W_]+", re.U)          # 去掉标点与空白，只留字与数字，用于跨段重复长句的比对
 EXT = r"(png|jpe?g|webp|heic|gif|mp4|mov|m4v|webm|avi|mkv|wav|mp3|m4a|flac|aac|ogg)"
 LEAK_RES = [
     (re.compile(r"(?<![A-Za-z0-9])[\w\-一-鿿]+\." + EXT + r"(?![A-Za-z0-9])", re.I), "文件名泄露"),
     (re.compile(r"(/Users/|/home/|/tmp/|/var/|/private/|[A-Za-z]:\\)"), "路径泄露"),
     (re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I), "UUID 泄露"),
-    (re.compile(r"@(?!图片|视频|音频|图)\S+"), "非法 @ 引用（只允许 @图片N/@视频N/@音频N）"),
+    (re.compile(r"@(?!图片|视频|音频|图)\S+"), "非法 @ 引用（新稿不写 @，写 图N/视频N/音频N；旧稿的 @图片N/@视频N/@音频N 仍合法）"),
 ]
 REF_ERR = ["同上一镜", "承接上一镜", "继续刚才", "如上", "上一镜", "上一个镜头", "上一版", "上次", "上一次", "上一轮", "像上次", "之前那样", "这次改", "这一版", "不要像"]
 REF_WARN = ["刚才", "再次"]
@@ -117,6 +133,42 @@ def cjk_to_int(s):
 
 def sha(s):
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def asset_key(kind, num):
+    """把 @图片N / 图片N / 图N / @视频N / 视频N / @音频N / 音频N 统一成 图N / 视频N / 音频N。"""
+    return f"{ASSET_KIND.get(kind, kind)}{int(num)}"
+
+
+def asset_keys(text):
+    """文本里用到的素材键集合（已归一）。"""
+    return {asset_key(m.group(2), m.group(3)) for m in LABEL_RE.finditer(text)}
+
+
+def norm_label(raw):
+    """--labels 里的一项：`图片1` 与 `图1`（带不带 @ 都行）归一成同一个键；认不出就原样返回。"""
+    m = LABEL_FULL_RE.match(raw.strip())
+    return asset_key(m.group(1), m.group(2)) if m else raw.strip()
+
+
+def split_sections(text):
+    """{段落名: 段落正文}；只取四段 / 五段 / 六段那几个已知标题，取不到的段不出现。"""
+    out = {}
+    for lab in SECTION_LABELS:
+        m = re.search(lab + r"[：:](.*?)(?=\n(?:主体|概述|场景|风格|情节|结尾)[：:]|$)", text, re.S)
+        if m:
+            out[lab] = m.group(1)
+    return out
+
+
+def clauses_of(body):
+    """按句号、分号、逗号切成子句，返回 [(原文, 去掉标点与空白后的形态)]。"""
+    out = []
+    for raw in re.split(r"[，,。.；;：:！!？?、\n]", body):
+        s = raw.strip()
+        if s:
+            out.append((s, PUNCT_RE.sub("", s)))
+    return out
 
 
 def parse_heads(lines):
@@ -235,9 +287,9 @@ def operation_text(text):
 
 def infer_task(baseline_text):
     ov = operation_text(baseline_text)
-    if any(w in ov for w in ["向后延长", "向前延长", "续写", "延续@"]):
+    if any(w in ov for w in ["向后延长", "向前延长", "续写"]) or re.search(r"延续@?视频\s?\d", ov):
         return "延长"
-    if re.search(r"编辑@视频|替换|删除@视频|去掉@视频|移除@视频", ov):
+    if re.search(r"(?:编辑|删除|去掉|移除)@?视频\s?\d|替换", ov):
         return "编辑"
     if "无缝衔接" in ov or "衔接起来" in ov:
         return "衔接"
@@ -296,7 +348,7 @@ def main():
     ap.add_argument("--format", dest="fmt", default=None, choices=["四段", "五段", "六段", "继承"])
     ap.add_argument("--total", type=float, default=None)
     ap.add_argument("--untimed", action="store_true")
-    ap.add_argument("--labels", default="")
+    ap.add_argument("--labels", default="", help="本次素材集合，逗号分开；`图1` 与 `图片1` 两种写法都接受（归一成 图N / 视频N / 音频N 再核对）")
     ap.add_argument("--baseline", default=None)
     ap.add_argument("--partial", action="store_true")
     ap.add_argument("--lock", action="append", default=[])
@@ -463,10 +515,10 @@ def main():
     if task == "延长":
         if not any(w in overview for w in ["向后延长", "向前延长", "续写", "延续"]):
             errors.append(f"延长命令的{command_location}缺少必填词：向后延长 / 向前延长 / 续写")
-        if "@视频" not in overview:
-            errors.append(f"延长命令要在{command_location}直接写 @视频N")
-        if "参考@视频" in overview:
-            errors.append("延长命令不能写成“参考@视频N”，会被判为参考任务")
+        if not re.search(r"@?视频\s?\d+", overview):
+            errors.append(f"延长命令要在{command_location}直接写 视频N")
+        if re.search(r"参考\s*@?视频\s?\d+", overview):
+            errors.append("延长命令不能写成“参考视频N”，会被判为参考任务")
         miss = [w for w in EXTEND_REQUIRED if w not in required_zone]
         if miss and all(w in text for w in EXTEND_REQUIRED):
             errors.append(f"{misplaced_hint}；延长的官方约束句要整句写在{zone_name}：{EXTEND_CONSTRAINT}")
@@ -477,14 +529,14 @@ def main():
     if task == "编辑":
         if not any(w in overview for w in ["编辑", "替换", "删除", "去掉", "增加", "加上", "修改", "改成", "移除"]):
             errors.append(f"编辑命令的{command_location}缺少必填词：编辑 / 替换 / 删除 / 增加 / 修改")
-        if "@视频" not in overview:
-            errors.append(f"编辑命令要在{command_location}直接写 @视频N")
-        if re.search(r"参考@视频\d+", overview) and not re.search(r"编辑@视频\d+", overview):
-            errors.append("编辑命令不能只写“参考@视频N”，要直接写“编辑@视频N”")
+        if not re.search(r"@?视频\s?\d+", overview):
+            errors.append(f"编辑命令要在{command_location}直接写 视频N")
+        if re.search(r"参考\s*@?视频\s?\d+", overview) and not re.search(r"编辑\s*@?视频\s?\d+", overview):
+            errors.append("编辑命令不能只写“参考视频N”，要直接写“编辑视频N”")
         must = overview if fmt == "四段" else text
         if not any(w in must for w in ["唯一编辑母版", "唯一母版", "编辑母版"]):
             errors.append("编辑命令没有在" + (command_zone if fmt == "四段" else "稿里")
-                          + "声明唯一编辑母版（@视频N是唯一编辑母版，负责……）")
+                          + "声明唯一编辑母版（视频N是唯一编辑母版，负责……）")
         if not any(w in must for w in ["保持", "不变"]):
             errors.append("编辑命令的“保持…不变”句" + (f"要写在{command_zone}，末尾只留固定句" if fmt == "四段" else "没有写"))
         if not errors or not any("编辑命令" in e for e in errors):
@@ -494,7 +546,7 @@ def main():
         if not any(w in must for w in ["无缝衔接", "衔接起来", "无缝转场"]):
             errors.append("衔接命令缺少“无缝衔接”" + (f"（写在{command_zone}）" if fmt == "四段" else ""))
         if "不修改" not in must:
-            errors.append("衔接命令没有写“不修改@视频1和@视频2”" + (f"（写在{command_zone}）" if fmt == "四段" else ""))
+            errors.append("衔接命令没有写“不修改视频1和视频2”" + (f"（写在{command_zone}）" if fmt == "四段" else ""))
         else:
             checked.append("衔接必填词齐全" + ("，都在命令区" if fmt == "四段" else ""))
 
@@ -548,23 +600,23 @@ def main():
         else:
             checked.append("末尾只有固定句一行，它前面是正文")
 
-    # --- 素材 ---
+    # --- 素材（@图片N / 图片N / 图N 等一律归一成 图N / 视频N / 音频N）---
     used = {}
     for m in LABEL_RE.finditer(text):
-        at, kind, num = m.group(1), m.group(2), m.group(3)
-        kind = "图片" if kind == "图" else kind
-        key = f"{kind}{num}"
+        key = asset_key(m.group(2), m.group(3))
         used.setdefault(key, {"at": 0, "plain": 0, "first_line": text[:m.start()].count("\n")})
-        used[key]["at" if at else "plain"] += 1
+        used[key]["at" if m.group(1) else "plain"] += 1
     if used and first_head is not None:
         late = sorted(k for k, v in used.items() if v["first_line"] > first_head)
         if late:
             errors.append(f"这些素材第一次出现在第一个镜头标题之后，素材映射应前置：{late}")
-    plain_only = [k for k, v in used.items() if v["at"] == 0]
-    if plain_only:
-        warnings.append(f"这些素材没有用 @ 引用：{plain_only}（建议写 @图片N）")
+    # 提示词里不写 @（即梦软件里粘贴后再 @ 出来）；继承模式按父稿：父稿用 @ 就不提醒
+    at_used = sorted(k for k, v in used.items() if v["at"])
+    baseline_has_at = bool(re.search(r"@(?:图片|视频|音频|图)\s?\d", baseline_text or ""))
+    if at_used and fmt in ("四段", "继承") and not baseline_has_at:
+        warnings.append(f"新稿不写 @（软件里再 @），写 图N / 视频N / 音频N：{at_used}")
     if a.labels:
-        declared = {x.strip() for x in a.labels.split(",") if x.strip()}
+        declared = {norm_label(x) for x in a.labels.split(",") if x.strip()}
         missing = sorted(declared - set(used))
         extra = sorted(set(used) - declared)
         if missing:
@@ -620,8 +672,7 @@ def main():
                 errors.append(f"未改镜头 {sid} 的正文与父稿不一致（逐字比对，只忽略行尾空白）")
         if unchanged_ids and not any("未改镜头" in e or "--unchanged" in e for e in errors):
             checked.append(f"未改镜头 {unchanged_ids} 与父稿逐字一致")
-        b_labels = set(re.findall(r"@(?:图片|视频|音频)\d+", baseline_text))
-        c_labels = set(re.findall(r"@(?:图片|视频|音频)\d+", text))
+        b_labels, c_labels = asset_keys(baseline_text), asset_keys(text)
         if b_labels != c_labels:
             warnings.append(f"素材标签与父稿不同：父稿 {sorted(b_labels)}，新稿 {sorted(c_labels)}；确认是有意替换")
         if len(b_heads) != len(heads):
@@ -709,20 +760,38 @@ def main():
             warnings.append(f"{tail_name}否定句已到上限 4，确认每条都没有正向写法")
         neg_note = f"自写否定计数 {neg} 条"
 
-    # --- 跨段重复句 ---
-    secs = {}
-    for lab in SECTION_LABELS:
-        m2 = re.search(lab + r"[：:](.*?)(?=\n(?:主体|概述|场景|风格|情节|结尾)[：:]|$)", text, re.S)
-        if m2:
-            secs[lab] = m2.group(1)
+    # --- 段落级重复与分工（都是提醒）---
+    secs = split_sections(text)
+    # 1）素材重复绑定：同一素材的职责句（带绑定动词）出现在两个段落；情节里的纯指代不算
+    bound = {}
+    for name, body in secs.items():
+        for sent in re.split(r"[。；;！!？?\n]", body):
+            if not any(v in sent for v in BIND_VERBS):
+                continue
+            for key in asset_keys(sent):
+                bound.setdefault(key, {})[name] = sent.strip()
+    for key in sorted(bound):
+        names = list(bound[key])
+        if len(names) > 1:
+            warnings.append(f"素材 {key} 在{'和'.join(n + '段' for n in names)}都写了职责；只在用它的那一段写一次")
+    # 2）跨段重复长句：去掉标点与空白后 ≥12 字、在两个段落里完全相同的子句（台词不参与）
     seen = {}
     for name, body in secs.items():
-        for cl in re.split(r"[，。；：\n]", body):
-            cl = cl.strip()
-            if len(cl) >= 10:
-                seen.setdefault(cl, set()).add(name)
-    for cl, s in [(cl, sorted(s)) for cl, s in seen.items() if len(s) > 1][:5]:
-        warnings.append(f"跨段重复句「{cl[:24]}」出现在 {s}，同一事实只写一处")
+        for raw, flat in clauses_of(strip_dialogue(body)):
+            if len(flat) >= 12:
+                seen.setdefault(flat, {}).setdefault(name, raw)
+    for flat, hits in [(f, h) for f, h in seen.items() if len(h) > 1][:5]:
+        sample = next(iter(hits.values()))
+        warnings.append(f"跨段重复：「{sample[:24]}」出现在{'与'.join(n + '段' for n in hits)}；同一件事只写一次")
+    # 3）风格段只写画面质感与镜头性格：时序与具体运镜路径、动作写进镜内
+    if "风格" in secs:
+        scan = strip_dialogue(secs["风格"])
+        for w in STYLE_SAFE_WORDS:
+            scan = scan.replace(w, "")
+        hit = [w for w in STYLE_SEQUENCE_WORDS + STYLE_MOVE_WORDS if w in scan]
+        if hit:
+            warnings.append("风格段里有时序或具体运镜/动作：" + "".join(f"「{w}」" for w in hit)
+                            + "；风格段只写画面质感与镜头性格，运镜路径与动作写进镜内")
     m = re.search(r"风格[：:](.*?)(?:\n情节[：:]|\n镜头|$)", text, re.S)
     if m and QUALITY_ONLY.search(m.group(1)) and len(re.sub(r"\s", "", m.group(1))) < 60:
         warnings.append("风格段只有画质词、缺少材质与光的具体句")
