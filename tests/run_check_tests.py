@@ -116,7 +116,8 @@ for name, f, args, want in CASES:
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} | exit {p.returncode} (期望 {want}) | errors={d.get('errors', [])[:2]}")
 # 弱运镜与密度提醒必须真的出现在 warnings 里
-for f, key in [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), ("dense_two_per_second.txt", "节拍"), ("four_section_overview_warning.txt", "总览句")]:
+WARN_CASES = [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), ("dense_two_per_second.txt", "节拍"), ("four_section_overview_warning.txt", "总览句")]
+for f, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12"], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 触发“{key}”提醒 |", [w for w in d["warnings"] if key in w][:1])
@@ -321,6 +322,6 @@ ok = p.returncode == 0
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| lint_cases 当前案例库通过 |", (p.stdout or p.stderr).strip()[:160])
 
-TOTAL = len(CASES) + 3 + 2 + 3 + len(REPORT_CASES) + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
+TOTAL = len(CASES) + len(WARN_CASES) + 2 + 3 + len(REPORT_CASES) + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)
