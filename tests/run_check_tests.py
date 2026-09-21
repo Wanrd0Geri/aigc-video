@@ -99,6 +99,7 @@ CASES = [
     ("六条否定：两条独立整句例外放行", "five_section_six_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "不出现水印。；不出现反光。"], 0),
     ("密度：每秒 2 拍也提醒（只提醒）", "dense_two_per_second.txt", ["--total", "12"], 0),
     ("弱运镜措辞只提醒", "weak_motion.txt", ["--total", "12"], 0),
+    ("四段生成稿情节段开头有总览句：只提醒", "four_section_overview_warning.txt", ["--total", "12"], 0),
     ("动作过密只提醒", "dense_beats.txt", ["--total", "12"], 0),
     ("B17 修订稿锁定 5 条否定只提醒", "five_negatives.txt", ["--baseline", str(C / "five_negatives.txt"), "--lock", "不出现第二个人。\n不出现文字水印。\n不出现多余武器。\n不出现现代物品。\n全片不添加BGM，不添加字幕。", "--total", "12"], 0),
     ("样例：打斗 12 秒", "../sample-combat-12s.txt", ["--total", "12", "--labels", "图片1,图片2,图片3"], 0),
@@ -115,7 +116,7 @@ for name, f, args, want in CASES:
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} | exit {p.returncode} (期望 {want}) | errors={d.get('errors', [])[:2]}")
 # 弱运镜与密度提醒必须真的出现在 warnings 里
-for f, key in [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), ("dense_two_per_second.txt", "节拍")]:
+for f, key in [("weak_motion.txt", "弱措辞"), ("dense_beats.txt", "节拍"), ("dense_two_per_second.txt", "节拍"), ("four_section_overview_warning.txt", "总览句")]:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12"], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 触发“{key}”提醒 |", [w for w in d["warnings"] if key in w][:1])

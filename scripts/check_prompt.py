@@ -439,6 +439,10 @@ def main():
     # --- 操作类必填词 ---
     overview = operation_text(text)
     command_zone = "情节段开头的命令区（情节：之后、第一个镜头标题之前）"
+    if fmt == "四段" and task == "生成" and overview.strip():
+        head = " / ".join(l.strip() for l in overview.strip().splitlines() if l.strip())[:40]
+        warnings.append(f"情节段开头有总览句：「{head}」；生成类新稿情节段直接从镜头标题开始，时长与镜数由镜头标题表达，"
+                        "控制句写进主体段或镜内，确认是重复就删掉")
     command_location = "概述段" if re.search(r"^\s*概述[：:]", text, re.M) else command_zone
     # 必填句的落点：四段新稿一律在命令区；五段 / 六段旧稿在结尾段；继承模式两处都接受（按父稿）
     m_tail = re.search(r"结尾[：:](.*)$", text, re.S)
