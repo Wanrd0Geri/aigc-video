@@ -264,14 +264,14 @@ class StopGateTests(unittest.TestCase):
         # 真实 transcript：作者跑 check_prompt 后的 tool_result 行也是 role=user，时间晚于报告；不能把它当本轮用户消息
         self.light(PROMPT)
         late = {"timestamp": iso(self.now - 10), "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
-        code, out, err = self.run_hook("```text\n" + PROMPT + "\n```\n" + self.check_line(PROMPT), extra_rows=[late])
+        code, out, err = self.run_hook("```text\n" + PROMPT + "\n```\n" + self.check_line(digest(PROMPT)), extra_rows=[late])
         self.assertEqual(code, 0, err)
         self.assertNotIn("代跑", out)
 
     def test_v141_hook_feedback_row_is_not_user_message(self):
         self.light(PROMPT)
         fb = {"timestamp": iso(self.now - 10), "message": {"role": "user", "content": "Stop hook feedback:\naigc-video 放行钩子：第 1 份提示词……"}}
-        code, out, err = self.run_hook("```text\n" + PROMPT + "\n```\n" + self.check_line(PROMPT), extra_rows=[fb])
+        code, out, err = self.run_hook("```text\n" + PROMPT + "\n```\n" + self.check_line(digest(PROMPT)), extra_rows=[fb])
         self.assertEqual(code, 0, err)
 
     def test_v141_real_user_message_after_report_still_stale(self):
