@@ -4,7 +4,7 @@
 
 ## 0 这套东西的结构（先理解再动手）
 
-- **唯一来源**：私有仓库 `https://github.com/Wanrd0Geri/aigc-video`。
+- **唯一来源**：公开仓库 `https://github.com/Wanrd0Geri/aigc-video`。克隆不需要登录；推送需要是协作者。
 - **本机唯一副本**：`~/Documents/Codex/aigc-video`，从仓库克隆。
 - **两个宿主的 skills 目录都是软链**：`~/.claude/skills/aigc-video` 和 `~/.codex/skills/aigc-video` → 指向本机副本。两边读同一份文件，经验库 `references/lessons/seedance-2.5.md` 也是同一份。
 - **禁止**：在 skills 目录里放拷贝；用 `git clone` 覆盖软链；手工改软链指向；`git pull` 之外的方式"更新"。
@@ -17,7 +17,7 @@
 - git、GitHub CLI `gh`（没有就 `brew install gh`）。
 - 网络：这台电脑访问 GitHub 是否需要代理，先测 `curl -sI https://github.com --max-time 10`。超时就要代理；用户笔记本上的代理是 `http://127.0.0.1:7897`，新电脑端口可能不同，问用户。
 
-## 2 登录 GitHub（私有仓库，必须登录）
+## 2 登录 GitHub（只有要往仓库推改动的人才需要；只用不改可以跳过）
 
 让用户自己在终端跑（不要替用户输入账号密码或验证码）：
 
@@ -25,7 +25,7 @@
 gh auth login -h github.com -p https -w
 ```
 
-需要代理时前面加 `HTTPS_PROXY=http://127.0.0.1:<端口> HTTP_PROXY=http://127.0.0.1:<端口>`。它会显示一个 8 位一次性码，用户在浏览器 `https://github.com/login/device` 输入并授权。验证：`gh auth status` 显示 `Logged in to github.com account Wanrd0Geri`。
+需要代理时前面加 `HTTPS_PROXY=http://127.0.0.1:<端口> HTTP_PROXY=http://127.0.0.1:<端口>`。它会显示一个 8 位一次性码，用户在浏览器 `https://github.com/login/device` 输入并授权。验证：`gh auth status` 显示已登录。不是仓库所有者 Wanrd0Geri 的话，推送前要请所有者把这个账号加为协作者，或者改用 fork + Pull Request。
 
 ## 3 克隆并挂载
 
@@ -66,7 +66,7 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 
 - 改了任何文件、或用 `scripts/log_lesson.py` 写了经验：`bash ~/Documents/Codex/aigc-video/scripts/sync.sh 备注`。
 - 开始用之前想拿到另一台电脑的改动：同样跑 `sync.sh`（它先拉后推）。
-- `sync.sh` 默认走 `http://127.0.0.1:7897` 代理；这台电脑不需要或端口不同：`AIGC_NO_PROXY=1 bash scripts/sync.sh`，或先 `export HTTPS_PROXY=...` 再跑。
+- 这台电脑连 GitHub 需要代理的话，把代理地址写进 `~/.aigc-video-proxy`（一行，例如 `http://127.0.0.1:7897`），`sync.sh` 会自动使用；不需要代理就不建这个文件。
 - 拉取时报冲突：只会发生在两台电脑改了同一行。经验库冲突时保留双方条目、编号只递增（可用 `scripts/merge_lessons.py` 按编号合并），改完 `git add -A && git rebase --continue` 再 `git push`。不要用 `--force`。
 
 ## 6 常见错误
@@ -74,10 +74,10 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | `gh auth login` 卡住后报 `operation timed out` | 终端没走代理 | 命令前加 `HTTPS_PROXY=... HTTP_PROXY=...` |
-| `git clone` 报 403 或要密码 | 没登录或登录的不是 Wanrd0Geri | 重做第 2 步 |
+| `git push` 报 403 | 没登录，或登录的账号不是协作者 | 重做第 2 步；请所有者加协作者，或 fork + Pull Request |
 | skills 目录里已有 `aigc-video` 真实目录 | 旧版拷贝 | 直接跑 `install.sh`，它会备份后换成软链 |
 | 钩子每次都拦、提示"没有本轮检查报告" | 交付的是局部镜头/操作命令且没跑 `check_prompt.py --report` | 按提示带 `--baseline`（局部再加 `--partial`）跑一次并 `--report` 到 `~/.aigc-video-gate/<时间戳>.json` |
-| 两边经验编号撞号 | 两台电脑离线各记了一条 | `merge_lessons.py` 合并，后写的改成下一个编号 |
+| 两边经验编号撞号 | 两台电脑或两个组员各记了一条 | `merge_lessons.py` 合并，后写的改成下一个编号 |
 
 ## 7 做完后报告给用户
 

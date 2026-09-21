@@ -67,8 +67,9 @@ tests/test_stop_gate.py      stop_gate 判定回归（52 项）
 
 ## 同步与安装（GitHub 单一来源）
 
-仓库 `https://github.com/Wanrd0Geri/aigc-video`（私有）是唯一来源；本机工作副本在 `~/Documents/Codex/aigc-video`，Claude Code 与 Codex 的 `skills/aigc-video` 都是指向它的软链，所以两边看到的永远是同一份文件，记进经验库的条目也立刻共享。
+仓库 `https://github.com/Wanrd0Geri/aigc-video`（公开）是唯一来源；本机工作副本在 `~/Documents/Codex/aigc-video`，Claude Code 与 Codex 的 `skills/aigc-video` 都是指向它的软链，所以两边看到的永远是同一份文件，记进经验库的条目也立刻共享。
 
-- 改完文件或写入经验后：`bash scripts/sync.sh 一句备注`（提交 → 拉取 → 推送；默认走本机代理）。
+- 改完文件或写入经验后：`bash scripts/sync.sh 一句备注`（提交 → 拉取 → 推送）。需要代理的机器把代理地址写进 `~/.aigc-video-proxy`。
+- 组员：直接克隆即可使用，不用登录；要往仓库推改动需要仓库所有者加为协作者，否则用 fork + Pull Request。
 - 换机器：`git clone https://github.com/Wanrd0Geri/aigc-video ~/Documents/Codex/aigc-video && bash ~/Documents/Codex/aigc-video/install.sh`，再按 `hooks/README.md` 挂钩子。
 - 不要在 skills 目录里另放一份拷贝，也不要 `git clone` 覆盖软链；拉取用 `git pull`。
