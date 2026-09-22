@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """check_prompt.py 回归：python3 tests/run_check_tests.py  （全部通过退出 0）"""
-import hashlib, json, pathlib, subprocess, sys, tempfile
+import hashlib, json, pathlib, re, subprocess, sys, tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 C = ROOT / "tests" / "check_cases"
 S = ROOT / "scripts" / "check_prompt.py"
@@ -132,6 +132,20 @@ CASES = [
     ("同一镜里尽头 + 贴着镜头掠过：只提醒", "far_near_conflict.txt", ["--total", "12"], 0),
     ("远处→逼近→贴镜写全（仍提醒，但必须通过）", "far_near_ok.txt", ["--total", "12"], 0),
     ("解释词（仿佛、似乎）：并入空词，只提醒", "explain_words.txt", ["--total", "12"], 0),
+    # ---- v21 ----
+    ("关键动作（松手）紧挨整幅遮挡（糊住）：只提醒", "key_action_occluded.txt", ["--total", "12"], 0),
+    ("关键动作与整幅遮挡各带第N秒、相差 3 秒：通过", "key_action_staggered.txt", ["--total", "12"], 0),
+    ("遮挡词前有否定（不占满画面）：通过", "key_action_negated.txt", ["--total", "12"], 0),
+    ("发力过程写法（先转肩、再转胯、引到最后）：只提醒", "force_process.txt", ["--total", "12"], 0),
+    ("发力只写结果（越转越快、袖子被甩平）：通过", "force_result.txt", ["--total", "12"], 0),
+    ("情节段用 a-b秒 标题：命令区能识别，通过", "four_section_seconds_heads.txt", ["--total", "12"], 0),
+    ("近景里的尺度名词（织纹）：只提醒", "micro_scale_in_near.txt", ["--total", "12"], 0),
+    # ---- v22 讲戏口吻：镜内标签与镜内画质词（都只提醒）----
+    ("镜内标签（摄影：/动作：/第二拍/镜头运动：/【构图】/第9秒：）与镜内画质词：只提醒", "shot_labels.txt", ["--total", "12"], 0),
+    ("像标签但不是（焦点分两段走：/第4秒，/半拍/台词里的第一拍/旁白：/起幅是/落幅停在）：通过", "shot_labels_lookalike.txt", ["--total", "12"], 0),
+    ("官方案例式镜内标签（动作/表情：/情感解析：/表情：）：只提醒", "shot_labels_official.txt", ["--total", "12"], 0),
+    ("像标签但不是（鼓点的第一拍/第三拍下去）：通过", "shot_labels_beat_lookalike.txt", ["--total", "12"], 0),
+    ("灯笼怪 v21 试稿与讲戏口吻重写稿：通过", "lantern_style_draft.txt", ["--total", "6", "--labels", "图1,图2", "--baseline", str(C / "lantern_v21_trial.txt")], 0),
     ("样例：打斗 12 秒", "../sample-combat-12s.txt", ["--total", "12", "--labels", "图片1,图片2,图片3"], 0),
     ("样例：对话 12 秒", "../sample-dialogue-12s.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
 ]
@@ -163,7 +177,20 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("micro_scale_in_medium.txt", [], "尺度名词「织纹」出现在非特写镜头里"),
               ("absolute_void.txt", [], "绝对化的空或黑：「压死的黑」"),
               ("far_near_conflict.txt", [], "同一镜里既有远处位置又有贴镜动作"),
-              ("explain_words.txt", [], "空词：仿佛")]
+              ("explain_words.txt", [], "空词：仿佛"),
+              # v21：关键动作紧挨整幅遮挡、发力过程写法（同句机制词并入）、机制词新文案、近景不算特写
+              ("key_action_occluded.txt", [], "关键动作「松手」和整幅遮挡「糊住」"),
+              ("force_process.txt", [], "发力过程写法：「先转肩」"),
+              ("force_process.txt", [], "同句机制词「惯性」"),
+              ("mechanism_words.txt", [], "改写看得见的结果"),
+              ("micro_scale_in_near.txt", [], "尺度名词「织纹」出现在非特写镜头里"),
+              # v22：镜内标签逐镜列出、镜内画质词
+              ("shot_labels.txt", [], "镜1 镜内标签「摄影：」「动作：」「第二拍」「镜头运动：」"),
+              ("shot_labels.txt", [], "镜2 镜内标签「【构图】」「第9秒：」"),
+              ("shot_labels.txt", [], "画质词「电影感」"),
+              # v22 审查修复：官方案例的复合标签与新增标签词
+              ("shot_labels_official.txt", [], "镜1 镜内标签「动作/表情：」「情感解析：」"),
+              ("shot_labels_official.txt", [], "镜2 镜内标签「表情：」")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -186,7 +213,31 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("control_valid.txt", [], "绝对化的空或黑"),
                  ("control_valid.txt", [], "既有远处位置又有贴镜动作"),
                  ("style_clean.txt", [], "尺度名词"),
-                 ("control_valid.txt", [], "空词：")]
+                 ("control_valid.txt", [], "空词："),
+                 # v21：已错开或遮挡被否定的不报；只写结果的不报；并入发力过程后机制词不单独报；
+                 # 锁定文字里的重心类不报；干净稿不误伤；机制词新文案不再举“肩膀滞后”；a-b秒 标题不算总览句；
+                 # key_action_negated 里另有“不会糊住”，覆盖遮挡词前两字的否定窗口
+                 ("key_action_staggered.txt", [], "整幅遮挡"),
+                 ("key_action_negated.txt", [], "整幅遮挡"),
+                 ("force_result.txt", [], "发力过程"),
+                 ("force_process.txt", [], "机制词：「惯性」"),
+                 ("force_process.txt", ["--lock", "重心压在后脚上"], "「重心压在」"),
+                 ("control_valid.txt", [], "整幅遮挡"),
+                 ("control_valid.txt", [], "发力过程"),
+                 ("mechanism_words.txt", [], "肩膀滞后"),
+                 ("four_section_seconds_heads.txt", [], "总览句"),
+                 # v21 修复：--asks 有效要求里的机制词（用户原话）不报
+                 ("mechanism_words.txt", ["--asks", str(C / "asks_mech.txt")], "机制词：「惯性」"),
+                 # v22：像标签但不是的写法、风格段的画质尾巴、父稿里原样存在的标签、镜头标题本身、灯笼怪两稿都不报
+                 ("shot_labels_lookalike.txt", [], "镜内标签"),
+                 ("shot_labels_lookalike.txt", [], "画质词"),
+                 ("shot_labels.txt", ["--baseline", str(C / "shot_labels.txt")], "镜内标签"),
+                 ("control_valid.txt", [], "镜内标签"),
+                 ("four_section_seconds_heads.txt", [], "镜内标签"),
+                 ("lantern_v21_trial.txt", [], "镜内标签"),
+                 ("lantern_style_draft.txt", [], "镜内标签"),
+                 # v22 审查修复：“第N拍”只在句首并紧跟冒号、逗号或句末才算（音乐卡点、拍打次数不报）
+                 ("shot_labels_beat_lookalike.txt", [], "镜内标签")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -427,8 +478,34 @@ ok = p.returncode == 0
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| lint_cases 当前案例库通过 |", (p.stdout or p.stderr).strip()[:160])
 
+# ---- v21：成功案例不误伤——M001–M004 的提示词原文不许报“整幅遮挡”“发力过程写法” ----
+# 旧外壳会报格式错误，不看退出码；只核对这两类新提醒没有出现。M001–M003 是六段旧稿，M004 按默认口径跑。
+SUCCESS_CASES = [("M001", ["--format", "六段"]), ("M002", ["--format", "六段"]),
+                 ("M003", ["--format", "六段"]), ("M004", [])]
+cases_text = CASES_MD.read_text(encoding="utf-8")
+with tempfile.TemporaryDirectory() as tmp:
+    for cid, extra in SUCCESS_CASES:
+        m = re.search(r"^### " + cid + r"\b.*?提示词原文[^\n]*\n\s*```text\n(.*?)\n```", cases_text, re.S | re.M)
+        if not m:
+            fails += 1
+            print("FAIL", f"| 成功案例 {cid} 不误伤 | my-cases.md 里找不到 {cid} 的提示词原文代码块")
+            continue
+        pf = pathlib.Path(tmp) / f"{cid}.txt"
+        pf.write_text(m.group(1) + "\n", encoding="utf-8")
+        p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), *extra], text=True, capture_output=True)
+        try:
+            ws = json.loads(p.stdout)["warnings"]
+        except Exception:
+            fails += 1
+            print("FAIL", f"| 成功案例 {cid} 不误伤 | 输出不是 JSON：{p.stderr.strip()[:120]}")
+            continue
+        hit = [w for w in ws if "整幅遮挡" in w or "发力过程写法" in w or "镜内标签" in w or "画质词" in w]
+        ok = not hit; fails += 0 if ok else 1
+        print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 不报“整幅遮挡”“发力过程写法”“镜内标签”“画质词” |", hit[:1] or "ok")
+
 TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES)
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
-         + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1)
+         + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
+         + 4)
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

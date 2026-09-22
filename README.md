@@ -2,11 +2,11 @@
 
 把想法翻译成 Seedance 2.5 听得懂的可见画面，在锁定项之外主动提升观感，要先看分镜时给一张能改的镜头表，并把成片反馈整理成可写入经验库的观察。Claude Code 与 Codex 通用（只依赖 SKILL.md、python3 标准库、ffmpeg）。
 
-当前文档架构为 v20：入口只保留关键底线、任务路由和交付条件；格式、写法、工艺、改稿、检查各有唯一详细归属。默认轻量路径与严格审触发条件未改变。
+当前为 v22：讲戏口吻（术语后紧跟半句看得见的结果、画面坐标、短句按时间往下说、镜内不加标签），建立在 v21 写法分主次（每拍三样、关键事件在明处、装饰层压到全局、发力只写结果）之上。入口只保留关键底线、任务路由和交付条件；格式、写法、工艺、改稿、检查各有唯一详细归属。默认轻量路径与严格审触发条件未改变。
 
 ## 安装
 
-只安装最终审查通过的冻结 ZIP：先核对交付包 SHA-256 与包内逐文件清单，备份当前安装目录；从该 ZIP 解压后再将整个 `aigc-video/` 目录放到以下位置，并核对安装后文件哈希。不要从仍在修改的开发目录复制，也不要把未审的新经验直接混入已验收包。候选交付本身不执行安装。
+从 GitHub 克隆后运行 `install.sh` 建软链，见下文「同步与安装」。
 
 安装位置：
 - Codex：`~/.codex/skills/aigc-video/`
@@ -21,7 +21,7 @@
 - 多轮任务：从第二版起工作目录里维护一份要求清单 `asks.txt`（一行一条：`编号 | 你提出的时间 | 你的原话摘录 | 落点关键词 | 有效或撤回`）。每收到你一条消息先更新清单再改稿；交付前用 `check_prompt.py --asks asks.txt` 机械核对**全部历史要求**还在不在正文里，缺一条报错误。你明确替换某项时直接据原话更新；作者自行建议放弃或替换意图不清时才问，其余要求保留；表头会多一行"保留：R1、R2、R4（R3 已按你 03:41 的要求撤回）"。
 - 输入「自检」：对最近一份提示词做质检。
 - 输入「整理经验」：跑一遍经验库体检，得到一份候选清单（哪几条被案例反复引用、哪几条像是能合并、哪几条互相修正、哪个分类太胖），每条一句人话，你挑要升级成规则、合并还是保留；不点头不动库。
-- 回传视频或截图 + 你的评价：得到逐句兑现表、归因、最小修法和一条待审观察；你说"写入经验库"才写进 `references/lessons/seedance-2.5.md`。
+- 回传视频或截图 + 你的评价：得到逐句兑现表、归因、最小修法和一条待审观察；你说"写入经验库"才写进 `references/lessons/seedance-2.5.md`；你明确评价某版成片效果好时，按长期授权自动记一条成功观察。
 - 问"这个效果叫什么 / 怎么写"：查词库直答。
 
 ## 结构
@@ -36,10 +36,10 @@ references/
   craft/                     10 张工艺卡：镜头、光影、表演、站位、运动物理、打斗、特效、场景氛围、题材配方、导演提案
   lexicon/                   4 张词库：运镜、动作、光线材质特效、表演；带官方三档与已试 / 未试
   review/                    自检展示、成片诊断、改稿规则；quality-gate 唯一维护严格审九步与证据接口
-  lessons/                   经验库（写前必读、诊断后必写）
+  lessons/                   经验库（写前按题材 grep 分类；诊断后给一条观察，写入需要授权，成功评价自动记录）
 scripts/
   check_prompt.py            格式、素材、时码及锁定检查；`--asks asks.txt` 核对要求清单，`--baseline` 另报父稿消失的句子与长度增长；
-                             启发式提醒：空词与解释词、机制词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜
+                             启发式提醒：空词与解释词、机制词、关键动作紧挨整幅遮挡、发力过程写法、镜内标签、镜头正文里的画质词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜
   verify_delivery.py         实际重跑检查，核对需求、专业审查和最终导出；--response 直接生成可粘贴的成品文件，--response-mode prompt-only 只出代码块不带交付行
   extract_frames.sh          抽帧 + 切镜检测 + 拼图
   log_lesson.py              追加经验条目（--topic 必须是 `分类/主题`，脚本强制）
@@ -48,10 +48,10 @@ scripts/
   lint_cases.py              案例库体检：可复用点必须带 `→ L0xx` 或标（样板）、引用的编号真的存在、索引与条目对得上（回归测试里有一项调用）
   review_lessons.py          「整理经验」：列出可升级 / 可合并 / 可能冲突的经验候选清单，只读不改
 hooks/
-  stop_gate.py               Stop 钩子（Claude Code 与 Codex 通用）：三层判定——本轮报告（verify 或 check_prompt --report）对得上就放行；没报告的完整稿由钩子代跑 check_prompt，有错拦下、无错放行并提示"作者未自己跑检查"；局部镜头与操作命令没报告则拦下
+  stop_gate.py               Stop 钩子（Claude Code 与 Codex 通用）：三层判定——本轮报告（verify 或 check_prompt --report）对得上就放行；没报告的完整稿由钩子代跑 check_prompt，有错拦下、无错放行并提示"作者未自己跑检查"；局部镜头与不带四段外壳的裸命令没报告则拦下
   README.md                  两个宿主的装法、能拦什么、真实宿主验证清单
 tests/cases.md               端到端用例
-tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检（184 项）
+tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检（228 项）
 tests/test_revision_checks.py 修订格式、旧稿兼容与丢句匹配回归（16 项）
 tests/test_delivery_gate.py  verify_delivery 放行行为回归（42 项）
 tests/test_stop_gate.py      stop_gate 判定回归（61 项）
@@ -83,4 +83,4 @@ tests/test_stop_gate.py      stop_gate 判定回归（61 项）
 - 换机器：`git clone https://github.com/Wanrd0Geri/aigc-video ~/Documents/Codex/aigc-video && bash ~/Documents/Codex/aigc-video/install.sh`，再按 `hooks/README.md` 挂钩子。
 - 不要在 skills 目录里另放一份拷贝，也不要 `git clone` 覆盖软链；拉取用 `git pull`。
 
-**维护者改 skill 的地方**：改动在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里做，三套测试跑过之后再合并到 main，然后在 `~/Documents/Codex/aigc-video` 跑 `bash scripts/sync.sh 备注`。main 是安装位（两个宿主的 skills 都软链到它），改到一半的文件不会影响正在使用的会话。
+**维护者改 skill 的地方**：改动在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里做，四套测试跑过之后再合并到 main，然后在 `~/Documents/Codex/aigc-video` 跑 `bash scripts/sync.sh 备注`。main 是安装位（两个宿主的 skills 都软链到它），改到一半的文件不会影响正在使用的会话。

@@ -14,7 +14,7 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
     阻止 = stdout 输出 {"decision": "block", "reason": "..."}。Codex 适配按官方文档字段实现，尚未在真实 Codex 会话验证。
 两边传入的 stdin JSON 都可能有 transcript_path、last_assistant_message、session_id、stop_hook_active。
 
-交付单元的契约（钩子只按这个契约认东西，SKILL 第 ⑨ 步、quality-gate.md、hooks/README.md 写的是同一套）：
+交付单元的契约（钩子只按这个契约认东西，SKILL.md「流程分级」、quality-gate.md、hooks/README.md 写的是同一套）：
   - 成品一律放 ```text 代码块（无语言标签、```prompt 同等对待）；这些代码块里像提示词的内容都要验收。
   - 引用旧稿用 ```quote，概念草案用 ```draft，工具输出用 ```diff/```json/```bash/```sh：一律不验收，也不受"原样粘贴"约束。
   - 代码块之外的纯文本同样扫描：完整稿（≥3 个段落标题，四段新壳与五段 / 六段旧壳都算）、局部镜头（镜头标题）、操作命令（视频N 或
@@ -38,7 +38,7 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
        钩子不知道素材集合、逐字锁、总时长和父稿，所以不传 --labels / --lock / --total / --baseline。
        有错误 → 阻止并把错误原文列给模型，要求修好后自己跑 `check_prompt.py --report <目录>/<时间戳>.json` 再交付；
        无错误 → 放行，但用 systemMessage 说明"这份稿由钩子代跑机械检查通过……作者本轮没有自己跑检查"。
-     第 3 层｜没有报告，单元是**局部镜头或操作命令** → 钩子没有父稿，代跑没有意义，直接阻止，要求带 --baseline
+     第 3 层｜没有报告，单元是**局部镜头或不带四段外壳的裸操作命令** → 钩子没有父稿，代跑没有意义，直接阻止，要求带 --baseline
        （局部再加 --partial）跑 `check_prompt.py --report` 再交付。
      拿不到 T_user（没有 transcript）时退回 24 小时窗口，并在放行时用 systemMessage 说明"本轮绑定较弱"。
   4. 回复里每一条"交付校验通过（正文 xxxxxxxx｜需求 xxxxxxxx）"都必须与某份已匹配报告成对一致（正文短哈希与
@@ -83,7 +83,7 @@ SELF_RUN_NOTE = ("aigc-video 守门：这份稿由钩子代跑机械检查通过
 
 
 def is_full_draft(body):
-    """完整稿：至少 3 个段落标题（四段新壳与五段 / 六段旧壳都算）。局部镜头和操作命令不是。"""
+    """完整稿：至少 3 个段落标题（四段新壳与五段 / 六段旧壳都算；带四段外壳的操作命令也算）。局部镜头和不带外壳的裸操作命令不是。"""
     return len(SECTION.findall(body)) >= 3
 
 

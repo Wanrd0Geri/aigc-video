@@ -4,7 +4,7 @@
 log_lesson.py — 向经验库追加一条记录，自动编号。
 
 用法：
-  python3 log_lesson.py --topic 画外人物 --phenomenon "写了曲伯仍在原位，曲伯进了特写" \
+  python3 log_lesson.py --topic "景别与画外/画外人物" --phenomenon "写了曲伯仍在原位，曲伯进了特写" \
       --a "写画外人物状态→被拉进画面" --b "删掉该句→未出现" \
       --conclusion "画外人物不写" --confidence 已试 --source "0916 jimeng-...-3612.mp4"
 可选：--date 2026-09-17  --file <经验库路径>

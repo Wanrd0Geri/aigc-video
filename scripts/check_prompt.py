@@ -36,14 +36,21 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 素材引用：`@图片N`、`图片N`、`图N`、`@视频N`、`视频N`、`@音频N`、`音频N` 一律归一成键 `图N` / `视频N` / `音频N`
   （`--labels` 写 `图1` 或 `图片1` 都行，同样归一）；声明集合、首次出现位置、操作命令必填词都按归一后的键核对。
   **提示词里不写 @**（软件里粘贴后再 @ 出来）：四段新稿出现 @ 引用时提醒一次；继承模式按父稿（父稿用 @ 就不提醒）。
-启发式扫描（空词与解释词、机制词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
+启发式扫描（空词与解释词、机制词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、关键动作紧挨整幅遮挡、发力过程写法、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
 用户实测（L064）模型多会加速完成密动作，但这是经验线索不是通过保证，仍要按动作依赖与可读性判断。
 v18 的五类提醒（词表都在脚本头部常量里，旁注「可调」）：
-  机制词（力从、传到手腕、惯性、过冲、蓄力本身……）不能单独承担控制；核对是否已有对应可见表现，缺少才补，已有可保留术语；
-  尺度名词（织纹、纤维、毛孔、抽丝……）出现在**没有**特写 / 大特写 / 微距 / 近景字样的镜头正文里时提醒，等于要求模型换景别去拍（风格段的材质句不扫）；
+  机制词（力从、传到手腕、惯性、过冲、蓄力本身……）只说原因、不产生画面：改写看得见的结果（越转越快、袖子被甩平、下摆整圈张开）；
+  --lock 锁定文字与 --asks 有效要求的关键词不报，其余用户点名的部位细节或原话由作者裁定保留；
+  尺度名词（织纹、纤维、毛孔、抽丝……）出现在**没有**特写 / 大特写 / 微距字样的镜头正文里时提醒，等于要求模型换景别去拍（风格段的材质句不扫）；
   绝对化的空或黑（压死的黑、什么都没有、再没有第三样……）会给出一块死区，写暗处还留着什么；
   解释词（仿佛、似乎、像是在、营造、氛围、有一种）并入空词清单，台词不扫；
-  同一镜正文里既有远处位置词（远处、尽头、深处……）又有贴镜动作词（贴着镜头、掠过镜头、撑满画面……）时提醒，中间要有逼近或后拉把距离接上。
+  同一镜正文里既有远处位置词（远处、尽头、深处……）又有贴镜动作词（贴着镜头、掠过镜头、撑满画面……）时提醒，中间要有一拍逼近或后拉把距离接上，那一拍写画框切在哪。
+v21 两类提醒：关键动作（松手、脱手……）和整幅遮挡（整幅被、糊住、全黑……）写在同一镜的同一句或相邻句（两句各带第N秒
+  且相差 ≥1 秒视为已错开，遮挡词前两个字里有否定字“不 / 没 / 未 / 无”就不算）；发力过程写法（先转肩、再转胯、腰先转、肩膀慢半拍、引到最后；
+  “重心压在 / 移到……”只在同句已有这些词时一起列出），锁定文字与有效要求的关键词不报，同句机制词并入本条。
+v22 两类提醒（讲戏口吻，只提醒不拦截，词表 SHOT_LABEL_WORDS / SHOT_QUALITY_RE 在头部常量里、可调）：镜头正文里的标签（“摄影：”“动作：”“动作/表情：”“情感解析：”
+  “镜头运动：”“【构图】”“第一拍，”“第4秒：”。标签词在句首并紧跟冒号才算，几个标签词用 / 、 连写也算；【标签】不需要冒号；“第N拍”在句首
+  并紧跟冒号、逗号或句末才算；台词与锁定文字不扫，改稿时父稿原样存在的句子不报）；镜头正文里的画质词（电影感、电影级、大片感）。
 否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外）里句首是
   `不出现|不添加|不得|不要|不能|不许|不可|禁止|避免` 的句子逐句给**提醒**（不是错误）；用 --negative-exception 逐句点名的不再提醒。
   “没有”“无”不当否定句抓。继承的四段稿也逐句提醒；五段 / 六段 / 未知旧外壳仍用结尾段预算：用户逐字锁不计入，新稿超过 4 条报错，
@@ -62,7 +69,7 @@ v18 的五类提醒（词表都在脚本头部常量里，旁注「可调」）�
      （最多 10 句，超出只报数量）；逐镜先精确、再相似地一对一匹配，同镜相近改写不算消失，不跨镜顶替。
      `--partial` 时只比对被替换的那几个镜头。消失的句子里如果含某条已经报"没有落点"的要求的关键词，不重复报。
      删句须按 references/review/revise-rules.md 核对：用户明确删改或替换；授权范围内等义改写 / 合并且所有独立控制有落点；
-     原句仅与本次明确替换的旧字段冲突。已认可效果、措辞或设计未经用户针对该项允许，不得删除、削弱或实质替换；
+     原句仅与本次明确替换的旧字段冲突；获准重写整镜或整拍时，作者自拟、未获认可的装饰层压进主体 / 场景 / 风格段一句。已认可效果、措辞或设计未经用户针对该项允许，不得删除、削弱或实质替换；
      新旧受保护要求冲突时保留并说明取舍，冲突本身不构成撤回授权。
   ② 新稿字数（去空白）比父稿多 15% 以上时，仅提醒核对新增必要信息与重复补丁，不强制压缩或为降字数删成功项；无父稿不报。
 
@@ -122,20 +129,49 @@ INTERNAL = ["可见清单", "锁定项", "执行回执", "FightBeat", "接触台
 # 空词 + 解释词（只解释画面的意思、不产生画面）。台词与 --lock 锁定文字不扫。词表可调。
 EMPTY_WORDS = ["高级感", "史诗感", "震撼", "美丽", "灵动",
                "仿佛", "似乎", "像是在", "营造", "氛围", "有一种"]
-# 机制词不能单独承担控制；核对已有可见表现，缺少才补，已有可保留术语。词表可调。
+# 机制词只说原因、不产生画面；提醒改写看得见的结果。与发力过程写法同句时并入那一条。词表可调。
 MECHANISM_WORDS = ["力从", "传到手腕", "传递到", "动量", "惯性", "过冲",
                    "受力链", "蓄力本身", "势能", "扭矩", "发力链"]
-# 尺度名词：只有特写 / 大特写 / 微距 / 近景装得下；出现在别的景别里等于要求模型换景别去拍。
-# 只扫镜头正文，风格段的材质句不扫。两张词表可调。
-MICRO_SCALE_WORDS = ["织纹", "纤维", "毛孔", "抽丝", "绒毛", "指纹", "睫毛", "颗粒感", "裂纹"]
-CLOSEUP_WORDS = ["特写", "大特写", "微距", "近景"]
+# 尺度名词：只有特写 / 大特写 / 微距装得下（近景、中近景装不下，L088）；词表与 writing-rules 第 5 条一致。
+# 出现在别的景别里等于要求模型换景别去拍。只扫镜头正文，风格段的材质句不扫。两张词表可调。
+MICRO_SCALE_WORDS = ["织纹", "纤维", "毛孔", "抽丝", "绒毛", "指纹"]
+CLOSEUP_WORDS = ["特写", "大特写", "微距"]
 # 绝对化的空或黑：模型会给一块死区，要写暗处还留着什么。词表可调。
 ABSOLUTE_VOID_WORDS = ["压死的黑", "死黑", "纯黑", "漆黑一片", "什么都没有",
                        "再没有第三样", "空无一物", "一片虚无"]
 # 距离链：同一镜正文里既有远处位置又有贴镜动作时提醒，中间要有逼近或后拉接上。两张词表可调。
 FAR_WORDS = ["远处", "尽头", "深处", "远端", "画面深处"]
 NEAR_CONTACT_WORDS = ["贴着镜头", "擦过镜头", "掠过镜头", "撑满画面", "占满画面", "贴到镜头"]
+# v21 关键事件在明处：关键动作与整幅遮挡写在同一句或相邻句时提醒（只提醒）。词表可调；按优先级排，先报前面的词
+KEY_ACTION_WORDS = ["松手", "脱手", "离手", "松开", "扔出", "甩出", "撒手", "抛出", "掷出"]
+KEY_ACTION_SKIP_RE = re.compile(r"甩出(?:一道|一圈|一串|一片|一蓬|扇形)|甩出去?的(?:那股)?(?:劲|势)|(?:眉头|眉心|牙关|拳头)松开")
+FULL_OCCLUSION_RE = re.compile(r"整幅(?:都)?被|(?:占满|撑满|盖满|糊满|遮满)整幅|整个画面(?:都)?被|(?:遮|挡|盖)住整个画面|占满画面|糊住|全黑|黑屏|画面一黑")
+OCCLUSION_NEGATION_RE = re.compile(r"[不没未无]")  # 遮挡词前两个字里有否定字就不算（不占满、不会糊住、没糊住、并未糊住）
+SECOND_ANCHOR_RE = re.compile(r"第\s*(\d+(?:\.\d+)?)\s*秒")
+# v21 发力只写结果：发力过程写法（只提醒）。"力从 / 传到 / 惯性"仍归 MECHANISM_WORDS；同句两类都命中时并成一条。可调
+FORCE_PROCESS_RES = [
+    re.compile(r"先(?:转|拧|扭|送)?[肩胯腰髋](?![^，。；]{0,2}(?:甲|带|绳|上|后|头))|再(?:转|拧|扭|送)[肩胯腰髋]|先[肩胯腰髋]后[肩胯腰髋]|[肩胯腰髋](?:膀|部)?先(?:转|拧|扭|走|动|带头)"),
+    re.compile(r"(?:肩膀|肩|胯|腰|髋)(?:部)?(?:慢半拍|滞后)|(?:胯|腰|髋)(?:部)?(?:随后)?(?:才)?跟上"),
+    re.compile(r"(?:引|拖)到最后"),
+]
+# 重心类只在同句已有上面的发力过程词时一起列出，单独出现不报（保证 M001–M004 零误报，见 Q4）
+FORCE_CHAIN_ONLY_RE = re.compile(r"重心(?:压在|压到|移到|移向|转到|落在|落到|沉到|放在|前移|后移|下沉)")
 OFFSCREEN_RE = re.compile(r"画外[^，。；\n]{0,8}正在")
+# v22 讲戏口吻：镜头正文不加标签（只提醒）。标签词出现在句首（行首或句号、分号、逗号之后）并紧跟冒号
+# （几个标签词用 / ／ 、 连写也算，如官方案例的“动作/表情：”），或写成【标签】；“第N拍”在句首并紧跟冒号、逗号
+# 或句末才算（“音乐的第一拍重音”“第三拍下去”不算）；“第N秒：”带冒号算（写成“第N秒，”不算）。台词、锁定文字不扫；
+# 改稿时父稿里原样存在的句子不报（继承父稿）。“旁白：”“台词语言：”“某某说道：”不在词表里。词表可调
+SHOT_LABEL_WORDS = ["镜头运动", "摄影机运动", "摄影机", "摄影", "运镜", "机位", "景别", "构图", "镜头",
+                    "动作", "表演", "画面", "光影", "光线", "灯光", "焦点", "节奏", "声音", "音效",
+                    "起幅", "落幅", "高光点", "情绪", "表情", "情感解析"]
+_SL = "|".join(SHOT_LABEL_WORDS)
+SHOT_LABEL_RE = re.compile(
+    r"(?:^|(?<=[。；;！!？?，,\n]))\s*(?:【\s*(?:" + _SL + r")\s*】|(?:" + _SL + r")(?:\s*[/／、]\s*(?:" + _SL + r"))*\s*[：:])"
+    r"|(?:^|(?<=[。；;！!？?，,\n]))\s*第\s*[一二三四五六七八九十\d]+\s*拍\s*(?=[：:，,。；;！!？?\n]|$)"
+    r"|(?:^|(?<=[。；;！!？?\n]))\s*第\s*\d+(?:\.\d+)?\s*秒\s*[：:]"
+    r"|(?i:\b(?:camera|action|beat)\s*\d*\s*[:：])")
+# 画质词写进镜头正文（风格段末尾的画质尾巴不扫，那里归第 77 条）。词表可调
+SHOT_QUALITY_RE = re.compile(r"电影感|电影级|大片感")
 MOTION_WORDS = ["飘", "晃", "摇", "流", "滴", "落", "升", "飞", "滚", "掠", "扫", "涟漪", "风", "雨", "雾", "烟", "尘", "火", "光斑", "闪", "跳", "颤", "摆", "抖", "吹", "涌", "散", "燃", "波", "呼吸", "眨", "滑", "翻", "卷", "溅", "拂", "漾", "抽", "推", "退", "冲", "转", "起伏", "凝结", "飘落", "闪烁", "进入", "入画", "出画", "走", "跑", "奔", "移动", "经过", "靠近", "逼近", "后退", "起身", "坐下", "抬", "垂"]
 QUALITY_ONLY = re.compile(r"(8K|4K|高清|精美|电影感|高级感|电影级|超清)")
 # 固定句：四段新稿用新句，五段 / 六段旧稿用旧句，继承模式按父稿用的那一句。匹配容忍 BGM 前后的空格与末尾句号。
@@ -318,7 +354,7 @@ def operation_text(text):
     m = re.search(r"概述[：:](.*?)(?=\n(?:主体|场景|风格|情节|结尾)[：:]|\Z)", text, re.S)
     if m:
         return m.group(1)
-    m = re.search(r"情节[：:](.*?)(?=\n\s*(?:镜头\s*\d+|【阶段|第[" + CJK_NUM + r"\d]+阶段)|\n(?:主体|场景|风格|结尾)[：:]|\Z)", text, re.S)
+    m = re.search(r"情节[：:](.*?)(?=\n\s*(?:镜头\s*\d+|【阶段|第[" + CJK_NUM + r"\d]+阶段|\d+(?:\.\d+)?\s*(?:s|秒)?\s*[-–—~到]\s*\d+(?:\.\d+)?\s*(?:s|秒)\s*[:：])|\n(?:主体|场景|风格|结尾)[：:]|\Z)", text, re.S)
     if m:
         return m.group(1)
     # 兼容继承的无标题操作稿：只看第一个镜头 / 阶段之前的命令区，不让镜内叙事误判任务类型。
@@ -514,6 +550,38 @@ def nonspace_len(text):
     return len(re.sub(r"\s", "", text))
 
 
+def key_occlusion_pair(sentences):
+    """同一镜里关键动作句与整幅遮挡句相邻（序号差 ≤1）时返回 (动作词, 遮挡词)；两句各带第N秒且相差 ≥1 秒视为已错开。"""
+    def keys(s):
+        t = KEY_ACTION_SKIP_RE.sub("", s)
+        return [w for w in KEY_ACTION_WORDS if w in t]
+    def occs(s):
+        return [m.group(0) for m in FULL_OCCLUSION_RE.finditer(s)
+                if not OCCLUSION_NEGATION_RE.search(s[max(0, m.start() - 2):m.start()])]
+    def anchor(s):
+        m = SECOND_ANCHOR_RE.search(s)
+        return float(m.group(1)) if m else None
+    K, O = [keys(s) for s in sentences], [occs(s) for s in sentences]
+    for i, ks in enumerate(K):
+        if not ks:
+            continue
+        for j in (i - 1, i, i + 1):
+            if 0 <= j < len(sentences) and O[j]:
+                a, b = anchor(sentences[i]), anchor(sentences[j])
+                if i != j and a is not None and b is not None and abs(a - b) >= 1:
+                    continue
+                return ks[0], O[j][0]
+    return None
+
+
+def force_process_hits(sentence):
+    """一句里的发力过程写法；重心类只在同句已有其它发力过程词时一起列出。"""
+    hits = [m.group(0) for rx in FORCE_PROCESS_RES for m in rx.finditer(sentence)]
+    if hits:
+        hits += [m.group(0) for m in FORCE_CHAIN_ONLY_RE.finditer(sentence)]
+    return list(dict.fromkeys(hits))
+
+
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--prompt", required=True)
@@ -531,7 +599,7 @@ def main():
                          "每条「有效」的要求都要在正文里有落点，缺一条报错误")
     ap.add_argument("--save-checked", default=None)
     ap.add_argument("--report", default=None, help="把机械检查结果另存为 JSON（kind=light），供 hooks/stop_gate.py 守门核对；有错误也写（ready=false）")
-    ap.add_argument("--negative-exception", default="", help="要逐句点名的必要否定句本身，多句用“；”分开。四段稿：点名的镜内否定句不再提醒（其余每句给一条提醒）；五段 / 六段 / 继承旧稿：每句必须与结尾段里一条独立否定条款整句一致，数量要覆盖超出 4 条预算的部分。最终放行仍须审查")
+    ap.add_argument("--negative-exception", default="", help="要逐句点名的必要否定句本身，多句用“；”分开。四段稿：点名的否定句（镜内，或用户要求全片静音时写在主体段的那一句）不再提醒（其余每句给一条提醒）；五段 / 六段 / 继承旧稿：每句必须与结尾段里一条独立否定条款整句一致，数量要覆盖超出 4 条预算的部分。最终放行仍须审查")
     a = ap.parse_args()
 
     def bail(msg):
@@ -650,7 +718,7 @@ def main():
             if "结尾" in unexpected and fmt == "四段":
                 hints.append("新稿不设结尾标题，末尾只有固定句一行；必要的否定句写进相应镜头的正文，操作命令的必填句写进情节段开头的命令区")
             if "概述" in unexpected and fmt in ("四段", "五段"):
-                hints.append("新稿不设概述段，总览信息写进情节段开头或删除（时长、风格、镜头数在情节段和风格段已有，不重复）")
+                hints.append("新稿不设概述段；其中的身份、数量写进主体段，时长和镜数由镜头标题表达，风格写进风格段，剩下重复的删掉")
             tip = "；确实要检查旧稿请显式加 --format 五段 或 --format 六段" if hints else ""
             errors.append(f"{fmt}格式含多余段落标题：{unexpected}"
                           + ("；" + "；".join(hints) + tip if hints else ""))
@@ -659,7 +727,7 @@ def main():
         if not bad and order != expected_labels:
             errors.append(f"段落标题顺序不对，应为 {' → '.join(expected_labels)}，实际：{order}"); bad = True
         if not heads:
-            errors.append("情节段里没有镜头标题（镜头N（a-b秒）： / 镜头N： / 【阶段N】 之一）"); bad = True
+            errors.append("情节段里没有镜头标题（镜头N（a-b秒）： / 镜头N： / a-b秒： / 【阶段N】 / 第N阶段：a-b秒 之一）"); bad = True
         if not bad:
             checked.append(f"{fmt}外壳各一次、顺序正确")
         section_starts = [(i, KNOWN_HEADER.match(ln)) for i, ln in enumerate(lines) if KNOWN_HEADER.match(ln)]
@@ -832,9 +900,6 @@ def main():
     for w in EMPTY_WORDS:
         if w in lock_free:
             warnings.append(f"空词：{w}（翻译成可见句或删）")
-    for w in MECHANISM_WORDS:
-        if w in lock_free:
-            warnings.append(f"机制词：「{w}」不能单独承担控制；核对是否已有对应可见表现（脚下碎响、下摆先转、肩膀滞后、手臂伸直），缺少才补，已有可保留术语")
     for w in ABSOLUTE_VOID_WORDS:
         if w in lock_free:
             warnings.append(f"绝对化的空或黑：「{w}」；模型会给一块死区，写暗处还留着什么")
@@ -930,6 +995,11 @@ def main():
     # --- 景别与内容（提醒；按实际取景判断，焦距不等于景别）---
     TIGHT, BODY_WIDE = ["特写", "大特写"], ["全身", "双脚", "脚下的", "整个房间", "整条街", "远处的山", "整片"]
     WIDE, BODY_TIGHT = ["大全景", "远景"], ["毛孔", "血珠", "睫毛", "瞳孔", "唇纹"]
+    force_sents_all = []  # 已并入发力过程提醒的句子；同句机制词不再单独报
+    base_flat = re.sub(r"\s", "", baseline_text) if revision else ""  # v22：父稿里原样存在的镜内标签句不报
+    ask_words = {w for r in asks_rows if r["active"] for g in r["groups"] for w in g}
+    def _asked(w):  # 与 --asks 有效要求的关键词互相包含就不报
+        return any(w in aw or aw in w for aw in ask_words)
     for k, (h, body_lines, _t) in enumerate(blocks):
         body = "\n".join(body_lines)
         tag = f"镜{h[2] or k + 1}"
@@ -951,7 +1021,47 @@ def main():
                     warnings.append(f"{tag} 尺度名词「{w}」出现在非特写镜头里，等于要求模型换景别去拍；"
                                     f"要么删，要么这一镜本来就是特写")
         if any(w in sbody for w in FAR_WORDS) and any(w in sbody for w in NEAR_CONTACT_WORDS):
-            warnings.append(f"{tag} 同一镜里既有远处位置又有贴镜动作，确认中间有逼近或后拉把距离接上")
+            warnings.append(f"{tag} 同一镜里既有远处位置又有贴镜动作，确认中间有一拍逼近或后拉把距离接上；那一拍写画框切在哪（“画框下缘切在他的膝盖”），不写“退到能装下整条身形”")
+        pair = key_occlusion_pair(split_sentences(sbody))
+        if pair:
+            warnings.append(f"{tag} 关键动作「{pair[0]}」和整幅遮挡「{pair[1]}」写在同一句或相邻句；关键动作要在画里看得见、有光的位置完成，遮挡和它错开（动作在明处做完再遮，或遮挡过去之后再做）；用户要求的遮挡保留，只调先后")
+        fbody = sbody
+        for lk in sorted(a.lock, key=len, reverse=True):
+            fbody = fbody.replace(lk, "")
+        # v22 讲戏口吻：镜内标签与镜内画质词（去掉镜头标题本身再扫；父稿原样存在的句子不报）
+        hm = HEAD_PATTERNS[h[1]].match(fbody)
+        lbody = fbody[hm.end():] if hm else fbody
+        lhits, qhits = [], []
+        for s in split_sentences(lbody):
+            if revision and re.sub(r"\s", "", s) in base_flat:
+                continue
+            lhits += [re.sub(r"\s", "", m.group(0)) for m in SHOT_LABEL_RE.finditer(s)]
+            qhits += SHOT_QUALITY_RE.findall(s)
+        if lhits:
+            lhits = list(dict.fromkeys(lhits))[:5]
+            warnings.append(f"{tag} 镜内标签{''.join(f'「{w}」' for w in lhits)}；镜头正文按时间顺序直接说，"
+                            f"不加“摄影：/动作：/第一拍”这类标签，时间点写成“第4秒，”，声音写进它发生的那一拍"
+                            f"（writing-rules「成文主规则」第 6 条）")
+        if qhits:
+            qhits = list(dict.fromkeys(qhits))
+            warnings.append(f"{tag} 镜头正文里有画质词{''.join(f'「{w}」' for w in qhits)}；程度写成看得见、数得出的结果"
+                            f"（越转越快、荡出右边缘再荡回来），画质词只作风格段末尾的尾巴（writing-rules 第 77 条）")
+        fsents, fwords = [], []
+        for s in split_sentences(fbody):
+            hs = [w for w in force_process_hits(s) if not _asked(w)]
+            if hs:
+                fsents.append(s); fwords.extend(hs)
+        if fwords:
+            fwords = list(dict.fromkeys(fwords))[:4]
+            mech = [w for w in MECHANISM_WORDS if any(w in s for s in fsents) and not _asked(w)]
+            note = f"（同句机制词{''.join(f'「{w}」' for w in mech)}并入本条）" if mech else ""
+            force_sents_all.extend(fsents)
+            warnings.append(f"{tag} 发力过程写法：{''.join(f'「{w}」' for w in fwords)}{note}；这类过程在灯笼怪实测里大多没被执行（L102，单次观察），改写看得见的结果（越转越快、袖子被甩平、下摆整圈张开）；用户点名要的部位细节保留")
+    for w in MECHANISM_WORDS:
+        if _asked(w):
+            continue
+        if lock_free.count(w) > sum(s.count(w) for s in force_sents_all):
+            warnings.append(f"机制词：「{w}」只说原因、不产生画面；改写看得见的结果（越转越快、袖子被甩平、下摆整圈张开、被撞得连退），已经写了结果的删掉它不丢控制；用户点名要的部位细节或原话保留")
 
     # --- 否定句：四段（含继承）全文逐句提醒；五 / 六段与未知旧外壳用结尾段预算 ---
     neg = 0
@@ -968,7 +1078,7 @@ def main():
                             f"（能改成正向的写进主体、场景、风格或镜内）")
         stray = [s for s in exc if not any(x.rstrip("。；;") == s for x in found)]
         if stray:
-            errors.append(f"--negative-exception 点名的句子在稿里找不到；要与镜内那一句整句一致，不能是片段或不存在的句子：{stray}")
+            errors.append(f"--negative-exception 点名的句子在稿里找不到；要与稿里那一句整句一致，不能是片段或不存在的句子：{stray}")
         if named:
             checked.append(f"镜内否定 {len(named)} 句已用 --negative-exception 逐句点名")
         if not found:

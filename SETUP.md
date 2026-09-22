@@ -39,14 +39,14 @@ git clone https://github.com/Wanrd0Geri/aigc-video ~/Documents/Codex/aigc-video 
 
 ```bash
 ls -l ~/.claude/skills/aigc-video ~/.codex/skills/aigc-video
-cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tail -1 && python3 -X utf8 tests/test_delivery_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_stop_gate.py 2>&1 | tail -1
+cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tail -1 && python3 -X utf8 tests/test_revision_checks.py 2>&1 | tail -1 && python3 -X utf8 tests/test_delivery_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_stop_gate.py 2>&1 | tail -1
 ```
 
-期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；三行分别是 `110/110 通过`、`OK`、`OK`（数字随版本增加，只要没有失败）。
+期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；每行都没有失败（项数随版本增加）。
 
 ## 4 挂守门钩子（Claude Code；可选但推荐）
 
-钩子配置不在仓库里，每台电脑单独挂。它在模型交付提示词时自动核对：有本轮检查报告就放行；没有报告的完整稿由钩子代跑 `scripts/check_prompt.py`，有错打回、无错放行并提示"作者未自己跑检查"；局部镜头和操作命令没报告则打回。第二次仍不过会放行并附警告，不会死锁。
+钩子配置不在仓库里，每台电脑单独挂。它在模型交付提示词时自动核对：有本轮检查报告就放行；没有报告的完整稿由钩子代跑 `scripts/check_prompt.py`，有错打回、无错放行并提示"作者未自己跑检查"；局部镜头和不带四段外壳的裸命令没报告则打回。第二次仍不过会放行并附警告，不会死锁。
 
 编辑 `~/.claude/settings.json`：在 `hooks.Stop` 数组里**追加**一项（用户已有别的 Stop 钩子时不要替换、不要删）；没有 `hooks` 或 `Stop` 键就新建：
 
@@ -76,13 +76,13 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 | `gh auth login` 卡住后报 `operation timed out` | 终端没走代理 | 命令前加 `HTTPS_PROXY=... HTTP_PROXY=...` |
 | `git push` 报 403 | 没登录，或登录的账号不是协作者 | 重做第 2 步；请所有者加协作者，或 fork + Pull Request |
 | skills 目录里已有 `aigc-video` 真实目录 | 旧版拷贝 | 直接跑 `install.sh`，它会备份后换成软链 |
-| 钩子每次都拦、提示"没有本轮检查报告" | 交付的是局部镜头/操作命令且没跑 `check_prompt.py --report` | 按提示带 `--baseline`（局部再加 `--partial`）跑一次并 `--report` 到 `~/.aigc-video-gate/<时间戳>.json` |
+| 钩子每次都拦、提示"没有本轮检查报告" | 交付的是局部镜头或不带四段外壳的裸操作命令，且没跑 `check_prompt.py --report` | 按提示带 `--baseline`（局部再加 `--partial`）跑一次并 `--report` 到 `~/.aigc-video-gate/<时间戳>.json` |
 | 两边经验编号撞号 | 两台电脑或两个组员各记了一条 | `merge_lessons.py` 合并，后写的改成下一个编号 |
 
 ## 7 做完后报告给用户
 
-一句话说清：软链指向哪里、三套测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
+一句话说清：软链指向哪里、四套测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
 
 ## 8 维护 skill 本身（改 skill 的人看）
 
-改 skill 的文件在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里改，三套测试跑过之后再合并到 main 并 `sync.sh`。main 是安装位，改到一半的文件不会影响正在使用的会话。
+改 skill 的文件在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里改，四套测试跑过之后再合并到 main 并 `sync.sh`。main 是安装位，改到一半的文件不会影响正在使用的会话。
