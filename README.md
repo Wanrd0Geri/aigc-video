@@ -29,14 +29,15 @@ SKILL.md                     入口：共享硬约束、路由、九步清单、
 references/
   seedance-format.md         官方格式、素材引用、时间戳、声音、禁止项、硬限制
   seedance-operations.md     延长、编辑、首尾帧、关键帧、宫格、白模、绿幕、衔接、成片
-  writing-rules.md           写法规则 60 条（三道门、只写当前画面…）
+  writing-rules.md           写法规则 78 条（五道门、只写当前画面、因果链、四种失效腔调…）
   cases/                     官方案例库 + 我的成功案例（只给组织方式与句式样板；只读索引再取一条，知识在经验库）
   craft/                     10 张工艺卡：镜头、光影、表演、站位、运动物理、打斗、特效、场景氛围、题材配方、导演提案
   lexicon/                   4 张词库：运镜、动作、光线材质特效、表演；带官方三档与已试 / 未试
   review/                    自检、成片诊断、改稿规则
   lessons/                   经验库（写前必读、诊断后必写）
 scripts/
-  check_prompt.py            格式、素材、时码及锁定检查；`--asks asks.txt` 核对要求清单，`--baseline` 另报父稿消失的句子与长度稀释
+  check_prompt.py            格式、素材、时码及锁定检查；`--asks asks.txt` 核对要求清单，`--baseline` 另报父稿消失的句子与长度稀释；
+                             启发式提醒：空词与解释词、机制词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜
   verify_delivery.py         实际重跑检查，核对需求、专业审查和最终导出；--response 直接生成可粘贴的成品文件，--response-mode prompt-only 只出代码块不带交付行
   extract_frames.sh          抽帧 + 切镜检测 + 拼图
   log_lesson.py              追加经验条目（--topic 必须是 `分类/主题`，脚本强制）
@@ -48,7 +49,7 @@ hooks/
   stop_gate.py               Stop 钩子（Claude Code 与 Codex 通用）：三层判定——本轮报告（verify 或 check_prompt --report）对得上就放行；没报告的完整稿由钩子代跑 check_prompt，有错拦下、无错放行并提示"作者未自己跑检查"；局部镜头与操作命令没报告则拦下
   README.md                  两个宿主的装法、能拦什么、真实宿主验证清单
 tests/cases.md               端到端用例
-tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检（166 项）
+tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检（184 项）
 tests/test_delivery_gate.py  verify_delivery 放行行为回归（42 项）
 tests/test_stop_gate.py      stop_gate 判定回归（61 项）
 ```

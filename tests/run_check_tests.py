@@ -124,6 +124,14 @@ CASES = [
     ("只改一句：通过", "revise_one_sentence.txt", ["--baseline", str(C / "revise_parent.txt"), "--total", "12"], 0),
     ("新稿比父稿长 30%：只提醒不拦", "revise_padded.txt", ["--baseline", str(C / "revise_parent.txt"), "--total", "12"], 0),
     ("局部替换丢了一句：只提醒不拦", "revise_partial_shot2.txt", ["--baseline", str(C / "revise_parent.txt"), "--partial", "--total", "12"], 0),
+    # ---- v18：机制词、尺度名词、绝对化的空或黑、解释词、距离链（五类都只提醒，不拦）----
+    ("机制词（力从…传到手腕）：只提醒", "mechanism_words.txt", ["--total", "12"], 0),
+    ("中景里的尺度名词（织纹）：只提醒", "micro_scale_in_medium.txt", ["--total", "12"], 0),
+    ("特写里的尺度名词：不提醒也不拦", "micro_scale_in_closeup.txt", ["--total", "12"], 0),
+    ("绝对化的空或黑（压死的黑）：只提醒", "absolute_void.txt", ["--total", "12"], 0),
+    ("同一镜里尽头 + 贴着镜头掠过：只提醒", "far_near_conflict.txt", ["--total", "12"], 0),
+    ("远处→逼近→贴镜写全（仍提醒，但必须通过）", "far_near_ok.txt", ["--total", "12"], 0),
+    ("解释词（仿佛、似乎）：并入空词，只提醒", "explain_words.txt", ["--total", "12"], 0),
     ("样例：打斗 12 秒", "../sample-combat-12s.txt", ["--total", "12", "--labels", "图片1,图片2,图片3"], 0),
     ("样例：对话 12 秒", "../sample-dialogue-12s.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
 ]
@@ -149,7 +157,13 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "被本轮修改的对象直接替代"),
               ("revise_partial_shot2.txt", ["--baseline", str(C / "revise_parent.txt"), "--partial"],
                "「后景虚化成一片柔光」"),
-              ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长 30%")]
+              ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长 30%"),
+              # v18：五类新提醒各要真的出现在 warnings 里
+              ("mechanism_words.txt", [], "机制词：「力从」"),
+              ("micro_scale_in_medium.txt", [], "尺度名词「织纹」出现在非特写镜头里"),
+              ("absolute_void.txt", [], "绝对化的空或黑：「压死的黑」"),
+              ("far_near_conflict.txt", [], "同一镜里既有远处位置又有贴镜动作"),
+              ("explain_words.txt", [], "空词：仿佛")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -165,7 +179,14 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("revise_one_sentence.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长"),
                  ("partial_shot2.txt", ["--baseline", str(C / "control_valid.txt"), "--partial"], "在新稿里消失"),
                  ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt")], "在新稿里消失"),
-                 ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长")]
+                 ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长"),
+                 # v18：特写镜头里的尺度名词不提醒；干净稿不被五类新提醒误伤
+                 ("micro_scale_in_closeup.txt", [], "尺度名词"),
+                 ("control_valid.txt", [], "机制词"),
+                 ("control_valid.txt", [], "绝对化的空或黑"),
+                 ("control_valid.txt", [], "既有远处位置又有贴镜动作"),
+                 ("style_clean.txt", [], "尺度名词"),
+                 ("control_valid.txt", [], "空词：")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
