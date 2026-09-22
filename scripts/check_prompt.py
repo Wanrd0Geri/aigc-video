@@ -11,6 +11,7 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 两个维度分开表示：
   --task      最终命令的性质：生成（默认）/ 编辑 / 延长 / 衔接。决定时码规则和必填词。
   --baseline  给了父稿就是修订：默认 --format 继承（父稿有什么标题、什么顺序，新稿必须一样），
+              识别父稿实际四 / 五 / 六段并执行对应检查，未知旧外壳保留兼容；固定句仍继承父稿。
               并检查 --lock 锁定文字逐字保留、--unchanged 镜头逐字未改。
   --format    新稿默认 四段（主体 / 场景 / 风格 / 情节），不设概述段、也不设结尾标题：固定句
               “全片不添加BGM，不添加字幕。”是整份提示词的最后一行，而且末尾只有它这一行——
@@ -31,21 +32,21 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
   新稿四段标题各恰好一次且顺序对（或显式检查旧五段 / 六段、继承父稿标题）；
   无文件名（含紧邻中文）、路径、UUID；引用性措辞（不扫台词与锁定文字）；内部术语与修改标记；
   操作类必填词与官方必填句——四段稿全部在情节段开头的命令区，六段旧稿在概述段与结尾段，五段旧稿按父稿，
-  继承模式命令区与结尾段都接受。
+  继承的四段稿仍只认命令区；继承旧壳的命令区与结尾段都接受。
 素材引用：`@图片N`、`图片N`、`图N`、`@视频N`、`视频N`、`@音频N`、`音频N` 一律归一成键 `图N` / `视频N` / `音频N`
   （`--labels` 写 `图1` 或 `图片1` 都行，同样归一）；声明集合、首次出现位置、操作命令必填词都按归一后的键核对。
   **提示词里不写 @**（软件里粘贴后再 @ 出来）：四段新稿出现 @ 引用时提醒一次；继承模式按父稿（父稿用 @ 就不提醒）。
 启发式扫描（空词与解释词、机制词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
 用户实测（L064）模型多会加速完成密动作，但这是经验线索不是通过保证，仍要按动作依赖与可读性判断。
 v18 的五类提醒（词表都在脚本头部常量里，旁注「可调」）：
-  机制词（力从、传到手腕、惯性、过冲、蓄力本身……）镜头拍不到，改成可见表现；
+  机制词（力从、传到手腕、惯性、过冲、蓄力本身……）不能单独承担控制；核对是否已有对应可见表现，缺少才补，已有可保留术语；
   尺度名词（织纹、纤维、毛孔、抽丝……）出现在**没有**特写 / 大特写 / 微距 / 近景字样的镜头正文里时提醒，等于要求模型换景别去拍（风格段的材质句不扫）；
   绝对化的空或黑（压死的黑、什么都没有、再没有第三样……）会给出一块死区，写暗处还留着什么；
   解释词（仿佛、似乎、像是在、营造、氛围、有一种）并入空词清单，台词不扫；
   同一镜正文里既有远处位置词（远处、尽头、深处……）又有贴镜动作词（贴着镜头、掠过镜头、撑满画面……）时提醒，中间要有逼近或后拉把距离接上。
 否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外）里句首是
   `不出现|不添加|不得|不要|不能|不许|不可|禁止|避免` 的句子逐句给**提醒**（不是错误）；用 --negative-exception 逐句点名的不再提醒。
-  “没有”“无”不当否定句抓。五段 / 六段 / 继承旧稿仍用结尾段预算：用户逐字锁不计入，新稿超过 4 条报错，
+  “没有”“无”不当否定句抓。继承的四段稿也逐句提醒；五段 / 六段 / 未知旧外壳仍用结尾段预算：用户逐字锁不计入，新稿超过 4 条报错，
   除非 --negative-exception 逐句点名超出的必要否定（每句与结尾段里一条独立否定条款整句一致，重复声明和片段不计数）；
   修订与操作命令给警告，须由最终专业审查裁定。
 
@@ -58,9 +59,12 @@ v18 的五类提醒（词表都在脚本头部常量里，旁注「可调」）�
 
 --baseline 还会做两件"改稿不丢句"的机械提醒（都只是提醒，不阻断）：
   ① 父稿与新稿按句号、分号、问号、感叹号和换行切句（引号内不切），去空白比对，**父稿有、新稿没有的句子**列出来
-     （最多 10 句，超出只报数量）；被改写成相近说法的那一句算"被本轮修改的对象直接替代"，不算消失。
+     （最多 10 句，超出只报数量）；逐镜先精确、再相似地一对一匹配，同镜相近改写不算消失，不跨镜顶替。
      `--partial` 时只比对被替换的那几个镜头。消失的句子里如果含某条已经报"没有落点"的要求的关键词，不重复报。
-  ② 新稿字数（去空白）比父稿多 15% 以上时提醒长度稀释；无父稿不报。
+     删句须按 references/review/revise-rules.md 核对：用户明确删改或替换；授权范围内等义改写 / 合并且所有独立控制有落点；
+     原句仅与本次明确替换的旧字段冲突。已认可效果、措辞或设计未经用户针对该项允许，不得删除、削弱或实质替换；
+     新旧受保护要求冲突时保留并说明取舍，冲突本身不构成撤回授权。
+  ② 新稿字数（去空白）比父稿多 15% 以上时，仅提醒核对新增必要信息与重复补丁，不强制压缩或为降字数删成功项；无父稿不报。
 
 --report：把这次机械检查的结果另存一份 JSON（`kind: "light"`，目录不存在会自动建），给 hooks/stop_gate.py 的守门用。
   报告里 delivered_sha256 = 实际交付出去的那段正文的哈希（非 --partial 时与 checked_sha256 相同），
@@ -71,7 +75,7 @@ v18 的五类提醒（词表都在脚本头部常量里，旁注「可调」）�
 
 退出码 0 = 无错误，1 = 有错误，2 = 参数错误。summary 一行可直接贴到交付里；它带 delivered_sha256 前 8 位
 （非 --partial 时即 checked_sha256 前 8 位），必须来自真实运行结果，可与报告、工具日志和正文核对；哈希不是执行签名或质量证明。
-脚本只报告机械结果；最终交付还须运行 verify_delivery.py 核对专业审查及警告裁定。
+脚本只报告机械结果；轻量路径核对并裁定警告后即可交付，全套路径再运行 verify_delivery.py 核对专业审查及警告裁定。
 """
 import argparse, difflib, hashlib, json, os, re, sys, time
 from pathlib import Path
@@ -118,7 +122,7 @@ INTERNAL = ["可见清单", "锁定项", "执行回执", "FightBeat", "接触台
 # 空词 + 解释词（只解释画面的意思、不产生画面）。台词与 --lock 锁定文字不扫。词表可调。
 EMPTY_WORDS = ["高级感", "史诗感", "震撼", "美丽", "灵动",
                "仿佛", "似乎", "像是在", "营造", "氛围", "有一种"]
-# 机制词：力学名词镜头拍不到，写它的可见表现。词表可调。
+# 机制词不能单独承担控制；核对已有可见表现，缺少才补，已有可保留术语。词表可调。
 MECHANISM_WORDS = ["力从", "传到手腕", "传递到", "动量", "惯性", "过冲",
                    "受力链", "蓄力本身", "势能", "扭矩", "发力链"]
 # 尺度名词：只有特写 / 大特写 / 微距 / 近景装得下；出现在别的景别里等于要求模型换景别去拍。
@@ -155,9 +159,9 @@ CJK_MAP = {c: i for i, c in enumerate("零一二三四五六七八九")}
 # 改稿不丢句：切句只认句号、分号、问号、感叹号和换行；引号内不切。
 SENT_END = "。；;？?！!"
 QUOTE_OPEN = {"“": "”", "「": "」", "『": "』", "\"": "\""}
-# 父稿句子与新稿某句的相似度到这条线，就算"被本轮修改的对象直接替代"（改写过的那一句），不算消失。
+# 同镜一对一匹配的句子相似度达到这条线，机械检查不报消失；相似度不代表删改已获授权。
 SENT_SIMILAR = 0.6
-# 长度稀释：新稿去空白字数超过父稿这个倍数就提醒。
+# 长度增长：超过父稿这个倍数时提醒核对新增信息，不据此要求压缩。
 LENGTH_BUDGET = 1.15
 
 
@@ -337,7 +341,13 @@ def infer_task(baseline_text):
     return "生成"
 
 
-def synthesize(baseline_lines, cand_lines, errors, unchanged_ids):
+def known_format(lines):
+    """识别实际外壳；未知旧外壳保留继承兼容，不猜成新格式。"""
+    labels = headers_of(lines, parse_heads(lines))
+    return next((name for name, expected in FORMAT_LABELS.items() if labels == expected), None)
+
+
+def synthesize(baseline_lines, cand_lines, errors, unchanged_ids, baseline_fmt=None):
     """校验局部替换段，再放回父稿。返回合成后的行列表。"""
     b_heads = parse_heads(baseline_lines)
     c_heads = parse_heads(cand_lines)
@@ -354,7 +364,7 @@ def synthesize(baseline_lines, cand_lines, errors, unchanged_ids):
     dup = sorted({i for i in c_ids if c_ids.count(i) > 1})
     if dup:
         errors.append(f"局部替换段里镜号重复：{dup}")
-    c_blocks = shot_blocks(cand_lines, c_heads)
+    c_blocks = shot_blocks(cand_lines, c_heads, len(cand_lines) if baseline_fmt == "四段" else None)
     for h, _body, tail in c_blocks:
         if "".join(tail).strip():
             errors.append(f"局部镜头 {h[2]} 后有固定句或收尾行，不能丢弃；收尾有改动请交付全稿")
@@ -362,7 +372,7 @@ def synthesize(baseline_lines, cand_lines, errors, unchanged_ids):
         if sid in unchanged_ids:
             errors.append(f"镜头 {sid} 被标为未改（--unchanged），局部替换段却改了它")
     b_ids = {h[2]: h for h in b_heads if h[2] is not None}
-    b_blocks = shot_blocks(baseline_lines, b_heads)
+    b_blocks = shot_blocks(baseline_lines, b_heads, len(baseline_lines) if baseline_fmt == "四段" else None)
     repl = {}
     for (h, body, _tail) in c_blocks:
         sid = h[2]
@@ -453,18 +463,50 @@ def split_sentences(text):
     return out
 
 
+def sentence_regions(text):
+    """按全局段落、镜号与尾部隔离；不让另一镜的相似句顶替本镜要求。"""
+    lines = text.splitlines()
+    heads = {h[0]: h for h in parse_heads(lines)}
+    regions, key = {}, ("global", "prefix")
+    for i, line in enumerate(lines):
+        if i in heads:
+            h = heads[i]
+            key = ("shot", h[2] if h[2] is not None else (h[3], h[4]))
+        elif is_tail_line(line):
+            key = ("global", "tail")
+        else:
+            match = KNOWN_HEADER.match(line)
+            if match:
+                key = ("global", match.group(1))
+        regions.setdefault(key, []).append(line)
+    return {key: split_sentences("\n".join(lines)) for key, lines in regions.items()}
+
+
 def lost_sentences(old_text, new_text):
-    """父稿有、新稿没有的句子（去空白比对）。被改写成相近说法的不算消失。"""
-    new_norm = [re.sub(r"\s+", "", s) for s in split_sentences(new_text)]
-    new_set = set(new_norm)
+    """逐镜先精确、再相似地一对一匹配；未匹配旧句只作提醒。"""
+    old_regions, new_regions = sentence_regions(old_text), sentence_regions(new_text)
     lost = []
-    for s in split_sentences(old_text):
-        n = re.sub(r"\s+", "", s)
-        if not n or n in new_set:
-            continue
-        if any(difflib.SequenceMatcher(None, n, m).ratio() >= SENT_SIMILAR for m in new_norm):
-            continue
-        lost.append(s)
+    for key, old in old_regions.items():
+        new = new_regions.get(key, [])
+        old_norm = [re.sub(r"\s+", "", s) for s in old]
+        new_norm = [re.sub(r"\s+", "", s) for s in new]
+        remaining_old, remaining_new = set(range(len(old))), set(range(len(new)))
+        # 先占用完全保留的句子，不能再拿它替代被删掉的相近旧句。
+        for i, n in enumerate(old_norm):
+            match = next((j for j in sorted(remaining_new) if n == new_norm[j]), None)
+            if match is not None:
+                remaining_old.remove(i)
+                remaining_new.remove(match)
+        pairs = sorted(
+            ((difflib.SequenceMatcher(None, old_norm[i], new_norm[j]).ratio(), i, j)
+             for i in remaining_old for j in remaining_new), reverse=True)
+        for similarity, i, j in pairs:
+            if similarity < SENT_SIMILAR:
+                break
+            if i in remaining_old and j in remaining_new:
+                remaining_old.remove(i)
+                remaining_new.remove(j)
+        lost.extend(old[i] for i in sorted(remaining_old))
     return lost
 
 
@@ -514,7 +556,10 @@ def main():
     baseline_lines = baseline_text.splitlines() if a.baseline else None
     task = infer_task(baseline_text) if a.task == "修订" else a.task
     revision = a.baseline is not None
-    fmt = a.fmt or ("继承" if revision else "四段")
+    requested_fmt = a.fmt or ("继承" if revision else "四段")
+    inherit_format = requested_fmt == "继承"
+    baseline_fmt = known_format(baseline_lines) if revision else None
+    fmt = (baseline_fmt or "继承") if inherit_format else requested_fmt
     untimed = a.untimed or task == "衔接"
     unchanged_ids = [int(x) for x in re.findall(r"\d+", a.unchanged)]
 
@@ -522,7 +567,7 @@ def main():
     if a.task == "修订":
         checked.append(f"--task 修订 已按父稿判断为「{task}」")
     if a.partial:
-        lines = synthesize(baseline_lines, cand_lines, errors, unchanged_ids)
+        lines = synthesize(baseline_lines, cand_lines, errors, unchanged_ids, baseline_fmt)
         checked.append("局部替换段已校验并放回父稿合成完整稿检查")
     else:
         lines = cand_lines
@@ -583,6 +628,13 @@ def main():
 
     # --- 外壳 ---
     hdrs = headers_of(lines, heads)
+    if inherit_format:
+        b_hdrs = headers_of(baseline_lines, parse_heads(baseline_lines))
+        if hdrs != b_hdrs:
+            errors.append(f"外壳没有继承父稿：父稿标题 {b_hdrs}，新稿标题 {hdrs}；修订默认继承父稿外壳，不为通过检查迁移格式；"
+                          f"要换成新标准（四段：无结尾标题、末尾只有固定句那一行）须本次明确授权并加 --format 四段")
+        else:
+            checked.append(f"外壳与父稿一致：{b_hdrs}")
     if fmt in FORMAT_LABELS:
         expected_labels = FORMAT_LABELS[fmt]
         bad = False
@@ -616,13 +668,6 @@ def main():
             content = lines[i][match.end():] + "\n" + "\n".join(lines[i + 1:end])
             if not content.strip():
                 errors.append(f"段落内容为空：{match.group(1)}")
-    else:
-        b_hdrs = headers_of(baseline_lines, parse_heads(baseline_lines))
-        if hdrs != b_hdrs:
-            errors.append(f"外壳没有继承父稿：父稿标题 {b_hdrs}，新稿标题 {hdrs}；修订默认继承父稿外壳，不为通过检查迁移格式；"
-                          f"要换成新标准（四段：无结尾标题、末尾只有固定句那一行）须本次明确授权并加 --format 四段")
-        else:
-            checked.append(f"外壳与父稿一致：{b_hdrs}")
 
     # --- 操作类必填词 ---
     overview = operation_text(text)
@@ -632,7 +677,7 @@ def main():
         warnings.append(f"情节段开头有总览句：「{head}」；生成类新稿情节段直接从镜头标题开始，时长与镜数由镜头标题表达，"
                         "控制句写进主体段或镜内，确认是重复就删掉")
     command_location = "概述段" if re.search(r"^\s*概述[：:]", text, re.M) else command_zone
-    # 必填句的落点：四段新稿一律在命令区；五段 / 六段旧稿在结尾段；继承模式两处都接受（按父稿）
+    # 四段（含继承）必填句一律在命令区；其它继承旧壳两处都接受（按父稿）。
     m_tail = re.search(r"结尾[：:](.*)$", text, re.S)
     zone_start, zone_end = (len(lines), len(lines)) if fmt == "四段" else tail_zone_bounds(lines)
     if fmt == "四段":
@@ -643,11 +688,11 @@ def main():
         tail_text, tail_name, has_tail = "\n".join(lines[zone_start:zone_end]), "结尾段", True
     else:
         tail_text, tail_name, has_tail = text[-400:], "结尾段", False
-    # 四段只认命令区；继承模式命令区或结尾段都行；旧壳只认结尾段
-    required_zone = overview if fmt == "四段" else (overview + "\n" + tail_text if fmt == "继承" else tail_text)
+    # 四段只认命令区；其它继承旧壳命令区或结尾段都行；显式旧壳只认结尾段。
+    required_zone = overview if fmt == "四段" else (overview + "\n" + tail_text if inherit_format else tail_text)
     misplaced_hint = ("操作命令的必填句写在情节段开头的命令区，末尾只留固定句" if fmt == "四段"
                       else f"操作命令的官方约束句要写在末尾固定句之前（{tail_name}），不能写在别处或固定句之后")
-    zone_name = command_zone if fmt == "四段" else (f"命令区或{tail_name}" if fmt == "继承" else tail_name)
+    zone_name = command_zone if fmt == "四段" else (f"命令区或{tail_name}" if inherit_format else tail_name)
     if task == "延长":
         if not any(w in overview for w in ["向后延长", "向前延长", "续写", "延续"]):
             errors.append(f"延长命令的{command_location}缺少必填词：向后延长 / 向前延长 / 续写")
@@ -687,13 +732,13 @@ def main():
             checked.append("衔接必填词齐全" + ("，都在命令区" if fmt == "四段" else ""))
 
     # --- 固定句：逐字一次、不拆开、结束整份提示词 ---
-    if fmt == "四段":
+    if inherit_format and CLOSING_NEW_RE.search(baseline_text or ""):
+        closing_kind = "new"
+    elif inherit_format and CLOSING_OLD_RE.search(baseline_text or ""):
+        closing_kind = "old"
+    elif fmt == "四段":
         closing_kind = "new"
     elif fmt in ("五段", "六段"):
-        closing_kind = "old"
-    elif CLOSING_NEW_RE.search(baseline_text or ""):
-        closing_kind = "new"
-    elif CLOSING_OLD_RE.search(baseline_text or ""):
         closing_kind = "old"
     else:
         closing_kind = "new" if CLOSING_NEW_RE.search(text) else "old"
@@ -709,7 +754,7 @@ def main():
     other = CLOSING_SPEC["old" if closing_kind == "new" else "new"]
     if n_exact == 0:
         if other[1].search(text):
-            src = "父稿" if fmt == "继承" else ("四段新稿" if fmt == "四段" else f"{fmt}旧稿")
+            src = "父稿" if inherit_format else ("四段新稿" if fmt == "四段" else f"{fmt}旧稿")
             errors.append(f"固定句用错了句式：{src}必须逐字写“{want}”，这里写成了“{other[0]}。”；"
                           f"换句式须本次明确授权并改 --format")
         elif any(part_counts) or CLOSING_ANY_RE.search(text):
@@ -749,7 +794,7 @@ def main():
     # 提示词里不写 @（即梦软件里粘贴后再 @ 出来）；继承模式按父稿：父稿用 @ 就不提醒
     at_used = sorted(k for k, v in used.items() if v["at"])
     baseline_has_at = bool(re.search(r"@(?:图片|视频|音频|图)\s?\d", baseline_text or ""))
-    if at_used and fmt in ("四段", "继承") and not baseline_has_at:
+    if at_used and (fmt == "四段" or inherit_format) and not baseline_has_at:
         warnings.append(f"新稿不写 @（软件里再 @），写 图N / 视频N / 音频N：{at_used}")
     if a.labels:
         declared = {norm_label(x) for x in a.labels.split(",") if x.strip()}
@@ -789,7 +834,7 @@ def main():
             warnings.append(f"空词：{w}（翻译成可见句或删）")
     for w in MECHANISM_WORDS:
         if w in lock_free:
-            warnings.append(f"机制词：「{w}」；镜头拍不到，改成可见表现（脚下碎响、下摆先转、肩膀滞后、手臂伸直）")
+            warnings.append(f"机制词：「{w}」不能单独承担控制；核对是否已有对应可见表现（脚下碎响、下摆先转、肩膀滞后、手臂伸直），缺少才补，已有可保留术语")
     for w in ABSOLUTE_VOID_WORDS:
         if w in lock_free:
             warnings.append(f"绝对化的空或黑：「{w}」；模型会给一块死区，写暗处还留着什么")
@@ -803,7 +848,8 @@ def main():
         checked.append(f"锁定文字 {len(a.lock)} 条逐字保留")
     if revision:
         b_heads = parse_heads(baseline_lines)
-        b_map = {h[2]: norm_shot(body) for (h, body, _t) in shot_blocks(baseline_lines, b_heads) if h[2] is not None}
+        baseline_blocks = shot_blocks(baseline_lines, b_heads, len(baseline_lines) if baseline_fmt == "四段" else None)
+        b_map = {h[2]: norm_shot(body) for (h, body, _t) in baseline_blocks if h[2] is not None}
         c_map = {h[2]: norm_shot(body) for (h, body, _t) in blocks if h[2] is not None}
         for sid in unchanged_ids:
             if sid not in b_map:
@@ -845,10 +891,10 @@ def main():
             checked.append(f"要求清单 {asks_active} 条有效全部有落点"
                            + (f"，{len(withdrawn)} 条已标撤回：{'、'.join(withdrawn)}" if withdrawn else ""))
 
-    # --- 改稿不丢句：父稿有、新稿没有的句子（提醒）；长度稀释（提醒）---
+    # --- 改稿不丢句：父稿有、新稿没有的句子（提醒）；长度增长（提醒）---
     if revision:
         if a.partial:
-            b_body = {h[2]: "\n".join(body) for (h, body, _t) in shot_blocks(baseline_lines, b_heads) if h[2] is not None}
+            b_body = {h[2]: "\n".join(body) for (h, body, _t) in baseline_blocks if h[2] is not None}
             p_ids = [h[2] for h in parse_heads(cand_lines) if h[2] is not None]
             old_side = "\n".join(b_body[i] for i in p_ids if i in b_body)
             new_side = "\n".join(cand_lines)
@@ -861,11 +907,11 @@ def main():
             shown = "".join(f"「{s[:30]}」" for s in lost[:10])
             more = f"（只列前 10 句）" if len(lost) > 10 else ""
             warnings.append(f"父稿有 {len(lost)} 句在新稿里消失：{shown}{more}；"
-                            f"每句须归入三类之一——用户要求删 / 被本轮修改的对象直接替代 / 与本轮修改冲突——否则恢复")
+                            f"按 references/review/revise-rules.md 核对删改授权与控制落点；已认可项不得擅自删除、削弱或替换，受保护要求冲突时保留并说明取舍")
         old_n, new_n = nonspace_len(old_side), nonspace_len(new_side)
         if old_n and new_n > old_n * LENGTH_BUDGET:
             warnings.append(f"新稿比父稿长 {round((new_n - old_n) / old_n * 100)}%（{old_n}→{new_n} 字）；"
-                            f"修改不堆砌：新增控制要有对应的删减或合并")
+                            f"仅核对新增必要信息与重复补丁，不强制压缩或为降字数删成功项；详见 references/review/revise-rules.md")
 
     # --- 每镜动态词扫描（提醒）---
     for k, (h, body_lines, _t) in enumerate(blocks):
@@ -907,7 +953,7 @@ def main():
         if any(w in sbody for w in FAR_WORDS) and any(w in sbody for w in NEAR_CONTACT_WORDS):
             warnings.append(f"{tag} 同一镜里既有远处位置又有贴镜动作，确认中间有逼近或后拉把距离接上")
 
-    # --- 否定句：四段稿全文逐句提醒（默认预算 0 条自写否定）；旧壳与继承稿仍用结尾段预算 ---
+    # --- 否定句：四段（含继承）全文逐句提醒；五 / 六段与未知旧外壳用结尾段预算 ---
     neg = 0
     exc_raw = [s.strip().rstrip("。；;") for s in a.negative_exception.replace(";", "；").split("；") if s.strip()]
     exc = list(dict.fromkeys(exc_raw))  # 去重
@@ -1016,7 +1062,7 @@ def main():
     parts.append(f"sha {delivered_sha[:8]}")
     summary = ("check_prompt 通过" if not errors else f"check_prompt 有 {len(errors)} 处错误") + "（" + "｜".join(parts) + "）"
     out = {
-        "ok": not errors, "task": task, "revision": revision, "format": fmt, "partial": a.partial,
+        "ok": not errors, "task": task, "revision": revision, "format": requested_fmt, "effective_format": fmt, "partial": a.partial,
         "errors": errors, "warnings": warnings, "checked": checked,
         "stats": {"shots": len(heads), "heading_style": sorted(styles), "total_seconds": timed[-1][4] if timed else None,
                   "labels_used": sorted(used), "chars": len(text)},
@@ -1032,7 +1078,7 @@ def main():
         report = {
             "kind": "light", "ready": not errors,
             "checked_sha256": checked_sha, "delivered_sha256": delivered_sha,
-            "task": task, "format": fmt, "partial": bool(a.partial),
+            "task": task, "format": requested_fmt, "effective_format": fmt, "partial": bool(a.partial),
             "errors": errors, "warnings": warnings,
             "labels": sorted(x.strip() for x in a.labels.split(",") if x.strip()), "locks": len(a.lock),
             "asks_checked": asks_checked,
