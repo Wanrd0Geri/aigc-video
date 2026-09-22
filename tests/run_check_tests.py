@@ -112,7 +112,7 @@ CASES = [
     ("弱运镜措辞只提醒", "weak_motion.txt", ["--total", "12"], 0),
     ("四段生成稿情节段开头有总览句：只提醒", "four_section_overview_warning.txt", ["--total", "12"], 0),
     ("动作过密只提醒", "dense_beats.txt", ["--total", "12"], 0),
-    ("B17 修订稿锁定 5 条否定只提醒", "five_negatives.txt", ["--baseline", str(C / "five_negatives.txt"), "--lock", "不出现第二个人。\n不出现文字水印。\n不出现多余武器。\n不出现现代物品。\n全片不添加BGM，不添加字幕。", "--total", "12"], 0),
+    ("B17 四段修订仍拦末尾约束，逐字锁不豁免摆放规则", "five_negatives.txt", ["--baseline", str(C / "five_negatives.txt"), "--lock", "不出现第二个人。\n不出现文字水印。\n不出现多余武器。\n不出现现代物品。\n全片不添加BGM，不添加字幕。", "--total", "12"], 1),
     # ---- v17 A：要求清单 --asks（多轮任务从第二版起维护）----
     ("要求清单 2 条有效全部有落点：通过", "asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_ok.txt")], 0),
     ("要求清单有一条在正文里没落点：拦下", "asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_missing.txt")], 1),
@@ -154,10 +154,10 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "在新稿里消失"),
               ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")],
                "「镜头缓缓推近到胸口高度」「后景虚化成一片柔光」"),
-              ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "被本轮修改的对象直接替代"),
+              ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "核对删改授权与控制落点"),
               ("revise_partial_shot2.txt", ["--baseline", str(C / "revise_parent.txt"), "--partial"],
                "「后景虚化成一片柔光」"),
-              ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt")], "新稿比父稿长 30%"),
+              ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt")], "仅核对新增必要信息与重复补丁"),
               # v18：五类新提醒各要真的出现在 warnings 里
               ("mechanism_words.txt", [], "机制词：「力从」"),
               ("micro_scale_in_medium.txt", [], "尺度名词「织纹」出现在非特写镜头里"),
