@@ -1,6 +1,6 @@
 interface:
   display_name: "AIGC Video"
-  short_description: "视频提示词设计与质量核对：保护要求、复查镜头、核对最终正文后交付。"
-  default_prompt: "用 $aigc-video 完成视频提示词；先完成适用的专业设计和质量校验，再交付正文。"
+  short_description: "即梦 Seedance 2.5 视频提示词导演：写新稿、改稿、操作命令、自检、成片诊断、打斗特效设计、效果查词"
+  default_prompt: "用 $aigc-video 为即梦 Seedance 2.5 写或改视频提示词（含延长、编辑等操作命令，也可做自检、成片诊断），先完成适用的专业设计与检查，再交付完整正文。"
 policy:
   allow_implicit_invocation: true

@@ -10,6 +10,12 @@ python3 scripts/verify_delivery.py --prompt prompt.txt --requirements requiremen
 报告里的 created_at（本次运行时间）与 session_id（环境变量 AIGC_SESSION_ID，没有则 null）供 Stop 钩子做本轮绑定：
 报告早于本轮用户消息、或属于别的会话时不算本轮验收，必须为当前要求重跑。
 
+requirements.json 里与机械检查有关的字段（quality-gate.md 模板）：
+  format   四段 / 五段 / 六段 / 继承；缺省时有父稿按“继承”、无父稿按“四段”，原样转给 check_prompt --format。
+  asks     多轮任务的 asks.txt 路径（相对路径先按当前目录找，找不到再按 requirements.json 所在目录找），转给 check_prompt --asks；单轮写 null。
+  complex  全套路径恒为 true（由严格审 / 审核节点触发，要求独立复核）；缺省或 false 报错不放行。
+局部修订（--partial）合成完整稿时按父稿的实际外壳切镜头块（与 check_prompt 同一口径），四段父稿镜内的否定句不会被当成结尾丢掉。
+
 Schema and workflow: references/review/quality-gate.md. Exit 0 ready, 1 not ready, 2 invalid input.
 The checker is executed here, not accepted from a supplied 'pass' receipt. Human/model review
 content is checked for completeness and text binding, not certified as semantically correct.
@@ -96,8 +102,30 @@ def evaluate(args):
         effective_locks = [spoken if x == original else x for x in effective_locks]
     if req.get('pronunciation_policy', 'homophone_allowed') not in ['homophone_allowed', 'exact_only']:
         errors.append('未知 pronunciation_policy')
-    if not isinstance(req.get('complex'), bool) or not req.get('complexity_reason', '').strip():
-        raise ValueError('必须判定 complex 并写 complexity_reason，不能默认省略独立复核')
+    # 全套路径只由“严格审 / 审核节点”触发，恒要独立复核：complex 缺省或不是 true 一律不放行
+    if req.get('complex') is not True:
+        errors.append('全套路径 complex 必须为 true（需独立复核）；本脚本只用于严格审或事先约定的审核节点，轻量路径不跑 verify_delivery')
+    if not isinstance(req.get('complexity_reason', ''), str) or not req.get('complexity_reason', '').strip():
+        raise ValueError('必须写 complexity_reason：本次是用户要求严格审，还是事先约定的审核节点')
+    # 外壳：缺省时有父稿按“继承”、无父稿按“四段”（与 check_prompt 同口径），原样转给 check_prompt
+    fmt = req.get('format') or ('继承' if args.baseline else '四段')
+    if fmt not in ['四段', '五段', '六段', '继承']:
+        raise ValueError('requirements.format 只能是 四段 / 五段 / 六段 / 继承')
+    if fmt == '继承' and not args.baseline:
+        raise ValueError('requirements.format 为“继承”时必须给 --baseline 父稿')
+    # 多轮任务的要求清单：相对路径先按当前目录，再按 requirements.json 所在目录找
+    asks = req.get('asks')
+    asks_path = None
+    if asks is not None:
+        if not isinstance(asks, str) or not asks.strip():
+            raise ValueError('requirements.asks 写 asks.txt 的路径；单轮任务写 null')
+        cand = Path(asks).expanduser()
+        if not cand.is_absolute() and not cand.is_file():
+            cand = Path(args.requirements).resolve().parent / cand
+        if not cand.is_file():
+            errors.append('requirements.asks 指定的要求清单找不到：' + asks)
+        else:
+            asks_path = str(cand)
     requirements = req['requirements']
     if not isinstance(requirements, list) or not requirements:
         raise ValueError('必须先从原请求建立 requirements')
@@ -115,13 +143,14 @@ def evaluate(args):
         cmd += ['--total', str(req['total'])]
     if req.get('untimed'):
         cmd += ['--untimed']
-    if req.get('format'):
-        cmd += ['--format', req['format']]
+    cmd += ['--format', fmt]
+    if asks_path:
+        cmd += ['--asks', asks_path]
     for lock in effective_locks:
         cmd += ['--lock', lock]
     neg_exc = req.get('negative_exception', [])
     if not isinstance(neg_exc, list) or not all(isinstance(x, dict) and x.get('sentence', '').strip() and x.get('reason', '').strip() for x in neg_exc):
-        raise ValueError('negative_exception 必须是 [{"sentence": "稿里那句否定（写在它管的那一镜，用户要求全片静音时的那一句写主体段；旧外壳为结尾段里的独立条款）", "reason": "防什么、为什么没有正向写法"}] 数组，无例外写 [] 或省略')
+        raise ValueError('negative_exception 必须是 [{"sentence": "稿里那句否定（位置按 writing-rules 第 62 条：只管一镜的写那一镜；全片级的写一次——身份数量类（含静音）写主体段末尾，环境、光、文字水印类写场景段末尾；操作类写命令区；旧外壳为结尾段里的独立条款）", "reason": "防什么、为什么没有正向写法"}] 数组，无例外写 [] 或省略')
     sentences = [x['sentence'].strip().rstrip('。；;') for x in neg_exc]
     if len(set(sentences)) != len(sentences):
         errors.append('negative_exception 有重复句子；每条例外必须对应一条不同的独立否定条款')
@@ -139,9 +168,12 @@ def evaluate(args):
     # Import only the deterministic synthesis helper to bind review quotes to the same full text.
     sys.dont_write_bytecode = True
     import check_prompt
+    # 父稿的实际外壳（与 check_prompt 同口径）：四段父稿里局部镜头的镜内否定句属于那一镜，不按旧壳结尾段切掉
+    parent_fmt = check_prompt.known_format(parent.splitlines()) if args.baseline else None
     if args.partial:
         synth_errors = []
-        full = '\n'.join(check_prompt.synthesize(parent.splitlines(), raw.splitlines(), synth_errors, req.get('unchanged', [])))
+        full = '\n'.join(check_prompt.synthesize(parent.splitlines(), raw.splitlines(), synth_errors,
+                                                 req.get('unchanged', []), parent_fmt))
         errors.extend(synth_errors)
     else:
         full = '\n'.join(raw.splitlines())
@@ -187,8 +219,11 @@ def evaluate(args):
     for row in rows_by_id(rev.get('checks', []), DOMAINS, '六个专业检查域'):
         evidence(row, allow_na=True)
     # Per-shot evidence makes the standing camera preference explicit on every delivery.
-    heads = check_prompt.parse_heads(full.splitlines())
-    blocks = check_prompt.shot_blocks(full.splitlines(), heads)
+    # 镜头块按 check_prompt 实际采用的外壳切：四段稿只在固定句那一行切开，镜内否定句仍算那一镜的正文
+    full_lines = full.splitlines()
+    heads = check_prompt.parse_heads(full_lines)
+    eff_fmt = mechanical.get('effective_format') or (parent_fmt if fmt == '继承' else fmt)
+    blocks = check_prompt.shot_blocks(full_lines, heads, len(full_lines) if eff_fmt == '四段' else None)
     shot_texts = ['\n'.join(body) for _head, body, _tail in blocks] or [full]
     camera_rows = rows_by_id(rev.get('camera', []), list(range(1, len(shot_texts) + 1)), '逐镜摄影')
     for row in camera_rows:
@@ -244,8 +279,8 @@ def evaluate(args):
     independent = None
     if args.independent_review:
         independent = read_json(args.independent_review)
-    if req['complex'] and independent is None:
-        errors.append('复杂任务缺少独立复核；保留候选，不能宣称已验收')
+    if independent is None:   # 全套路径恒要独立复核（complex 必须为 true，见上）
+        errors.append('全套路径缺少独立复核（--independent-review）；保留候选，不能宣称已验收')
     if independent is not None:
         if (independent.get('prompt_sha256') != prompt_hash or independent.get('requirements_sha256') != req_hash
                 or independent.get('status') != 'pass' or independent.get('unresolved') != []

@@ -136,5 +136,24 @@ class RevisionChecks(unittest.TestCase):
         self.assertIn("双手", self.loss(out)[0])
 
 
+    # ---- v25：没给 --task 时按合成后的全稿推断；紧跟镜头标题的否定句也逐句提醒 ----
+    def test_partial_infers_task_from_parent_command_zone(self):
+        parent = (CASES / "extend_ok.txt").read_text(encoding="utf-8")
+        prompt = "镜头1（0-5秒）：延长片段的第一个画面直接承接@视频1的尾帧，镜头跟着向左横移，人物停下脚步。"
+        out, combined = self.check(prompt, parent, ("--partial", "--total", "5", "--labels", "视频1"))
+        self.assertTrue(out["ok"], out["errors"])
+        self.assertEqual(out["task"], "延长")
+        self.assertTrue(any("推断为「延长」" in c for c in out["checked"]))
+        self.assertIn("向后延长@视频1", combined)
+
+    def test_inherited_four_flags_negative_right_after_shot_heading(self):
+        prompt = BASE.replace("镜头2（6-12秒）：", "镜头2（6-12秒）：不出现第二个人。")
+        out, _ = self.check(prompt)
+        self.assertTrue(out["ok"], out["errors"])
+        self.assertTrue(any(w.startswith("否定句：不出现第二个人") for w in out["warnings"]))
+        named, _ = self.check(prompt, extra=("--negative-exception", "不出现第二个人。"))
+        self.assertFalse(any(w.startswith("否定句：") for w in named["warnings"]))
+
+
 if __name__ == "__main__":
     unittest.main()

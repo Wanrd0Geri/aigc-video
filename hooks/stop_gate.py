@@ -6,9 +6,9 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
 要么由钩子当场代跑 scripts/check_prompt.py。比对的是提示词正文本身的 SHA-256，不是那行"交付校验通过"。
 
 宿主：
-  Claude Code  ~/.claude/settings.json →
+  Claude Code  ~/.claude/settings.json（与 SETUP.md 同一写法）→
     {"hooks": {"Stop": [{"hooks": [{"type": "command",
-      "command": "python3 ~/.claude/skills/aigc-video/hooks/stop_gate.py"}]}]}}
+      "command": "python3 -X utf8 $HOME/.claude/skills/aigc-video/hooks/stop_gate.py", "timeout": 30}]}]}}
     阻止 = 退出码 2 + stderr（Claude Code 会把 stderr 交给模型继续处理）。
   Codex        ~/.codex/hooks.json → Stop 事件挂同一脚本（按官方 hooks 文档，Stop 钩子必须输出 JSON）。
     阻止 = stdout 输出 {"decision": "block", "reason": "..."}。Codex 适配按官方文档字段实现，尚未在真实 Codex 会话验证。
@@ -31,22 +31,26 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
        checked_sha256 相等的报告（全套的 verify_delivery 报告，或轻量路径 check_prompt --report 写的 kind="light" 报告；
        kind 缺失视为全套）；报告还必须满足 created_at（缺失时用文件 mtime）≥ T_user，且 payload 与报告都带 session_id
        时两者相等。找到了就通过。报告存在但早于本轮 / 属于别的会话 → 直接阻止（旧稿冒充本轮），不代跑。
-     第 2 层｜没有报告，单元是**完整稿**（≥3 个段落标题）→ 钩子自己跑一遍 scripts/check_prompt.py（把规范化后的正文写进
-       临时文件；任务类型按正文推断：命令区或 视频N 附近有"向后延长/向前延长/续写"→ 延长，有"无缝衔接"→ 衔接，
-       有 编辑视频N/替换/删除/增加 且出现 视频N → 编辑，否则 生成（视频N 带不带 @ 都认）；外壳按标题推断：有概述段 → 六段旧壳，
-       只有结尾段 → 五段旧壳，两者都没有 → 不传 --format，用脚本默认的四段新壳）。
+     第 2 层｜没有报告，单元是**四段新壳的完整稿**（≥3 个段落标题，没有概述段、结尾段）→ 钩子自己跑一遍 scripts/check_prompt.py
+       （把规范化后的正文写进临时文件；一律按四段新稿检查，不传 --format；任务类型用 check_prompt.infer_task_from_text 按情节段开头的
+       命令区推断——向后延长 / 向前延长 / 续写 / 延续视频N → 延长，编辑 / 替换 / 删除 / 增加 / 移除紧挨着视频N → 编辑，无缝衔接 → 衔接，
+       否则生成；与 check_prompt 没给 --task 时同一个函数，认得 a-b秒 标题，镜内的“雨势增加”不会把生成稿推成编辑）。
        钩子不知道素材集合、逐字锁、总时长和父稿，所以不传 --labels / --lock / --total / --baseline。
        有错误 → 阻止并把错误原文列给模型，要求修好后自己跑 `check_prompt.py --report <目录>/<时间戳>.json` 再交付；
-       无错误 → 放行，但用 systemMessage 说明"这份稿由钩子代跑机械检查通过……作者本轮没有自己跑检查"。
-     第 3 层｜没有报告，单元是**局部镜头或不带四段外壳的裸操作命令** → 钩子没有父稿，代跑没有意义，直接阻止，要求带 --baseline
-       （局部再加 --partial）跑 `check_prompt.py --report` 再交付。
+       无错误 → 放行，但用 systemMessage 说明"这份稿由钩子代跑机械检查通过……作者本轮没有自己跑检查"，并附代跑的
+       "待裁定提醒 N 条"和前三条摘要（钩子只看错误，提醒仍要作者逐条裁定）。
+     第 3 层｜没有报告，单元是**局部镜头、不带四段外壳的裸操作命令，或带概述段 / 结尾段的五段 / 六段旧壳** → 直接阻止：
+       局部镜头要带 --baseline（再加 --partial）自己跑 `check_prompt.py --report`；裸操作命令要套四段外壳并自己带 --report；
+       旧壳稿提示“新稿四段；修改旧稿请自己带 --baseline 出报告”（钩子没有父稿，按四段代跑会误拦旧壳修订，按旧壳代跑又会放过
+       新稿写旧壳配旧固定句）。
      拿不到 T_user（没有 transcript）时退回 24 小时窗口，并在放行时用 systemMessage 说明"本轮绑定较弱"。
   4. 回复里每一条"交付校验通过（正文 xxxxxxxx｜需求 xxxxxxxx）"都必须与某份已匹配报告成对一致（正文短哈希与
      checked/delivered 前 8 位一致，且需求短哈希是同一份报告的）；对不上就阻止，不再默默忽略。交付行本身不是放行依据，
      可以不显示（prompt-only）。
-  5. 回复里每一条机械检查行"check_prompt 通过（…｜sha xxxxxxxx）"的短哈希，都必须对得上本轮已匹配到的某份 light 报告
-     （delivered_sha256 或 checked_sha256 前 8 位）；对不上就阻止（不要手写检查行）。代跑通过的单元没有报告，所以
-     那种情况下也不许自己写这行。全套报告匹配的单元不要求有这行。
+  5. 回复里每一条机械检查行（check_prompt 的 summary）的短哈希，都必须对得上本轮（created_at ≥ T_user、会话相容）的某份 light
+     报告（delivered_sha256 或 checked_sha256 前 8 位）；对不上就阻止（不要手写检查行）。“check_prompt 通过（…）”行还要求那份
+     报告 ready=true；“check_prompt 有 N 处错误（…）”行认 ready=false 的报告（自检如实抄错误结果是合法的），错误条数也要一致。
+     代跑通过的单元没有报告，所以那种情况下也不许自己写这行。全套报告匹配的单元不要求有这行。
   6. stop_hook_active=true（已经被本钩子拦过一次）：仍然检查；仍不通过时不再阻止（防死循环），改为放行并附系统消息
      "本次交付未经放行验收"，由用户看到。这是失败降级，不是硬阻断：Stop 钩子不能撤回已经显示出来的文字。
 退出码：0 放行；2 阻止（Claude Code）。Codex 模式下阻止用 JSON decision=block、退出码 0。
@@ -59,12 +63,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CHECKER = ROOT / "scripts" / "check_prompt.py"
+# 命令区与任务类型推断复用 check_prompt（与 verify_delivery 同样的 import 方式）；导入失败时不传 --task，让 check_prompt 自己推断
+sys.path.insert(0, str(ROOT / "scripts"))
+sys.dont_write_bytecode = True
+try:
+    import check_prompt as CP
+except Exception:   # 钩子不能因为导入失败而崩掉；代跑时退回让脚本自己推断
+    CP = None
 GATE_DIR = Path(os.environ.get("AIGC_GATE_DIR", os.path.expanduser("~/.aigc-video-gate")))
 FENCE = re.compile(r"```(?P<lang>[^\n]*)\n(?P<body>(?:.|\n)*?)\n```", re.M)
 RECEIPT = re.compile(r"交付校验通过（正文 ([0-9a-f]{8})｜需求 ([0-9a-f]{8})）")
 RECEIPT_ANY = re.compile(r"交付校验通过（正文 [0-9a-f]{8}｜需求 [0-9a-f]{8}）")
 SHOT_HEAD = re.compile(r"(?m)^\s*(镜头\s*\d+\s*[（(:：]|【阶段[一二三四五六七八九十\d]+】|第[一二三四五六七八九十\d]+阶段|\d+(?:\.\d+)?\s*(?:s|秒)?\s*[-–—~到]\s*\d+(?:\.\d+)?\s*(?:s|秒)\s*[:：])")
 SECTION = re.compile(r"(?m)^\s*(主体|概述|场景|风格|情节|结尾)\s*[：:]")
+OLD_SHELL = re.compile(r"(?m)^\s*(概述|结尾)\s*[：:]")   # 五段 / 六段旧壳的标志：代跑不认，按第 3 层打回
 VERB = "编辑|延长|续写|衔接|替换|删除|增加"
 # 素材引用：提示词里写 视频N（软件里再 @），旧稿的 @视频N 也认；仍要求动词邻近，免得把闲聊里的"视频1"当成命令
 VIDEO_REF = r"@?视频\s?\d+"
@@ -72,12 +84,10 @@ OPERATION = re.compile(VIDEO_REF + r"[^\n]{0,40}(?:" + VERB + r")|(?:" + VERB + 
 # 只有这些语言标签的围栏不验收：引用旧稿、概念草案、工具输出。其余（text/prompt/无标签/未知）都是成品候选。
 NON_DELIVERY_LANGS = {"quote", "draft", "diff", "json", "bash", "sh"}
 DAY = 86400
-# 机械检查行（check_prompt 的 summary）：只取里面的 sha 短哈希，用来核对它不是手写的
-CHECK_LINE = re.compile(r"check_prompt\s*(?:通过|有\s*\d+\s*处错误)（[^）\n]*?sha\s*([0-9a-f]{8})[^）\n]*）")
-# 代跑时推断任务类型用：命令区 = 概述段，或情节段开头到第一个镜头 / 阶段标题之前
-COMMAND_ZONE = re.compile(
-    r"(?:概述|情节)[：:](.*?)(?=\n\s*(?:镜头\s*\d+|【阶段|第[一二三四五六七八九十\d]+阶段)|\n(?:主体|场景|风格|结尾)[：:]|\Z)", re.S)
-NEAR_VIDEO = re.compile(r"[^\n]{0,40}" + VIDEO_REF + r"[^\n]{0,40}")
+# 代跑的时限：宿主（SETUP.md）给钩子 30 秒，代跑要在这之内结束
+CHECK_TIMEOUT = 25
+# 机械检查行（check_prompt 的 summary）：取“通过 / 有 N 处错误”和 sha 短哈希，用来核对它不是手写的
+CHECK_LINE = re.compile(r"check_prompt\s*(通过|有\s*(\d+)\s*处错误)（[^）\n]*?sha\s*([0-9a-f]{8})[^）\n]*）")
 SELF_RUN_NOTE = ("aigc-video 守门：这份稿由钩子代跑机械检查通过（未核对素材标签、锁定台词、总时长与父稿），"
                  "作者本轮没有自己跑检查。")
 
@@ -88,36 +98,28 @@ def is_full_draft(body):
 
 
 def infer_task(body):
-    """代跑时按正文推断 check_prompt 的 --task（钩子拿不到用户给的任务类型）。"""
-    zone = "\n".join(COMMAND_ZONE.findall(body) + NEAR_VIDEO.findall(body))
-    if re.search(r"向后延长|向前延长|续写", zone):
-        return "延长"
-    if "无缝衔接" in body:
-        return "衔接"
-    if re.search(r"编辑" + VIDEO_REF + r"|替换|删除|增加", zone) and re.search(VIDEO_REF, body):
-        return "编辑"
-    return "生成"
+    """代跑时按正文推断 check_prompt 的 --task（钩子拿不到用户给的任务类型）：复用 check_prompt.infer_task_from_text，
+    只看情节段开头的命令区。导入失败时返回 None，代跑不传 --task，由 check_prompt 自己推断。"""
+    return CP.infer_task_from_text(body) if CP is not None else None
 
 
 def run_checker(body):
-    """钩子代跑 scripts/check_prompt.py。返回 (状态, 说明列表)：
-    'ok' 无错误；'errors' 有错误（说明列表是错误原文）；'unavailable' 根本没跑起来。"""
+    """钩子代跑 scripts/check_prompt.py，一律按四段新稿检查（不传 --format）。返回 (状态, 错误列表, 提醒列表)：
+    'ok' 无错误；'errors' 有错误（错误列表是错误原文）；'unavailable' 根本没跑起来（错误列表是原因）。"""
     if not CHECKER.exists():
-        return "unavailable", [f"找不到检查脚本 {CHECKER}"]
+        return "unavailable", [f"找不到检查脚本 {CHECKER}"], []
     tmp = None
     try:
         with tempfile.NamedTemporaryFile("w", suffix=".txt", encoding="utf-8", delete=False) as fh:
             fh.write(body + "\n")
             tmp = fh.name
-        cmd = [sys.executable, "-X", "utf8", str(CHECKER), "--prompt", tmp, "--task", infer_task(body)]
-        # 外壳按标题推断：有概述段 = 六段旧壳；只有结尾段 = 五段旧壳；都没有就不传，用脚本默认的四段新壳
-        if re.search(r"(?m)^\s*概述\s*[：:]", body):
-            cmd += ["--format", "六段"]
-        elif re.search(r"(?m)^\s*结尾\s*[：:]", body):
-            cmd += ["--format", "五段"]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        cmd = [sys.executable, "-X", "utf8", str(CHECKER), "--prompt", tmp]
+        task = infer_task(body)
+        if task:
+            cmd += ["--task", task]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=CHECK_TIMEOUT)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
-        return "unavailable", [f"代跑 check_prompt.py 失败：{exc}"]
+        return "unavailable", [f"代跑 check_prompt.py 失败：{exc}"], []
     finally:
         if tmp:
             try:
@@ -128,9 +130,10 @@ def run_checker(body):
         data = json.loads(proc.stdout)
     except (json.JSONDecodeError, ValueError):
         detail = (proc.stderr or proc.stdout or "").strip().splitlines()
-        return "unavailable", [f"check_prompt.py 的输出读不懂（退出码 {proc.returncode}）：{detail[-1][:200] if detail else '无输出'}"]
+        return "unavailable", [f"check_prompt.py 的输出读不懂（退出码 {proc.returncode}）：{detail[-1][:200] if detail else '无输出'}"], []
     errors = [e for e in (data.get("errors") or []) if isinstance(e, str)]
-    return ("ok" if not errors else "errors"), errors
+    warnings = [w for w in (data.get("warnings") or []) if isinstance(w, str)]
+    return ("ok" if not errors else "errors"), errors, warnings
 
 
 def digest(text):
@@ -282,6 +285,8 @@ def last_assistant_text(payload, rows):
 
 
 def load_reports():
+    """24 小时内的全部报告 [(报告, created_at)]，ready=true 与 ready=false 都返回：交付单元只认 ready=true 的，
+    “check_prompt 有 N 处错误”这种检查行认本轮 ready=false 的 light 报告（自检如实抄错误结果）。"""
     out = []
     if not GATE_DIR.exists():
         return out
@@ -292,7 +297,7 @@ def load_reports():
             rep = json.loads(p.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError, ValueError):
             continue
-        if not isinstance(rep, dict) or rep.get("ready") is not True:
+        if not isinstance(rep, dict):
             continue
         created = rep.get("created_at")
         created = float(created) if isinstance(created, (int, float)) else mtime
@@ -312,11 +317,12 @@ def check(text, t_user, session_id):
     if not units and not receipts and not check_lines:
         return True, "", []
     reports = load_reports()
+    ready_reports = [(r, ts) for r, ts in reports if r.get("ready") is True]
     matched, notes = [], []
     for i, body in enumerate(units, 1):
         norm = normalize(body)
         h = digest(norm)
-        same = [(r, ts) for r, ts in reports
+        same = [(r, ts) for r, ts in ready_reports
                 if r.get("delivered_sha256") == h or r.get("checked_sha256") == h]
         stale = session_bad = False
         good = []
@@ -339,13 +345,24 @@ def check(text, t_user, session_id):
         if session_bad:
             return False, (f"第 {i} 份提示词（正文哈希 {h[:8]}）的检查报告来自另一个会话（session_id 不一致），"
                            "请在本会话为本轮要求重新运行检查脚本。"), notes
-        if not is_full_draft(norm):                     # 第 3 层：局部镜头或操作命令，钩子没有父稿
-            return False, (f"第 {i} 份提示词（正文哈希 {h[:8]}）是局部镜头或操作命令，在 {GATE_DIR} 里没有本轮"
-                           "ready=true 且正文一致的检查报告；钩子拿不到父稿，代跑没有意义。"
-                           "请自己跑：python3 scripts/check_prompt.py --prompt <正文.txt> --baseline <父稿.txt>"
-                           "（只交部分镜头再加 --partial）--report " + str(GATE_DIR) + "/<时间戳>.json，"
-                           "然后原样粘贴检查过的正文。改过稿必须重跑。"), notes
-        state, detail = run_checker(norm)               # 第 2 层：完整稿，钩子代跑
+        if not is_full_draft(norm):                     # 第 3 层：局部镜头或裸操作命令
+            if SHOT_HEAD.search(norm):
+                return False, (f"第 {i} 份提示词（正文哈希 {h[:8]}）是局部镜头，在 {GATE_DIR} 里没有本轮"
+                               "ready=true 且正文一致的检查报告；钩子拿不到父稿，代跑没有意义。"
+                               "请自己跑：python3 scripts/check_prompt.py --prompt <正文.txt> --baseline <父稿.txt>"
+                               "（只交部分镜头再加 --partial）--report " + str(GATE_DIR) + "/<时间戳>.json，"
+                               "然后原样粘贴检查过的正文。改过稿必须重跑。"), notes
+            return False, (f"第 {i} 份提示词（正文哈希 {h[:8]}）是不带四段外壳的裸操作命令，在 {GATE_DIR} 里没有本轮"
+                           "ready=true 且正文一致的检查报告。操作命令要套四段外壳并自己带 --report：主体 / 场景 / 风格 / 情节，"
+                           "命令句与官方必填句写在情节段开头的命令区，末尾只留固定句；然后跑 python3 scripts/check_prompt.py "
+                           "--prompt <正文.txt> --task <编辑|延长|衔接> --report " + str(GATE_DIR) + "/<时间戳>.json，"
+                           "原样粘贴检查过的正文。修改旧稿里的操作命令按父稿外壳，再加 --baseline <父稿.txt>。"), notes
+        if OLD_SHELL.search(norm):                      # 第 3 层：五段 / 六段旧壳，钩子没有父稿，也不替它选外壳
+            return False, (f"第 {i} 份提示词（正文哈希 {h[:8]}）带概述段或结尾段（五段 / 六段旧壳），在 {GATE_DIR} 里没有本轮"
+                           "ready=true 且正文一致的检查报告；钩子代跑一律按四段新稿检查，核对不了旧壳。"
+                           "新稿四段；修改旧稿请自己带 --baseline 出报告：python3 scripts/check_prompt.py --prompt <正文.txt> "
+                           "--baseline <父稿.txt> --report " + str(GATE_DIR) + "/<时间戳>.json，然后原样粘贴检查过的正文。"), notes
+        state, detail, warns = run_checker(norm)        # 第 2 层：四段完整稿，钩子代跑
         if state == "errors":
             listed = "\n".join("- " + e for e in detail)
             return False, (f"第 {i} 份提示词（正文哈希 {h[:8]}）没有本轮检查报告，钩子代跑 scripts/check_prompt.py "
@@ -356,19 +373,34 @@ def check(text, t_user, session_id):
             return False, (f"第 {i} 份提示词（正文哈希 {h[:8]}）没有本轮检查报告，钩子也没能代跑机械检查"
                            f"（{detail[0] if detail else '原因不明'}）。请自己跑 `python3 scripts/check_prompt.py "
                            "--prompt <正文.txt> --report " + str(GATE_DIR) + "/<时间戳>.json` 再交付。"), notes
-        notes.append(SELF_RUN_NOTE)
+        # 代跑只看错误；提醒照样要作者逐条裁定，把条数和前三条摘要带给用户
+        brief = "；".join(w[:40] + ("…" if len(w) > 40 else "") for w in warns[:3])
+        notes.append(SELF_RUN_NOTE + f"第 {i} 份代跑的待裁定提醒 {len(warns)} 条"
+                     + (f"，前三条：{brief}" if warns else "") + "（钩子只看错误，提醒仍要作者逐条裁定）。")
     for pre_body, pre_req in receipts:
         if not any((str(r.get("checked_sha256", "")).startswith(pre_body)
                     or str(r.get("delivered_sha256", "")).startswith(pre_body))
                    and str(r.get("requirements_sha256", "")).startswith(pre_req) for r in matched):
             return False, (f"交付行与放行报告不一致，不要手写交付行（正文 {pre_body}｜需求 {pre_req} 对不上本轮任何一份已匹配报告）；"
                            "照抄 verify_delivery.py --response 生成的成品。"), notes
-    light = [r for r in matched if r.get("kind") == "light"]
-    for pre in check_lines:
-        if not any(str(r.get("delivered_sha256", "")).startswith(pre)
-                   or str(r.get("checked_sha256", "")).startswith(pre) for r in light):
-            return False, (f"机械检查行与 check_prompt 报告不一致，不要手写检查行（sha {pre} 对不上本轮任何一份已匹配的 "
-                           "check_prompt 报告）；照抄 `check_prompt.py --report …` 真实输出的那行 summary。"), notes
+    # 机械检查行：认本轮（created_at ≥ T_user、会话相容）的 light 报告；“通过”行要求 ready=true，
+    # “有 N 处错误”行认 ready=false 的报告且错误条数一致（自检如实抄错误结果是合法的）
+    def this_turn(rep, ts):
+        rs = rep.get("session_id")
+        return (t_user is None or ts >= t_user) and not (session_id and rs and rs != session_id)
+    turn_light = [r for r, ts in reports if r.get("kind") == "light" and this_turn(r, ts)]
+    for kind, n_err, pre in check_lines:
+        def same_sha(r):
+            return str(r.get("delivered_sha256", "")).startswith(pre) or str(r.get("checked_sha256", "")).startswith(pre)
+        if kind == "通过":
+            ok_line = any(same_sha(r) and r.get("ready") is True for r in turn_light)
+        else:
+            ok_line = any(same_sha(r) and r.get("ready") is not True and len(r.get("errors") or []) == int(n_err)
+                          for r in turn_light)
+        if not ok_line:
+            return False, (f"机械检查行与 check_prompt 报告不一致，不要手写检查行（「{kind}」这行的 sha {pre} 对不上本轮任何一份"
+                           + ("ready=true 的" if kind == "通过" else "错误条数一致的")
+                           + " check_prompt 报告）；照抄 `check_prompt.py --report …` 真实输出的那行 summary。"), notes
     if receipts and len(receipts) < len(units) and len(units) > 1:
         return False, f"回复里有 {len(units)} 份提示词，但交付行只有 {len(receipts)} 条；每份提示词都要各自放行。", notes
     return True, "", notes

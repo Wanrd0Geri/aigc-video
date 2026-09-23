@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """check_prompt.py 回归：python3 tests/run_check_tests.py  （全部通过退出 0）"""
-import hashlib, json, pathlib, re, subprocess, sys, tempfile
+import hashlib, json, os, pathlib, re, shutil, subprocess, sys, tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 C = ROOT / "tests" / "check_cases"
 S = ROOT / "scripts" / "check_prompt.py"
@@ -183,6 +183,46 @@ CASES = [
     ("主体段“白猿全程用右手握棍”（E1 身份事实）：通过", "prop_hand_in_subject.txt", ["--total", "12"], 0),
     ("样例：打斗 12 秒", "../sample-combat-12s.txt", ["--total", "12", "--labels", "图片1,图片2,图片3"], 0),
     ("样例：对话 12 秒", "../sample-dialogue-12s.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
+    # ---- v25（2026-09-23）一、错误级误报 ----
+    ("A10 普通说法不算引用（挂上一轮满月 / 宛如上好的 / 不要像木偶 / 镜内第二句的再次）：通过", "ref_wording_lookalike.txt", ["--total", "12"], 0),
+    ("A10 漏报的引用性措辞（这次不要 / 和之前一样 / 承接着）：拦下", "ref_wording_missed.txt", ["--total", "12"], 1),
+    ("A10 镜头第一句的“再次”：只提醒", "ref_again_first_sentence.txt", ["--total", "12"], 0),
+    ("A19 末镜最后一行“不远处的灯笼……”：通过", "tail_line_buyuanchu.txt", ["--total", "12"], 0),
+    ("A19 末镜最后一行“无数冤魂……”：通过", "tail_line_wushu.txt", ["--total", "12"], 0),
+    ("A19 固定句上一行“严禁……”：拦下", "tail_line_yanjin.txt", ["--total", "12"], 1),
+    # ---- v25 二、讲戏口吻生效（新提醒都只提醒，不拦）----
+    ("A1 灯笼怪 v23 试写（24 句 / 6 秒，正好 0.5 秒一拍）：通过", "lantern_v23_trial.txt", ["--task", "生成", "--total", "6", "--labels", "图1,图2"], 0),
+    ("A1 句数估拍（2 秒 10 句）：只提醒", "dense_sentences.txt", ["--total", "12"], 0),
+    ("A2 弱词后跟运镜术语、前面没写镜头：只提醒", "weak_motion_no_prefix.txt", ["--total", "12"], 0),
+    ("A2 人物与面部描写里的微微 / 轻微（推开门、拉紧背带、嘴角轻微下拉、眉头轻微下压、肩膀微微下降）：通过", "weak_motion_person.txt", ["--total", "12"], 0),
+    ("A2 面部描写后面紧跟的“镜头微微推近”：只提醒", "weak_motion_camera_after_face.txt", ["--total", "12"], 0),
+    ("A3 成文主规则第 2 条正例（占满画面下半 + 离开它的手）：通过", "key_event_rule2_example.txt", ["--total", "12"], 0),
+    ("A3 新关键动作词（离开它的手 / 冲向镜头）紧挨整幅遮挡：只提醒", "key_action_new_words.txt", ["--total", "12"], 0),
+    ("A4 站位保证全稿扫、始终在画面中央照报：只提醒", "guarantee_position_scan.txt", ["--total", "12"], 0),
+    ("A5 道具归属、亮着熄着、场景段环境句不算总括：通过", "guarantee_exempt_more.txt", ["--total", "12"], 0),
+    ("A6 紧跟标题的否定句与严禁 / 请勿 / 别：只提醒", "negative_after_heading.txt", ["--total", "12"], 0),
+    ("A7 命令区的参考视频与首帧句不算总览句：通过", "command_zone_reference.txt", ["--total", "12", "--labels", "图1,图2,图3,视频1"], 0),
+    ("A8 尺度名词按句取最近的景别：只提醒", "micro_scale_per_sentence.txt", ["--total", "12"], 0),
+    ("A9 重心单独不报、与转肩转胯连写才报；传到 / 蓄力：只提醒", "force_chain_mechanism.txt", ["--total", "12"], 0),
+    ("A13 取景写成能装下什么：只提醒", "framing_fit_words.txt", ["--total", "12"], 0),
+    ("A14 远处与贴镜之间有推近：通过", "far_near_transition.txt", ["--total", "12"], 0),
+    ("A15 主体段的情绪词与动作单字：只提醒", "subject_emotion_action.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("A16 风格段的随动、表演与放慢后恢复：只提醒", "style_follow_perf.txt", ["--total", "12"], 0),
+    ("A16 风格段的跟随感、稳定器般、呼吸感的手持：通过", "style_camera_character.txt", ["--total", "12"], 0),
+    ("A17 图片N / 视频片段N 与同段两次绑定：只提醒", "asset_long_form.txt", ["--total", "12"], 0),
+    ("A17 “用于……；不采用……”不算两次绑定：通过", "asset_bind_skip.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("A18 各段画质词与解释词：只提醒", "quality_words_sections.txt", ["--total", "12"], 0),
+    ("A18 风格段末尾的画质尾巴：通过且不提醒", "quality_style_tail.txt", ["--total", "12"], 0),
+    ("A18 风格段只有画质词：只提醒", "quality_style_only.txt", ["--total", "12"], 0),
+    ("B1 只有人物动作、没有摄影运动：只提醒", "camera_person_actions.txt", ["--total", "12"], 0),
+    ("B5 --asks 有效要求里的空词（震撼）：通过且不提醒", "asks_empty_word_draft.txt", ["--total", "12", "--asks", str(C / "asks_empty_word.txt")], 0),
+    ("--task 推断：延续视频N → 延长，通过", "extend_yanxu.txt", ["--total", "5", "--labels", "视频1"], 0),
+    ("延长必填词认“延续视频N”：显式 --task 延长，通过", "extend_yanxu.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"], 0),
+    ("--task 推断：移除视频1 → 编辑，通过", "edit_remove.txt", ["--labels", "视频1,图1"], 0),
+    ("--task 推断：没给 --task 的延长稿按延长检查，通过", "extend_ok.txt", ["--total", "5", "--labels", "视频1"], 0),
+    ("--task 推断：a-b秒 标题 + 风格段视频1 + 镜内“雨势增加”仍是生成，通过", "rain_increase_seconds_heads.txt", ["--total", "8", "--labels", "视频1"], 0),
+    ("--task 编辑但命令区没有动词：拦下（报错列出移除）", "rain_increase_seconds_heads.txt", ["--task", "编辑", "--labels", "视频1"], 1),
+    ("A6 旧壳结尾段计数认“严禁 / 请勿”：5 条拦下", "five_section_yanjin.txt", ["--format", "五段", "--total", "12"], 1),
 ]
 fails = 0
 for name, f, args, want in CASES:
@@ -291,7 +331,8 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("bg_activity_wordlist.txt", [], "「穿过」——「冤魂从它身后穿过」"),
               ("bg_activity_wordlist.txt", [], "「飘过」——「冤魂一群群朝左边飘过去」"),
               ("bg_activity_wordlist.txt", [], "「涌动」——「人群在街上涌动」"),
-              ("bg_activity_wordlist.txt", [], "「发抖」——「它神情惊恐，浑身发抖」"),
+              # v25（A15）：情绪词进主体段词表，“神情惊恐”同句一并列出
+              ("bg_activity_wordlist.txt", [], "「发抖」「惊恐」——「它神情惊恐，浑身发抖」"),
               ("bg_activity_wordlist.txt", [], "场景段这句写了角色活动：「冤魂」「飘过」"),
               ("bg_activity_wordlist.txt", [], "场景段这句写了角色活动：「路人」「来来往往」"),
               ("bg_activity_wordlist.txt", [], "场景段这句写了角色活动：「村民」「赶路」"),
@@ -304,6 +345,8 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("guarantee_phrasing.txt", [], "总括保证句：「始终位于画面内」"),
               ("guarantee_phrasing.txt", [], "总括保证句：「始终留在画内」——「那颗被它双手捧着的人头始终留在画内」"),
               ("guarantee_phrasing.txt", [], "总括保证句：「一直在画面里」——「它腰间的人头一直在画面里」"),
+              # v25（A4）：“始终在画面中央 / 始终位于画面中央”没有规则依据的豁免，整个物件始终在画内、没给切线，照报
+              ("guarantee_phrasing.txt", [], "总括保证句：「始终在画面中央」「始终位于画面中央」——「快速后拉到膝盖以上"),
               # v24：密度提醒按新口径（不到 0.5 秒一拍，1 秒里超过 2 个互不相连的动作才算太密）
               ("dense_over_two_per_second.txt", [], "镜1 约 7 个动作节拍挤在 3 秒里（平均不到 0.5 秒一拍"),
               ("dense_beats.txt", [], "1 秒里超过 2 个互不相连的不同动作才算太密"),
@@ -315,10 +358,74 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("void_body_half.txt", [], "绝对化的空或黑：「纯黑」"),
               ("absolute_void.txt", [], "绝对化的空或黑：「再没有第三样」"),
               # v24：主体段随动提醒说明镜内每拍可写一处衣物、头发或持物的可见结果
-              ("subject_action.txt", [], "衣物、头发、持物的可见结果写进镜内那一拍，每拍一处"),
+              ("subject_action.txt", [], "衣物、头发、持物的可见结果写进镜内那一拍，每拍最多一处"),
               # v24 审查修复：只写曝光、“一成不变”“大半圈”都不算有意纯黑
               ("void_exposure_only.txt", [], "绝对化的空或黑：「纯黑」"),
-              ("void_not_range.txt", [], "绝对化的空或黑：「纯黑」")]
+              ("void_not_range.txt", [], "绝对化的空或黑：「纯黑」"),
+              # ---- v25 一、A10：镜头第一句的“再次”仍提醒 ----
+              ("ref_again_first_sentence.txt", [], "可能的引用性措辞：再次"),
+              # ---- v25 二、讲戏口吻生效 ----
+              # A1：讲戏口吻按句数估拍（2 秒 10 句 → 5 拍）
+              ("dense_sentences.txt", [], "镜1 约 5 个动作节拍挤在 2 秒里"),
+              # A2：弱词后 0–4 字跟运镜术语，不要求前面写镜头
+              ("weak_motion_no_prefix.txt", [], "镜1 运镜用了弱措辞"),
+              ("weak_motion_no_prefix.txt", [], "镜2 运镜用了弱措辞"),
+              ("../sample-dialogue-12s.txt", [], "镜1 运镜用了弱措辞"),
+              ("weak_motion_camera_after_face.txt", [], "镜1 运镜用了弱措辞"),
+              # A3：新关键动作词；没带部位限定的“占满画面”仍算整幅遮挡
+              ("key_action_new_words.txt", [], "镜1 关键动作「离开它的手」和整幅遮挡「糊住」"),
+              ("key_action_new_words.txt", [], "镜2 关键动作「冲向镜头」和整幅遮挡「整幅被」"),
+              ("key_action_new_words.txt", [], "镜3 关键动作「松手」和整幅遮挡「占满画面」"),
+              # A4：站位保证全稿扫（场景段、风格段、镜内普通句），始终在画面中央照报
+              ("guarantee_position_scan.txt", [], "总括保证句：「左右位置全程不变」——「两人的左右位置全程不变」；站位保证"),
+              ("guarantee_position_scan.txt", [], "总括保证句：「站位始终不变」——「两人的站位始终不变」"),
+              ("guarantee_position_scan.txt", [], "镜1 总括保证句：「相对位置一直保持不变」——「苏云与罗大娘的相对位置一直保持不变」"),
+              ("guarantee_position_scan.txt", [], "总括保证句：「始终在画面中央」——「灯笼始终在画面中央」"),
+              # A6：紧跟段落标题 / 镜头标题的第一句、严禁 / 请勿 / 别
+              ("negative_after_heading.txt", [], "否定句：不要任何声音"),
+              ("negative_after_heading.txt", [], "否定句：不出现第二个人"),
+              ("negative_after_heading.txt", [], "否定句：严禁出现文字水印"),
+              ("negative_after_heading.txt", [], "否定句：请勿让窗外出现路人"),
+              ("negative_after_heading.txt", [], "否定句：别让轻纱挡住他的脸"),
+              ("negative_after_heading.txt", [], "writing-rules 第 62 条"),
+              # A8：按句取最近的景别或画框切线；“近景（不是特写）”不豁免
+              ("micro_scale_per_sentence.txt", [], "镜1 尺度名词「织纹」"),
+              ("micro_scale_per_sentence.txt", [], "镜2 尺度名词「抽丝」"),
+              # A9：重心与转肩转胯连写才报；力 / 劲……传到任意部位、蓄力
+              ("force_chain_mechanism.txt", [], "镜2 发力过程写法：「转肩」「转胯」「重心移到」"),
+              ("force_chain_mechanism.txt", [], "机制词：「传到」"),
+              ("force_chain_mechanism.txt", [], "机制词：「蓄力」"),
+              # A13：取景写成能装下什么（L101 原稿 lantern_trial_s 也报）
+              ("framing_fit_words.txt", [], "镜1 取景写成了“能装下什么”：「拉到能看见」"),
+              ("framing_fit_words.txt", [], "镜2 取景写成了“能装下什么”：「刚够装下」"),
+              ("lantern_trial_s.txt", ["--total", "6"], "镜1 取景写成了“能装下什么”：「刚够装下」"),
+              # A15：主体段的情绪词与动作单字
+              ("subject_emotion_action.txt", ["--labels", "图1"], "「拔」「愤怒」「冷笑」——「他满脸愤怒，冷笑着拔出长刀」"),
+              ("subject_emotion_action.txt", ["--labels", "图1"], "情绪不写主体段"),
+              # A16：风格段的随动、表演、放慢后恢复；风格段写“衣料随步伐摆动”的旧夹具在现行规则下就该报
+              ("style_follow_perf.txt", [], "风格段里有时序或具体运镜/动作：「随步伐」「摆动」「表演」「克制」「眼神」「后恢复」"),
+              ("control_valid.txt", [], "风格段里有时序或具体运镜/动作：「随步伐」「摆动」"),
+              ("../sample-dialogue-12s.txt", [], "风格段里有时序或具体运镜/动作：「随呼吸」「微动」「表演」「克制」「眼神」"),
+              ("../sample-combat-12s.txt", [], "风格段里有时序或具体运镜/动作：「后恢复」"),
+              # A17：图片N / 视频片段N；同一段里同一素材绑定两次
+              ("asset_long_form.txt", [], "新稿素材统一写 图N / 视频N / 音频N：「图片1」「视频片段2」"),
+              ("asset_long_form.txt", [], "素材 图1 在主体段绑定了 2 次"),
+              # A18：主体段、场景段、镜内的画质词；风格段画质词不在最后一句；解释词补“为了表现”；风格段只有画质词
+              ("quality_words_sections.txt", [], "主体段里有画质词「8K」「高清」"),
+              ("quality_words_sections.txt", [], "场景段里有画质词「电影级」"),
+              ("quality_words_sections.txt", [], "风格段的画质词「电影感」不在最后一句"),
+              ("quality_words_sections.txt", [], "镜1 镜头正文里有画质词「精美」"),
+              ("quality_words_sections.txt", [], "空词：为了表现"),
+              ("quality_style_only.txt", [], "风格段只有画质词"),
+              # A20：镜头标题的非整数秒
+              ("dense_exact_half_second.txt", [], "镜头标题的秒数不是整数：「0-1.1秒」「1.1-4.1秒」「4.1-12秒」"),
+              # B1：只认摄影运动术语（对话样例镜 2、镜 3 只有表演，没有运镜）
+              ("camera_person_actions.txt", [], "镜1 未识别到摄影运动；本用户默认每镜有可见运镜，固定须有用户要求或保护来源"),
+              ("../sample-dialogue-12s.txt", [], "镜2 未识别到摄影运动"),
+              ("../sample-dialogue-12s.txt", [], "镜3 未识别到摄影运动"),
+              # B2：正文里有素材引用而没给 --labels 才提醒；B5 对照：没给 --asks 时“震撼”照报空词
+              ("at_refs_in_new_draft.txt", [], "没有给 --labels，素材集合未核对"),
+              ("asks_empty_word_draft.txt", [], "空词：震撼")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -389,9 +496,8 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("lantern_trial_v22.txt", ["--total", "6"], "全片只有一个挑着亮灯笼"),
                  ("lantern_trial_v22.txt", ["--total", "6"], "灯笼是唯一的暖光源"),
                  ("lantern_trial_v22.txt", ["--total", "6"], "灯笼里点着火"),
-                 # v23 审查修复：单独的“没有出画”、画面里的位置“始终在画面中央”不算总括；晃眼、掠食是外形，伤口持续渗血是伤势
+                 # v23 审查修复：单独的“没有出画”不算总括；晃眼、掠食是外形，伤口持续渗血是伤势（“始终在画面中央”v25 起照报，见 WARN_CASES）
                  ("guarantee_phrasing.txt", [], "没有出画」"),
-                 ("guarantee_phrasing.txt", [], "画面中央"),
                  ("subject_wordlist.txt", [], "晃眼"),
                  ("subject_wordlist.txt", [], "掠食"),
                  ("subject_wordlist.txt", [], "渗血"),
@@ -426,8 +532,6 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  # 参考图看不出的外形状态（一直湿透）与身份句（始终是同一颗、同一主体始终是同一个连续对象）不算总括
                  ("guarantee_exempt_states.txt", [], "总括保证句"),
                  ("guarantee_exempt_states.txt", [], "主体段这句"),
-                 # 画面里的位置（始终位于画面中央）不算总括
-                 ("guarantee_phrasing.txt", [], "位于画面中央"),
                  # v24：正好 0.5 秒一拍不报密度；有意的纯黑不报；“压死的黑”的提醒不带有意纯黑的写法；全局段材质词不扫；随动提醒不再说“交给模型”
                  ("dense_two_per_second.txt", [], "节拍"),
                  ("dense_exact_half_second.txt", [], "节拍"),
@@ -440,7 +544,58 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("void_ref_bg_excluded.txt", ["--labels", "图1"], "绝对化的空或黑"),
                  ("prop_hand_in_subject.txt", [], "总括保证句"),
                  ("prop_hand_in_subject.txt", [], "主体段这句"),
-                 ("tried_negative_exception.txt", ["--negative-exception", "开始的一秒画面是纯黑，看不到任何轮廓、光点或亮边；暗部不做任何补光"], "否定句")]
+                 ("tried_negative_exception.txt", ["--negative-exception", "开始的一秒画面是纯黑，看不到任何轮廓、光点或亮边；暗部不做任何补光"], "否定句"),
+                 # ---- v25 一、A10：镜内第二句以后的“再次”指同一镜前面的动作，不报 ----
+                 ("ref_wording_lookalike.txt", [], "再次"),
+                 # ---- v25 二、讲戏口吻生效 ----
+                 # A1：4 句 / 2 秒 = 2 拍不报；灯笼怪 v23 试写与讲戏口吻重写稿都是 24 句 / 6 秒，正好 0.5 秒一拍不报
+                 ("dense_sentences.txt", [], "镜2 约"),
+                 ("lantern_v23_trial.txt", ["--total", "6"], "节拍"),
+                 ("lantern_style_draft.txt", ["--total", "6"], "节拍"),
+                 # A2：人物与面部描写里的微微 / 轻微（嘴角轻微下拉、眉头轻微下压，writing-rules 第 1 道门正例）不算弱运镜；有横移、慢推就算有摄影运动
+                 ("weak_motion_person.txt", [], "弱措辞"),
+                 ("weak_motion_person.txt", [], "未识别到摄影运动"),
+                 # A3：关键主体自己占满画面下半 / 右下一块不算整幅遮挡（成文主规则第 2 条正例、灯笼怪两稿）
+                 ("key_event_rule2_example.txt", [], "整幅遮挡"),
+                 ("lantern_trial_v22.txt", ["--total", "6"], "整幅遮挡"),
+                 ("lantern_v23_trial.txt", ["--total", "6"], "整幅遮挡"),
+                 # A4：跟拍取景（它在画面里的大小和位置始终不变）不算站位保证；道具停在画面哪里不按站位报
+                 ("guarantee_position_scan.txt", [], "——「近景跟拍罗大娘"),
+                 ("guarantee_position_scan.txt", [], "「位置一直保持」"),
+                 # A5：全程右手握着铁棒、属于、拿在手里、亮着 / 熄着 / 是湿的；场景段的雨丝、灯光
+                 ("guarantee_exempt_more.txt", [], "总括保证句"),
+                 ("guarantee_exempt_more.txt", [], "主体段这句"),
+                 # A6：“别墅”不是劝阻；点名后的静音句不再提醒
+                 ("negative_after_heading.txt", [], "别墅"),
+                 ("negative_after_heading.txt", ["--negative-exception", "不要任何声音。"], "否定句：不要任何声音"),
+                 # A7：命令区的参考视频与首帧句不算总览句；没有“情节：”标题的稿不报总览句
+                 ("command_zone_reference.txt", ["--labels", "图1,图2,图3,视频1"], "总览句"),
+                 ("guarantee_headerless.txt", [], "总览句"),
+                 # A8：“近景，推近到大特写”之后的织纹按大特写算
+                 ("micro_scale_per_sentence.txt", [], "镜3 尺度名词"),
+                 # A9：单独一句“重心移到左脚”不报
+                 ("force_chain_mechanism.txt", [], "镜1 发力过程"),
+                 # A14：远处与贴镜之间有推近；灯笼怪 v21 试稿（贴镜在前、远处在后，中间还有拉远）不再误报
+                 ("far_near_transition.txt", [], "既有远处位置又有贴镜动作"),
+                 ("lantern_v21_trial.txt", [], "既有远处位置又有贴镜动作"),
+                 # A15：明晃晃、挺拔是外形
+                 ("subject_emotion_action.txt", ["--labels", "图1"], "明晃晃"),
+                 ("subject_emotion_action.txt", ["--labels", "图1"], "挺拔"),
+                 # A16：跟随感、稳定器般、呼吸感的手持、画面边缘随呼吸浮动是镜头性格
+                 ("style_camera_character.txt", [], "风格段里有时序"),
+                 # A17：“用于……；不采用……”不算两次绑定；不写图片N的稿不报
+                 ("asset_bind_skip.txt", ["--labels", "图1"], "绑定了"),
+                 ("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "统一写"),
+                 # A18：风格段末尾的画质尾巴不报，也不算“只有画质词”
+                 ("quality_style_tail.txt", [], "画质词"),
+                 # B1：推近、后撤都是摄影运动；编辑命令的摄影按原视频不报
+                 ("../sample-dialogue-12s.txt", [], "镜1 未识别到摄影运动"),
+                 ("../sample-combat-12s.txt", [], "镜2 未识别到摄影运动"),
+                 ("edit_remove.txt", ["--labels", "视频1,图1"], "未识别到摄影运动"),
+                 # B2：正文里没有素材引用时不提醒 --labels
+                 ("control_valid.txt", [], "没有给 --labels"),
+                 # B5：--asks 有效要求里的空词不报
+                 ("asks_empty_word_draft.txt", ["--asks", str(C / "asks_empty_word.txt")], "空词：震撼")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -456,15 +611,18 @@ for args, want_n, label in [([], 1, "镜内否定：提醒 1 条"),
     ok = p.returncode == 0 and len(hits) == want_n
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {label} | exit {p.returncode} | {hits}")
-# summary 里四段用"镜内否定提醒 N 句"，旧壳仍用"自写否定计数 N 条"；一行里不放全角括号（钩子正则按「）」截断）
-SUMMARY_CASES = [("inline_negative.txt", ["--total", "12"], "镜内否定提醒 1 句"),
-                 ("control_valid.txt", ["--total", "12"], "镜内否定提醒 0 句"),
+# summary 里四段用"否定句提醒 N 句"，旧壳仍用"自写否定计数 N 条"；一行里不放全角括号（钩子正则按「）」截断）
+SUMMARY_CASES = [("inline_negative.txt", ["--total", "12"], "否定句提醒 1 句"),
+                 ("control_valid.txt", ["--total", "12"], "否定句提醒 0 句"),
                  ("five_section_four_negatives.txt", ["--format", "五段", "--total", "12"], "自写否定计数 4 条"),
                  # v17 A：要求清单进 summary
                  ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_ok.txt")], "要求清单 2 条有效全部有落点"),
                  ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_withdrawn.txt")], "要求清单 2 条有效全部有落点"),
                  ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_missing.txt")], "要求清单 3 条有效，1 条没有落点"),
-                 ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_bad_format.txt")], "要求清单格式错误")]
+                 ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_bad_format.txt")], "要求清单格式错误"),
+                 # v25 B2：没给 --labels 时，正文里没有素材引用写“无素材引用”，有引用才写“素材集合未核对”
+                 ("control_valid.txt", ["--total", "12"], "无素材引用"),
+                 ("at_refs_in_new_draft.txt", ["--total", "12"], "素材集合未核对")]
 for f, args, needle in SUMMARY_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = needle in d["summary"] and "（" not in d["summary"][d["summary"].index("（") + 1:]
@@ -490,6 +648,69 @@ for name, f, args, field, needle in ASK_DETAIL_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *args], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [x for x in d[field] if needle in x]; ok = bool(hit); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} |", hit[:1] or d[field])
+
+# ---- v25：错误原文、checked 行与 summary 的细节（参数不自动加 --total）----
+DETAIL_CASES = [
+    ("A10 漏报补上：这次不要", "ref_wording_missed.txt", ["--total", "12"], "errors", "引用性措辞：这次不要"),
+    ("A10 漏报补上：和之前一样", "ref_wording_missed.txt", ["--total", "12"], "errors", "引用性措辞：和之前一样"),
+    ("A10 漏报补上：承接着", "ref_wording_missed.txt", ["--total", "12"], "errors", "引用性措辞：承接着"),
+    ("A19 固定句上一行“严禁……”报末尾只留固定句", "tail_line_yanjin.txt", ["--total", "12"], "errors", "末尾只留固定句"),
+    ("A1 checked 里逐镜列出句数与估算拍数（v23 试写 24 句 → 12 拍）", "lantern_v23_trial.txt", ["--total", "6", "--labels", "图1,图2"],
+     "checked", "镜1 动作密度：24 句、时序词 2 个，估算 12 拍，6 秒，平均 0.50 秒一拍"),
+    ("--task 推断写进 checked：延长", "extend_yanxu.txt", ["--total", "5", "--labels", "视频1"], "checked",
+     "没给 --task，按情节段开头的命令区推断为「延长」；建议显式传 --task"),
+    ("--task 推断写进 checked：编辑", "edit_remove.txt", ["--labels", "视频1,图1"], "checked", "推断为「编辑」"),
+    ("--task 推断写进 checked：a-b秒 标题 + 雨势增加仍是生成", "rain_increase_seconds_heads.txt", ["--total", "8", "--labels", "视频1"],
+     "checked", "推断为「生成」"),
+    ("延长缺必填词的报错列出“延续视频N”", "extend_five_missing_command.txt", ["--task", "延长", "--total", "5", "--labels", "视频1"],
+     "errors", "向后延长 / 向前延长 / 续写 / 延续视频N"),
+    ("编辑缺必填词的报错列出“移除”", "rain_increase_seconds_heads.txt", ["--task", "编辑", "--labels", "视频1"],
+     "errors", "编辑 / 替换 / 删除 / 增加 / 移除 / 修改"),
+    ("A6 旧壳结尾段计数认严禁 / 请勿（5 条）", "five_section_yanjin.txt", ["--format", "五段", "--total", "12"], "errors", "结尾段否定句 5 条"),
+    ("B2 没有素材引用时 checked 写明素材集合为空", "control_valid.txt", ["--total", "12"], "checked", "正文里没有 图N / 视频N / 音频N 引用"),
+]
+for name, f, args, field, needle in DETAIL_CASES:
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
+    d = json.loads(p.stdout); v = d[field]
+    hit = ([v] if needle in v else []) if isinstance(v, str) else [x for x in v if needle in x]
+    ok = bool(hit); fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {name} |", hit[:1] or v)
+
+# ---- v25：infer_task_from_text（check_prompt 没给 --task 与 hooks/stop_gate.py 代跑共用）----
+sys.path.insert(0, str(ROOT / "scripts"))
+sys.dont_write_bytecode = True
+import check_prompt as CP
+SHELL = "主体：一位穿灰衣的成年人。\n场景：室内走廊。\n风格：{style}\n情节：\n{zone}镜头1（0-5秒）：{shot}\n全片不添加BGM，不添加字幕。"
+INFER_CASES = [
+    ("向后延长视频1 → 延长", SHELL.format(style="写实。", zone="向后延长视频1，新增 5 秒。\n", shot="镜头慢推，他停下。"), "延长"),
+    ("延续视频2 → 延长", SHELL.format(style="写实。", zone="延续视频2，新增 5 秒。\n", shot="镜头慢推，他停下。"), "延长"),
+    ("风格段的“延续视频1的画风”不算命令 → 生成", SHELL.format(style="延续视频1的画风。", zone="", shot="镜头慢推，他停下。"), "生成"),
+    ("编辑视频1 → 编辑", SHELL.format(style="写实。", zone="编辑视频1，把上衣替换为图1中的服装。\n", shot="只换上衣。"), "编辑"),
+    ("把视频1中的路人删除 → 编辑", SHELL.format(style="写实。", zone="把视频1中的路人删除。\n", shot="街面留空。"), "编辑"),
+    ("参考视频1的运镜，光亮逐渐增加 → 生成", SHELL.format(style="写实。", zone="参考视频1的运镜，光亮逐渐增加。\n", shot="镜头慢推。"), "生成"),
+    ("无缝衔接 → 衔接", SHELL.format(style="写实。", zone="将视频1和视频2无缝衔接起来，不修改视频1和视频2。\n", shot="镜头慢推。"), "衔接"),
+    ("a-b秒 标题 + 镜内雨势增加 → 生成", (C / "rain_increase_seconds_heads.txt").read_text(encoding="utf-8"), "生成"),
+]
+for name, text, want in INFER_CASES:
+    got = CP.infer_task_from_text(text)
+    ok = got == want; fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| infer_task_from_text：{name} |", got)
+
+# ---- v25 A20：正文超过 15000 字符报错误；15000 以内不报 ----
+with tempfile.TemporaryDirectory() as tmp:
+    base = (C / "control_valid.txt").read_text(encoding="utf-8").rstrip("\n")
+    pad = "人物从门口走到窗前，衣摆轻晃，镜头慢推。"
+    for label, n, want_err in [("超过 15000 字符：报错", (15000 - len(base)) // len(pad) + 1, True),
+                               ("不到 15000 字符：不报长度", (15000 - len(base)) // len(pad), False)]:
+        body = base.replace("人物从门口走到窗前，衣摆轻晃。", "人物从门口走到窗前，衣摆轻晃。" + pad * n, 1)
+        pf = pathlib.Path(tmp) / f"long{n}.txt"
+        pf.write_text(body, encoding="utf-8")
+        p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), "--total", "12"], text=True, capture_output=True)
+        d = json.loads(p.stdout)
+        has = any("超过即梦提示词上限 15000 字符" in e for e in d["errors"])
+        ok = has == want_err and (p.returncode == 1) == want_err and (len(body) > 15000) == want_err
+        fails += 0 if ok else 1
+        print(("PASS" if ok else "FAIL"), f"| A20 {label}（实际 {len(body)} 字符）|", d["errors"][:1])
 
 # --report 里记 asks_checked（没给 --asks 时是 null）
 with tempfile.TemporaryDirectory() as tmp:
@@ -677,6 +898,62 @@ with tempfile.TemporaryDirectory() as tmp:
         fails += 0 if not why else 1
         print(("PASS" if not why else "FAIL"), f"| {name} |", "；".join(why) or "ok")
 
+# ---- v25 五：review_lessons 认三位编号的“见 Lxxx”，多个升级标记显示最后一个 ----
+REVIEW = ROOT / "scripts" / "review_lessons.py"
+REVIEW_CHECKS = [
+    ("review_lessons：“见 L101”这种 L1xx 编号也列进第三节", "| L001 | 通用/占位 | L101 | 未试 |"),
+    ("review_lessons：多个升级标记显示最后一个（规则位置更新）",
+     "- L002 通用/两个标记 → 已拆到 writing-rules.md 第 53 条（2 个标记，显示最后一个：规则位置更新）"),
+]
+with tempfile.TemporaryDirectory() as tmp:
+    d = pathlib.Path(tmp)
+    lf = d / "lessons.md"
+    lf.write_text("# 临时经验库\n\n"
+                  "L001 | 2026-09-21 | 通用/占位 | 现象 | 写法A → 效果 | — | 结论，见 L101 | 未试 | 来源\n"
+                  "L002 | 2026-09-21 | 通用/两个标记 | 现象 | 写法A → 效果 | — | 结论【已升级为规则：SKILL.md 九步⑥】"
+                  "【规则位置更新：已拆到 writing-rules.md 第 53 条】 | 已试 | 来源\n", encoding="utf-8")
+    cf = d / "cases.md"
+    cf.write_text(case_md("- 「那句句式」 → L001"), encoding="utf-8")
+    out = run([REVIEW, "--file", lf, "--cases", cf]).stdout
+    for name, needle in REVIEW_CHECKS:
+        ok = needle in out; fails += 0 if ok else 1
+        print(("PASS" if ok else "FAIL"), f"| {name} |", "ok" if ok else out[-300:])
+
+# ---- v25 五：install.sh 只从主线仓库的 main 分支安装；sync.sh 只在 main 分支上同步（临时 HOME 里跑，不碰真实的 skills 软链）----
+def sh(script, home):
+    return subprocess.run(["bash", str(script)], text=True, capture_output=True, env={**os.environ, "HOME": str(home)})
+
+
+SCRIPT_GUARD_CASES = []
+with tempfile.TemporaryDirectory() as tmp:
+    home = pathlib.Path(tmp)
+    repo = home / "Documents" / "Codex" / "aigc-video"
+    (repo / "scripts").mkdir(parents=True)
+    shutil.copy(ROOT / "install.sh", repo / "install.sh")
+    shutil.copy(ROOT / "scripts" / "sync.sh", repo / "scripts" / "sync.sh")
+    def git(*args):
+        return subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false", *args],
+                              text=True, capture_output=True)
+    git("init", "-q", "-b", "dev"); git("commit", "-q", "--allow-empty", "-m", "init")
+    SCRIPT_GUARD_CASES = [
+        ("install.sh 不在主线路径（dev 工作区）：拒绝执行", ROOT / "install.sh", 1, "只从主线仓库"),
+        ("install.sh 在主线路径但分支是 dev：拒绝执行", repo / "install.sh", 1, "只在 main 分支上安装"),
+        ("sync.sh 分支是 dev：拒绝执行", repo / "scripts" / "sync.sh", 1, "只在 main 分支上同步"),
+    ]
+    for name, script, want, needle in SCRIPT_GUARD_CASES:
+        p = sh(script, home)
+        linked = (home / ".claude" / "skills" / "aigc-video").exists() or (home / ".codex" / "skills" / "aigc-video").exists()
+        commits = len(git("log", "--oneline").stdout.splitlines())
+        ok = p.returncode == want and needle in p.stderr and not linked and commits == 1
+        fails += 0 if ok else 1
+        print(("PASS" if ok else "FAIL"), f"| {name} |", (p.stderr.strip().splitlines() or ["无输出"])[0][:80])
+    git("switch", "-q", "-c", "main")
+    p = sh(repo / "install.sh", home)
+    link = home / ".claude" / "skills" / "aigc-video"
+    ok = p.returncode == 0 and link.is_symlink() and link.resolve() == repo.resolve()
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), "| install.sh 在主线仓库的 main 分支：两个宿主都挂上软链 |", p.stdout.strip().splitlines()[:1] or p.stderr[:120])
+
 # lint_cases：当前案例库必须干净（每条可复用点有编号或标样板，编号真的存在，索引对得上）
 p = run([LINTC, "--file", CASES_MD, "--lessons", LESSONS])
 ok = p.returncode == 0
@@ -740,6 +1017,8 @@ print(("PASS" if ok else "FAIL"), "| 两份不同的稿 input_sha256 不同，�
 TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES)
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
-         + 4 + len(SUCCESS_EXTRA) + 1)
+         + 4 + len(SUCCESS_EXTRA) + 1
+         + len(DETAIL_CASES) + len(INFER_CASES) + 2
+         + len(REVIEW_CHECKS) + len(SCRIPT_GUARD_CASES) + 1)
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

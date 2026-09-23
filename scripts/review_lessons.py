@@ -9,9 +9,9 @@ review_lessons.py — 「整理经验」用的候选清单生成器：只读、�
 输出一份 Markdown 清单，五节：
   一、被 2 条以上案例引用的经验（多次复用，优先考虑升级成规则）
   二、同分类里主题相近、可能能合并的条目对
-  三、结论里写了"修正"或"见 L0xx"的条目（互相修正，可能已经冲突）
+  三、结论里写了"修正"或"见 Lxxx"的条目（互相修正，可能已经冲突；三位编号都认，L100 以后的也算）
   四、各分类条目数（超过 15 条的点名）
-  五、已经标了「已升级为规则」或「已撤回推荐」的条目
+  五、已经标了「已升级为规则」或「已撤回推荐」的条目（同一条有多个【已升级为规则】/【规则位置更新】标记时显示最后一个，即规则现在的位置）
 
 清单只是候选，改不改、怎么改由用户挑：
   - 升级到 SKILL.md、writing-rules.md、review/revise-rules.md 或工艺卡的，把规则写进那份文件，并在原条目「结论」列末尾加
@@ -34,6 +34,10 @@ CJK = re.compile(r"[一-鿿]+")
 BIG_CAT = 15
 # 「结论」列最前面的撤回标注：【<日期> 已撤回推荐：<一句话>，见末尾注记】
 WITHDRAWN = re.compile(r"【(\d{4}-\d{2}-\d{2})\s*已撤回推荐[：:]([^】]*)】")
+# 结论里点到别的条目：“见 L071”“见L101”（三位编号，L100 以后也认）
+SEE_OTHER = re.compile(r"见\s*L\d{3}")
+# 升级去向标记：【已升级为规则：…】与后来补的【规则位置更新：…】，多个时最后一个是规则现在的位置
+UPGRADE_MARK = re.compile(r"【(已升级为规则|规则位置更新)[：:]([^】]*)】")
 
 
 def read_lessons(path):
@@ -142,8 +146,8 @@ def main():
 
     # 三、互相修正 / 可能冲突
     fix = [r for r in rows.values()
-           if "修正" in r["conclusion"] or re.search(r"见\s*L0", r["conclusion"])]
-    out.append(f"## 三、结论里写了「修正」或「见 L0xx」的条目（{len(fix)} 条，可能互相冲突）")
+           if "修正" in r["conclusion"] or SEE_OTHER.search(r["conclusion"])]
+    out.append(f"## 三、结论里写了「修正」或「见 Lxxx」的条目（{len(fix)} 条，可能互相冲突）")
     out.append("")
     if fix:
         out.append("| 编号 | 分类/主题 | 结论里点到的条目 | 置信度 |")
@@ -171,14 +175,16 @@ def main():
     out.append("")
 
     # 五、已升级 / 已撤回推荐
-    up = [r for r in rows.values() if "已升级" in r["conclusion"]]
+    up = [r for r in rows.values() if UPGRADE_MARK.search(r["conclusion"])]
     wd = [r for r in rows.values() if WITHDRAWN.search(r["conclusion"])]
     out.append(f"## 五、已经标了「已升级为规则」或「已撤回推荐」的条目（{len(up)} + {len(wd)} 条）")
     out.append("")
     if up or wd:
         for r in sorted(up, key=lambda r: r["id"]):
-            m = re.search(r"【已升级为规则：([^】]*)】", r["conclusion"])
-            out.append(f"- {r['id']} {r['topic']} → {m.group(1) if m else '（没写去向）'}")
+            marks = UPGRADE_MARK.findall(r["conclusion"])
+            kind, where = marks[-1] if marks else ("", "")
+            note = f"（{len(marks)} 个标记，显示最后一个：{kind}）" if len(marks) > 1 else ""
+            out.append(f"- {r['id']} {r['topic']} → {where.strip() or '（没写去向）'}{note}")
         for r in sorted(wd, key=lambda r: r["id"]):
             m = WITHDRAWN.search(r["conclusion"])
             out.append(f"- {r['id']} {r['topic']} → 已撤回推荐（{m.group(1)}）：{m.group(2)}")

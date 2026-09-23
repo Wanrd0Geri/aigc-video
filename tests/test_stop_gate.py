@@ -91,7 +91,7 @@ class StopGateTests(unittest.TestCase):
         return f"交付校验通过（正文 {h[:8]}｜需求 {req[:8]}）"
 
     def check_line(self, h):
-        return f"check_prompt 通过（1 镜｜0-6 连续｜素材集合未核对｜镜内否定提醒 1 句｜待裁定提醒 1 条｜sha {h[:8]}）"
+        return f"check_prompt 通过（1 镜｜0-6 连续｜素材集合未核对｜否定句提醒 1 句｜待裁定提醒 1 条｜sha {h[:8]}）"
 
     def assertAllowWithNote(self, res, needle):
         self.assertEqual(res[0], 0, res[2])
@@ -163,9 +163,9 @@ class StopGateTests(unittest.TestCase):
         self.assertAllow(self.run_hook(EDIT_CMD))
 
     def test_v16_plain_edit_command_without_at_is_operation(self):
-        """不带 @ 的纯文本操作命令（编辑视频1，……）同样是交付单元：没有报告按第 3 层打回。"""
+        """不带 @ 的纯文本操作命令（编辑视频1，……）同样是交付单元：没有报告按第 3 层打回（v25 D9：提示套四段外壳并自己带 --report）。"""
         code, _, err = self.run_hook(EDIT_CMD_NO_AT)
-        self.assertEqual(code, 2); self.assertIn("--baseline", err)
+        self.assertEqual(code, 2); self.assertIn("操作命令要套四段外壳并自己带 --report", err)
 
     def test_v16_plain_edit_command_without_at_with_report_passes(self):
         self.report(EDIT_CMD_NO_AT)
@@ -339,9 +339,12 @@ class StopGateTests(unittest.TestCase):
         self.assertIn("--baseline", err); self.assertIn("--partial", err)
 
     def test_v12_no_report_edit_command_blocked(self):
-        """没有报告 + 纯文本操作命令：同样按第 3 层打回。"""
+        """没有报告 + 纯文本操作命令：同样按第 3 层打回；v25 D9：新写的裸操作命令提示套四段外壳并自己带 --report，
+        改旧稿的操作命令仍提示按父稿外壳加 --baseline。"""
         code, _, err = self.run_hook(EDIT_CMD)
-        self.assertEqual(code, 2); self.assertIn("--baseline", err)
+        self.assertEqual(code, 2)
+        self.assertIn("操作命令要套四段外壳并自己带 --report", err); self.assertIn("--baseline", err)
+        self.assertNotIn("局部镜头", err)
 
     def test_v12_check_line_without_matching_report_blocked(self):
         """机械检查行的短哈希对不上任何本轮 light 报告：手写检查行，拦下。"""
@@ -372,15 +375,31 @@ class StopGateTests(unittest.TestCase):
         d = json.loads(out)
         self.assertEqual(d["decision"], "block"); self.assertIn("固定句不在正文最后一行", d["reason"])
 
-    def test_v12_self_run_six_section_draft_allows(self):
-        """六段旧壳完整稿：钩子按概述段推断成六段来代跑，不被外壳规则误伤。"""
+    def test_d1_self_run_six_section_draft_blocked(self):
+        """v25 D1：六段旧壳完整稿没有报告 → 钩子不再按六段代跑（那会放过新稿写旧壳），按第 3 层打回，要求带父稿自己出报告。"""
         six = FIVE_SECTION.replace("场景：", "概述：生成一段6秒的单镜产品视频。\n场景：").replace(
             "情节：\n生成一段6秒的单镜产品视频。\n", "情节：\n")
-        self.assertAllowWithNote(self.run_hook(self.block(six)), "代跑")
+        code, _, err = self.run_hook(self.block(six))
+        self.assertEqual(code, 2)
+        self.assertIn("新稿四段；修改旧稿请自己带 --baseline 出报告", err)
 
-    def test_v13_self_run_five_section_draft_allows(self):
-        """五段旧壳完整稿：钩子按结尾段推断成五段来代跑，旧固定句不被新口径误伤。"""
-        self.assertAllowWithNote(self.run_hook(self.block(FIVE_SECTION)), "代跑")
+    def test_d1_self_run_five_section_draft_blocked(self):
+        """v25 D1：新稿写成五段旧壳、配旧固定句 → 以前按五段代跑会放行，现在一律按四段口径打回。"""
+        code, out, err = self.run_hook(self.block(FIVE_SECTION))
+        self.assertEqual(code, 2)
+        self.assertIn("新稿四段；修改旧稿请自己带 --baseline 出报告", err)
+        self.assertNotIn("代跑机械检查通过", out)
+
+    def test_d1_old_shell_with_report_still_passes(self):
+        """旧壳修订自己带 --baseline 出了本轮报告：第 1 层照常放行。"""
+        self.light(FIVE_SECTION)
+        self.assertAllow(self.run_hook(self.block(FIVE_SECTION)))
+
+    def test_d1_codex_old_shell_block_is_json(self):
+        code, out, _ = self.run_hook(self.block(FIVE_SECTION), codex=True)
+        self.assertEqual(code, 0)
+        d = json.loads(out)
+        self.assertEqual(d["decision"], "block"); self.assertIn("新稿四段", d["reason"])
 
     def test_v13_self_run_four_section_with_inline_negative_allows(self):
         """四段新壳 + 镜内否定句（末尾只有固定句）：代跑通过。"""
@@ -396,6 +415,68 @@ class StopGateTests(unittest.TestCase):
         """固定句不是最后一行的四段稿：代跑打回。"""
         code, _, err = self.run_hook(self.block(PROMPT + "\n杯口的高光停住。"))
         self.assertEqual(code, 2); self.assertIn("固定句不在正文最后一行", err)
+
+
+    # ---- v25 D4：代跑只看错误，放行时把待裁定提醒的条数和前三条摘要带给用户 ----
+    def test_d4_self_run_note_lists_pending_warnings(self):
+        code, out, err = self.run_hook(self.block(PROMPT))
+        self.assertEqual(code, 0, err)
+        msg = json.loads(out)["systemMessage"]
+        self.assertIn("待裁定提醒", msg); self.assertIn("前三条", msg); self.assertIn("情节段开头有总览句", msg)
+
+    # ---- v25 命令区复用 check_prompt：a-b秒 标题、风格段的视频1、镜内“雨势增加”不能把生成稿推成编辑 ----
+    def test_v25_seconds_heads_rain_increase_not_edit(self):
+        draft = ("主体：一位撑伞的少女。\n场景：雨夜的青石板街口，屋檐下一盏灯笼是唯一光源。\n"
+                 "风格：视频1用于运镜节奏参考。3D 国风漫画 CG 风格，亮部柔和收束。\n情节：\n"
+                 "0-4秒：镜头从右向左横移，少女从巷口走到灯笼下，屋檐从画面左边缘移进来。\n"
+                 "4-8秒：镜头慢推到她的胸口，雨势增加，伞面上的水珠连成线往下淌。\n全片不添加BGM，不添加字幕。")
+        code, out, err = self.run_hook(self.block(draft))
+        self.assertEqual(code, 0, err)
+        self.assertIn("代跑", json.loads(out)["systemMessage"])
+
+    def test_v25_hook_infers_extend_with_yanxu(self):
+        """命令区写“延续视频1”：钩子按延长代跑（必填约束句缺了会被查出来）。"""
+        draft = ("主体：视频1是原视频，负责人物身份与街口场景。\n场景：雨夜街口。\n风格：写实。\n情节：\n"
+                 "延续视频1，新增 5 秒：人物停下脚步。\n镜头1（0-5秒）：镜头向左横移，人物停下脚步。\n全片不添加BGM，不添加字幕。")
+        code, _, err = self.run_hook(self.block(draft))
+        self.assertEqual(code, 2)
+        self.assertIn("官方约束句", err)
+
+    # ---- v25 D2：自检如实抄“check_prompt 有 N 处错误”是合法的；“通过”行仍要 ready=true ----
+    def not_ready_light(self, body, n_errors, name="nr.json", created=None):
+        h = digest(body)
+        rep = {"kind": "light", "ready": False, "checked_sha256": h, "delivered_sha256": h,
+               "errors": [f"错误{k}" for k in range(n_errors)], "warnings": [],
+               "created_at": self.fresh if created is None else created, "session_id": None}
+        (self.gate / name).write_text(json.dumps(rep, ensure_ascii=False), encoding="utf-8")
+        return h
+
+    def error_line(self, h, n):
+        return f"check_prompt 有 {n} 处错误（1 镜｜0-6 连续｜无素材引用｜否定句提醒 0 句｜待裁定提醒 1 条｜sha {h[:8]}）"
+
+    def test_d2_error_check_line_with_not_ready_report_allows(self):
+        h = self.not_ready_light(BROKEN, 1)
+        text = "自检结论：固定句不在最后一行。\n" + self.block(BROKEN, "quote") + self.error_line(h, 1)
+        self.assertAllow(self.run_hook(text))
+
+    def test_d2_error_check_line_count_mismatch_blocked(self):
+        h = self.not_ready_light(BROKEN, 1)
+        code, _, err = self.run_hook("自检结论：\n" + self.error_line(h, 2))
+        self.assertEqual(code, 2); self.assertIn("不要手写检查行", err)
+
+    def test_d2_error_check_line_stale_report_blocked(self):
+        h = self.not_ready_light(BROKEN, 1, created=self.stale)
+        code, _, err = self.run_hook("自检结论：\n" + self.error_line(h, 1))
+        self.assertEqual(code, 2); self.assertIn("不要手写检查行", err)
+
+    def test_d2_pass_check_line_needs_ready_report(self):
+        h = self.not_ready_light(PROMPT, 1)
+        code, _, err = self.run_hook("自检结论：\n" + self.check_line(h))
+        self.assertEqual(code, 2); self.assertIn("ready=true", err)
+
+    def test_d2_pass_check_line_with_ready_report_allows_without_unit(self):
+        h = self.light(PROMPT)
+        self.assertAllow(self.run_hook("自检结论：机械检查没有错误。\n" + self.check_line(h)))
 
 
 if __name__ == "__main__":

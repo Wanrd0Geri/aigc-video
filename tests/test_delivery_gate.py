@@ -16,6 +16,9 @@ def sha(s):
     return hashlib.sha256(s.encode()).hexdigest()
 
 
+AUTO = object()   # gate() 默认按当前审查记录自动补一份绑定本版哈希的独立复核；传 None 表示不给
+
+
 class DeliveryTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -30,14 +33,15 @@ class DeliveryTests(unittest.TestCase):
         p = subprocess.run([sys.executable, str(ROOT/'scripts/check_prompt.py'), '--prompt', str(self.prompt), *args], capture_output=True, text=True)
         return p.returncode, json.loads(p.stdout)
 
-    def setup_gate(self, text=BASE):
+    def setup_gate(self, text=BASE, check_args=()):
         self.prompt.write_text(text)
+        # 全套路径恒为 complex=true（由严格审 / 审核节点触发，要求独立复核）
         self.req = {'request':'12秒两镜行走，没有参考素材。', 'task':'生成', 'labels':[], 'assets':[], 'total':12,
                     'exact_locks':[], 'requirements':[{'id':'R1','source':'两镜行走','text':'两个镜头行走'}],
-                    'complex':False,'complexity_reason':'单人行走，供机械测试的固定样本'}
+                    'complex':True,'complexity_reason':'用户要求严格审；单人行走，供机械测试的固定样本'}
         self.req_path = self.d/'requirements.json'
         self.req_path.write_text(json.dumps(self.req, ensure_ascii=False))
-        code, check = self.checker(text, ['--total','12'])
+        code, check = self.checker(text, ['--total','12', *check_args])
         quote = '人物从门口走到窗前，衣摆轻晃。'
         self.review = {'author':'unit-author','reviewer':'unit-author','prompt_sha256':check['checked_sha256'],
                        'requirements_sha256':sha(self.req_path.read_text()), 'baseline_sha256':None,
@@ -46,8 +50,17 @@ class DeliveryTests(unittest.TestCase):
                        'camera':[{'id':1,'mode':'moving','quote':'摄影机向右缓移','effect_quote':'门框向左错开','reason':'本测试正文中的摄影与视差'}, {'id':2,'mode':'moving','quote':'摄影机缓推','effect_quote':'人脸逐渐放大','reason':'本测试正文中的摄影与尺度变化'}],
                        'warnings':[{'message':w,'decision':'false_positive','quote':'没有参考素材','reason':'该单元样本明确无素材，集合为空'} for w in check['warnings']], 'unresolved':[]}
 
-    def gate(self, independent=None, extra=()):
+    def auto_independent(self):
+        """绑定当前审查记录哈希的独立复核（新上下文、没看过作者结论）；只为机械测试，不代表真实复核。"""
+        return {'prompt_sha256':self.review['prompt_sha256'],'requirements_sha256':self.review['requirements_sha256'],
+                'reviewer':'unit-independent-reviewer','status':'pass','unresolved':[],
+                'quote':'人物从门口走到窗前，衣摆轻晃。','reason':'单元测试：独立复核绑定本版正文与需求',
+                'context':{'kind':'subagent','id':'unit-subagent-auto','saw_author_review':False}}
+
+    def gate(self, independent=AUTO, extra=()):
         self.req_path.write_text(json.dumps(self.req,ensure_ascii=False))
+        if independent is AUTO:
+            independent = self.auto_independent()
         path = self.d/'review.json'; path.write_text(json.dumps(self.review,ensure_ascii=False))
         cmd=[sys.executable,str(ROOT/'scripts/verify_delivery.py'),'--prompt',str(self.prompt),'--requirements',str(self.req_path),'--review',str(path),'--output',str(self.d/'delivered.txt')]
         if independent is not None:
@@ -161,7 +174,7 @@ class DeliveryTests(unittest.TestCase):
     def test_gate_complex_requires_separate_record_binding(self):
         self.setup_gate();self.req['complex']=True
         self.req_path.write_text(json.dumps(self.req,ensure_ascii=False));self.review['requirements_sha256']=sha(self.req_path.read_text())
-        self.assertEqual(self.gate()[0],1)
+        self.assertEqual(self.gate(None)[0],1)  # 全套路径不给独立复核：不放行
         independent={'prompt_sha256':self.review['prompt_sha256'],'requirements_sha256':self.review['requirements_sha256'],
                      'reviewer':'unit-author','status':'pass','unresolved':[],'quote':self.review['coverage'][0]['quote'],'reason':'单元测试绑定'}
         self.assertEqual(self.gate(independent)[0],1)
@@ -321,6 +334,111 @@ class DeliveryTests(unittest.TestCase):
         code,result=self.gate()
         self.assertEqual(code,1,result)
         self.assertTrue(any('锁定文字' in error for error in result['errors']))
+
+    # ---- v25 D6：全套路径 complex 恒为 true，缺省或 false 报错不放行 ----
+    def test_d6_complex_false_or_missing_blocks(self):
+        for mutate in ('false', 'missing'):
+            self.setup_gate()
+            if mutate == 'false':
+                self.req['complex'] = False
+            else:
+                self.req.pop('complex')
+            self.refresh_requirement_hash()
+            code, res = self.gate()
+            self.assertEqual(code, 1, res)
+            self.assertTrue(any('全套路径 complex 必须为 true（需独立复核）' in e for e in res['errors']), res['errors'])
+            self.assertFalse((self.d/'delivered.txt').exists())
+
+    def test_d6_complexity_reason_still_required(self):
+        self.setup_gate(); self.req['complexity_reason'] = ''
+        self.refresh_requirement_hash()
+        self.assertEqual(self.gate()[0], 2)
+
+    # ---- v25 D5：requirements.asks 转给 check_prompt --asks ----
+    def write_asks(self, name, rows):
+        f = self.d/name
+        f.write_text('\n'.join(rows) + '\n', encoding='utf-8')
+        return f
+
+    def test_d5_asks_forwarded_blocks_missing_landing(self):
+        self.setup_gate()
+        self.write_asks('asks.txt', ['R1 | 03:12 | 两镜行走 | 走到窗前 | 有效',
+                                     'R2 | 03:20 | 窗外要有一只猫 | 猫 | 有效'])
+        self.req['asks'] = 'asks.txt'   # 相对路径：当前目录找不到时按 requirements.json 所在目录找
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 1, res)
+        self.assertTrue(any('要求 R2' in e and '没有落点' in e for e in res['errors']), res['errors'])
+        self.assertEqual(res['mechanical'].get('asks_checked'), 2)
+
+    def test_d5_asks_forwarded_passes_when_landed(self):
+        self.setup_gate()
+        asks = self.write_asks('asks.txt', ['R1 | 03:12 | 两镜行走 | 走到窗前 | 有效'])
+        self.req['asks'] = str(asks)
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertEqual(res['mechanical'].get('asks_checked'), 1)
+        self.assertIn('要求清单 1 条有效全部有落点', res['mechanical']['summary'])
+
+    def test_d5_asks_missing_file_blocks(self):
+        self.setup_gate(); self.req['asks'] = 'no-such-asks.txt'
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 1, res)
+        self.assertTrue(any('requirements.asks 指定的要求清单找不到' in e for e in res['errors']), res['errors'])
+
+    def test_d5_asks_null_is_single_round(self):
+        self.setup_gate(); self.req['asks'] = None
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertIsNone(res['mechanical'].get('asks_checked'))
+
+    # ---- v25 D8：requirements.format（缺省：有父稿按继承、无父稿按四段）----
+    def test_d8_format_defaults_to_four_without_parent(self):
+        five = (ROOT/'tests/check_cases/five_section_old.txt').read_text()
+        self.setup_gate(five, ['--format', '五段'])
+        code, res = self.gate()
+        self.assertEqual(code, 1, res)
+        self.assertEqual(res['mechanical'].get('effective_format'), '四段')
+
+    def test_d8_format_explicit_old_shell_passes(self):
+        five = (ROOT/'tests/check_cases/five_section_old.txt').read_text().replace(
+            '衣摆轻晃。', '衣摆轻晃。摄影机向右缓移，门框向左错开。').replace('轻纱缓缓飘动。', '轻纱缓缓飘动。摄影机缓推，人脸逐渐放大。')
+        self.setup_gate(five, ['--format', '五段'])
+        self.req['format'] = '五段'; self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertEqual(res['mechanical'].get('effective_format'), '五段')
+
+    def test_d8_format_inherit_requires_parent(self):
+        self.setup_gate(); self.req['format'] = '继承'; self.refresh_requirement_hash()
+        self.assertEqual(self.gate()[0], 2)
+
+    def test_d8_format_unknown_value_rejected(self):
+        self.setup_gate(); self.req['format'] = '七段'; self.refresh_requirement_hash()
+        self.assertEqual(self.gate()[0], 2)
+
+    # ---- v25 D7：四段父稿 + 局部镜头里的镜内否定句：合成时按父稿外壳切，不当成结尾丢掉 ----
+    def test_d7_partial_inline_negative_under_four_section_parent(self):
+        self.setup_gate()
+        parent = self.d/'parent.txt'; parent.write_text(BASE)
+        partial = '镜头1（0-6秒）：人物从门口走到窗前，衣摆轻晃。摄影机向右缓移，门框向左错开。\n不出现第二个人。'
+        self.prompt.write_text(partial)
+        self.req['negative_exception'] = [{'sentence': '不出现第二个人。', 'reason': '单元测试：防群演闯入，镜内没有等价正向写法'}]
+        self.refresh_requirement_hash()
+        self.review['baseline_sha256'] = sha(BASE)
+        code, c = self.checker(partial, ['--baseline', str(parent), '--partial', '--total', '12',
+                                         '--negative-exception', '不出现第二个人。'])
+        self.assertEqual(code, 0, c['errors'])
+        self.review['prompt_sha256'] = c['checked_sha256']
+        self.review['warnings'] = [{'message': w, 'decision': 'false_positive', 'quote': '没有参考素材', 'reason': '测试明确无素材'} for w in c['warnings']]
+        self.prompt.write_text(partial)
+        code, res = self.gate(extra=['--baseline', str(parent), '--partial'])
+        self.assertEqual(code, 0, res)
+        self.assertFalse(any('局部镜头' in e for e in res['errors']))
+
 
 if __name__=='__main__':
     unittest.main(verbosity=2)

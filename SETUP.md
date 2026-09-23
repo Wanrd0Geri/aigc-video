@@ -46,7 +46,7 @@ cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tai
 
 ## 4 挂守门钩子（Claude Code；可选但推荐）
 
-钩子配置不在仓库里，每台电脑单独挂。它在模型交付提示词时自动核对：有本轮检查报告就放行；没有报告的完整稿由钩子代跑 `scripts/check_prompt.py`，有错打回、无错放行并提示"作者未自己跑检查"；局部镜头和不带四段外壳的裸命令没报告则打回。第二次仍不过会放行并附警告，不会死锁。
+钩子配置不在仓库里，每台电脑单独挂。它在模型交付提示词时自动核对：有本轮检查报告就放行；没有报告的四段完整稿由钩子代跑 `scripts/check_prompt.py`（一律按四段新稿查），有错打回、无错放行并提示"作者未自己跑检查"；局部镜头、不带四段外壳的裸命令和五段 / 六段旧壳没报告则打回。第二次仍不过会放行并附警告，不会死锁。
 
 编辑 `~/.claude/settings.json`：在 `hooks.Stop` 数组里**追加**一项（用户已有别的 Stop 钩子时不要替换、不要删）；没有 `hooks` 或 `Stop` 键就新建：
 
@@ -76,7 +76,7 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 | `gh auth login` 卡住后报 `operation timed out` | 终端没走代理 | 命令前加 `HTTPS_PROXY=... HTTP_PROXY=...` |
 | `git push` 报 403 | 没登录，或登录的账号不是协作者 | 重做第 2 步；请所有者加协作者，或 fork + Pull Request |
 | skills 目录里已有 `aigc-video` 真实目录 | 旧版拷贝 | 直接跑 `install.sh`，它会备份后换成软链 |
-| 钩子每次都拦、提示"没有本轮检查报告" | 交付的是局部镜头或不带四段外壳的裸操作命令，且没跑 `check_prompt.py --report` | 按提示带 `--baseline`（局部再加 `--partial`）跑一次并 `--report` 到 `~/.aigc-video-gate/<时间戳>.json` |
+| 钩子每次都拦、提示"没有本轮检查报告" | 交付的是局部镜头、不带四段外壳的裸操作命令或五段 / 六段旧壳稿，且没跑 `check_prompt.py --report` | 局部镜头与旧稿修订按提示带 `--baseline`（局部再加 `--partial`）；操作命令装进四段（旧稿修订按父稿外壳）并按任务带 `--task 延长`、`--task 编辑` 或 `--task 衔接`，没有时码的加 `--untimed`（见 `references/seedance-operations.md` 第 0.5 节末尾）；跑一次并 `--report` 到 `~/.aigc-video-gate/<时间戳>.json` |
 | 两边经验编号撞号 | 两台电脑或两个组员各记了一条 | `merge_lessons.py` 合并，后写的改成下一个编号 |
 
 ## 7 做完后报告给用户
