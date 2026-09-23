@@ -960,6 +960,14 @@ ok = p.returncode == 0
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| lint_cases 当前案例库通过 |", (p.stdout or p.stderr).strip()[:160])
 
+# ---- 词库体检：带“理解度”列的五列词条表每行五列、理解度合规、可用句不含空词 / 解释词 / 画质词 / 引用性措辞 / 发力过程 ----
+LINTX = ROOT / "scripts" / "lint_lexicon.py"
+p = run([LINTX])
+ok = p.returncode == 0
+fails += 0 if ok else 1
+_out = (p.stdout or p.stderr).strip().splitlines()
+print(("PASS" if ok else "FAIL"), "| lint_lexicon 当前词库通过 |", (_out[-1] if _out else "")[:160])
+
 # ---- v21：成功案例不误伤——M001–M004 的提示词原文不许报下面八类提醒 ----
 # 旧外壳会报格式错误，不看退出码；只核对“整幅遮挡”“发力过程写法”“镜内标签”“画质词”“主体段这句”“场景段这句”
 # “风格段这句”“总括保证句”八类提醒不出现。M001–M003 是六段旧稿，按 --format 六段跑；主体段、场景段与风格段提醒只对四段新稿启用，
@@ -1014,7 +1022,7 @@ ok = len(set(shas.values())) == 2 and shas["lantern_trial_s.txt"] == want
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| 两份不同的稿 input_sha256 不同，且等于整份输入的哈希 |", "ok" if ok else shas)
 
-TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES)
+TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES) + 1  # lint_lexicon 当前词库
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
          + 4 + len(SUCCESS_EXTRA) + 1

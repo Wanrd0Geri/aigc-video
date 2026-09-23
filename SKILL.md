@@ -31,13 +31,14 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 
 | 任务 | 本次必读 | 交付 |
 |---|---|---|
-| 写新提示词 | lessons 按题材 grep 两三个分类 → 两份 cases 各只读索引：my-cases 取最接近的 1 条，只读“可复用点/关联经验”，类型与素材形态都相同且确需抄句式时才展开原文；official-cases 取 1–2 条看“原案例结构” → [seedance-format.md](references/seedance-format.md) → [writing-rules.md](references/writing-rules.md) → [directing-upgrade.md](references/craft/directing-upgrade.md) 与所有适用工艺卡 | 默认表头 + 完整提示词 + 检查行；用户要先看分镜或已有审核节点时先交镜头表 |
+| 写新提示词 | lessons 按题材 grep 两三个分类 → 两份 cases 各只读索引：my-cases 取最接近的 1 条，只读“可复用点/关联经验”，类型与素材形态都相同且确需抄句式时才展开原文；official-cases 取 1–2 条看“原案例结构” → [seedance-format.md](references/seedance-format.md) → [writing-rules.md](references/writing-rules.md) → [directing-upgrade.md](references/craft/directing-upgrade.md) 与所有适用工艺卡 → 按题材在 [references/lexicon/](references/lexicon/) 对应表 grep 用户白话里的动作与效果，每个挑 1 个推荐 + 1–2 个备选写进表头“升级”行（读法与升级写法见 lexicon/README「词库升级」） | 默认表头 + 完整提示词 + 检查行；用户要先看分镜或已有审核节点时先交镜头表 |
 | 改现有提示词 | lessons 按分类 grep → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 完整受影响单元 + ≤3 行变更摘要 + 检查行；不为表头全文加载新稿格式或严格审文件 |
 | 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons 的 `操作命令/` 及题材分类 | 四段完整操作命令；旧稿修订按父稿外壳 |
 | 输入「自检」 | [qa-checklist.md](references/review/qa-checklist.md) + `scripts/check_prompt.py`；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 一句结论 + 六维综合表 + 必要问题；自检不自动改稿 |
 | 回传视频、截图或生成反馈 | [diagnose.md](references/review/diagnose.md)；需要时用 `scripts/extract_frames.sh` | 逐句兑现、归因、最小修法与一条待审观察；获授权才写经验库 |
 | 只要打斗或特效设计 | [combat.md](references/craft/combat.md) 或 [vfx.md](references/craft/vfx.md) | 白话设计，不编译提示词 |
 | 问效果叫什么或怎么写 | [references/lexicon/](references/lexicon/) 对应表 | 术语 + 可见效果 + 一句可用中文 + 理解度 |
+| 说「拔高 / 更细 / 更小众 / 还有什么写法」 | [references/lexicon/](references/lexicon/) 对应表按小类 grep（读法见 lexicon/README） | 3–5 个候选：效果名 + 画面上看到什么一句 + 适合题材；用户选定后成文，不回答就用第一个 |
 | 输入「整理经验」 | 运行 `scripts/review_lessons.py`（只读） | 用人话列候选；用户选定后才升级或合并 |
 
 题材工艺卡：对话/情绪读 `performance.md`、`lighting-color.md`；多人读 `staging.md`；打斗读 `combat.md`、`camera.md`；特效读 `vfx.md`；环境/空镜读 `scene-mood.md`、`lighting-color.md`；动作/追逐/天气读 `motion-physics.md`、`camera.md`；产品/UGC/预演/衔接/文字读 `genre-recipes.md`。采用前判断适用性；工艺卡只拥有专业设计，不拥有公开格式、改稿授权或检查流程。
