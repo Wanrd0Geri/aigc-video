@@ -11,12 +11,14 @@ review_lessons.py — 「整理经验」用的候选清单生成器：只读、�
   二、同分类里主题相近、可能能合并的条目对
   三、结论里写了"修正"或"见 L0xx"的条目（互相修正，可能已经冲突）
   四、各分类条目数（超过 15 条的点名）
-  五、已经标了「已升级为规则」的条目
+  五、已经标了「已升级为规则」或「已撤回推荐」的条目
 
 清单只是候选，改不改、怎么改由用户挑：
   - 升级到 SKILL.md、writing-rules.md、review/revise-rules.md 或工艺卡的，把规则写进那份文件，并在原条目「结论」列末尾加
     `【已升级为规则：<文件> <节>】`（其它列不动）；
-  - 合并的，保留编号靠前的一条，后一条的「结论」列末尾加 `【并入 L0xx】`。
+  - 合并的，保留编号靠前的一条，后一条的「结论」列末尾加 `【并入 L0xx】`；
+  - 用户决定不再采用某条的推荐写法的，在它「结论」列最前面加 `【<日期> 已撤回推荐：<一句话>，见末尾注记】`，
+    末尾写用户决定的注记（其它列不动）。
 跑的频率：每新增约 10 条经验或 3 条案例跑一次，或用户随时喊「整理经验」。
 """
 import argparse, os, re, sys
@@ -30,6 +32,8 @@ DEFAULT_CASES = os.path.join(HERE, "..", "references", "cases", "my-cases.md")
 ENTRY = re.compile(r"^(L\d{3})\s*\|")
 CJK = re.compile(r"[一-鿿]+")
 BIG_CAT = 15
+# 「结论」列最前面的撤回标注：【<日期> 已撤回推荐：<一句话>，见末尾注记】
+WITHDRAWN = re.compile(r"【(\d{4}-\d{2}-\d{2})\s*已撤回推荐[：:]([^】]*)】")
 
 
 def read_lessons(path):
@@ -166,16 +170,20 @@ def main():
     out.append("超过 15 条的分类：" + ("、".join(big) if big else "无"))
     out.append("")
 
-    # 五、已升级
+    # 五、已升级 / 已撤回推荐
     up = [r for r in rows.values() if "已升级" in r["conclusion"]]
-    out.append(f"## 五、已经标了「已升级为规则」的条目（{len(up)} 条）")
+    wd = [r for r in rows.values() if WITHDRAWN.search(r["conclusion"])]
+    out.append(f"## 五、已经标了「已升级为规则」或「已撤回推荐」的条目（{len(up)} + {len(wd)} 条）")
     out.append("")
-    if up:
+    if up or wd:
         for r in sorted(up, key=lambda r: r["id"]):
             m = re.search(r"【已升级为规则：([^】]*)】", r["conclusion"])
             out.append(f"- {r['id']} {r['topic']} → {m.group(1) if m else '（没写去向）'}")
+        for r in sorted(wd, key=lambda r: r["id"]):
+            m = WITHDRAWN.search(r["conclusion"])
+            out.append(f"- {r['id']} {r['topic']} → 已撤回推荐（{m.group(1)}）：{m.group(2)}")
         out.append("")
-        out.append("这些条目仍会被 grep 到，不用专门跳过；同一件事以规则文件里的写法为准。")
+        out.append("这些条目仍会被 grep 到，不用专门跳过；同一件事以规则文件里的写法为准，已撤回推荐的写法不再照用。")
     else:
         out.append("（没有）")
     out.append("")

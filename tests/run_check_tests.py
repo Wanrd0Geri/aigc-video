@@ -146,6 +146,25 @@ CASES = [
     ("官方案例式镜内标签（动作/表情：/情感解析：/表情：）：只提醒", "shot_labels_official.txt", ["--total", "12"], 0),
     ("像标签但不是（鼓点的第一拍/第三拍下去）：通过", "shot_labels_beat_lookalike.txt", ["--total", "12"], 0),
     ("灯笼怪 v21 试稿与讲戏口吻重写稿：通过", "lantern_style_draft.txt", ["--total", "6", "--labels", "图1,图2", "--baseline", str(C / "lantern_v21_trial.txt")], 0),
+    # ---- v23 主体段只写是谁、长什么样、有几个；总括保证句（都只提醒）----
+    ("主体段写了持物状态、表演、随动与贴镜掠过：只提醒", "subject_action.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("主体段只写是谁、长什么样、有几个（绑定、静态外形、数量锁、身份锁、唯一光源）：通过", "subject_clean.txt", ["--total", "12", "--labels", "图1,图2,音频1"], 0),
+    ("总括保证句（不断开的连续镜头 / 任何时刻 / 始终留在画面 / 整段里始终）：只提醒", "guarantee_lock.txt", ["--total", "12"], 0),
+    ("灯笼怪两份试写稿（主体段写进情节、连续镜头锁）：只提醒", "lantern_trial_s.txt", ["--total", "6", "--labels", "图1,图2"], 0),
+    ("灯笼怪两份试写稿（主体段写进情节、连续镜头锁）：只提醒", "lantern_trial_v22.txt", ["--total", "6", "--labels", "图1,图2"], 0),
+    # v23 审查修复：强档补常见说法；主体段词表的误报与漏报
+    ("总括保证句的其他说法（持续出现在镜头中、始终在画面里、从不离开画面、都不出画）：只提醒", "guarantee_phrasing.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("主体段词表：晃眼、掠食、伤口持续渗血不报，手持长剑照报：只提醒", "subject_wordlist.txt", ["--total", "12", "--labels", "图1"], 0),
+    # v23 审查后同日修正：镜内“始终在画内”只有点名部位或切线才算取景；场景段的角色活动
+    ("镜内取景约束（全镜里灯笼怪始终留在画内照报，头部和双肩始终留在画内不报）：只提醒", "guarantee_scope.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("场景段写了冤魂飞过、路人走过（雨、风、鸟群、落叶不报）：只提醒", "scene_activity.txt", ["--total", "12", "--labels", "图1"], 0),
+    # v23 第二次复查修正：取景豁免只给镜头正文普通句；风格段的角色活动；总览句强档与宽档并一条；背景活动词表；外形状态与身份句
+    ("主体段与总览句的站位保证（两人的左右位置全程不变）：只提醒", "guarantee_subject_position.txt", ["--total", "12", "--labels", "图1,图2"], 0),
+    ("主体段的取景保证（全身 / 头部和双肩始终留在画面）：只提醒", "guarantee_subject_lantern.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("风格段写了冤魂飞过、贴镜掠过：只提醒", "style_activity.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("总览句的强档与“；”后分句并一条、场景段强档并入角色活动：只提醒", "guarantee_overview_merge.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("背景活动词表（盘旋、穿过、飘过、涌动、发抖、来来往往、赶路、鬼影）：只提醒", "bg_activity_wordlist.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("外形状态与身份句（一直湿透、始终是同一颗、同一主体）：通过", "guarantee_exempt_states.txt", ["--total", "12", "--labels", "图1"], 0),
     ("样例：打斗 12 秒", "../sample-combat-12s.txt", ["--total", "12", "--labels", "图片1,图片2,图片3"], 0),
     ("样例：对话 12 秒", "../sample-dialogue-12s.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
 ]
@@ -190,7 +209,85 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("shot_labels.txt", [], "画质词「电影感」"),
               # v22 审查修复：官方案例的复合标签与新增标签词
               ("shot_labels_official.txt", [], "镜1 镜内标签「动作/表情：」「情感解析：」"),
-              ("shot_labels_official.txt", [], "镜2 镜内标签「表情：」")]
+              ("shot_labels_official.txt", [], "镜2 镜内标签「表情：」"),
+              # v23：主体段逐句列出动作 / 随动 / 持物状态 / 调度；总括保证句（强档全稿、宽档主体段与镜内总览句）
+              ("subject_action.txt", [], "主体段这句写了动作、随动、持物状态或调度：「倒提」——「图1用于"),
+              ("subject_action.txt", [], "「牙不停地磕」——「那颗人头"),
+              ("subject_action.txt", [], "「随动作」「甩开」「慢半拍」「落回」"),
+              ("subject_action.txt", [], "「掠过」「前景」「镜头」"),
+              ("guarantee_lock.txt", [], "总括保证句：「不断开的连续镜头」「任何时刻」「至少有一部分」"),
+              ("guarantee_lock.txt", [], "总括保证句：「始终留在画面」——「他始终留在画面中央」"),
+              ("guarantee_lock.txt", [], "镜1 总括保证句：「始终」——「整段里"),
+              ("guarantee_headerless.txt", [], "总括保证句：「始终」——「天空里始终有"),
+              ("lantern_v21_trial.txt", [], "（同句总括词「始终」并入本条"),
+              ("lantern_v21_trial.txt", ["--baseline", str(C / "lantern_v21_trial.txt")], "这句父稿原有"),
+              # v23：用户指出“主体的时候把一部分情节里的东西也写进去了”的两份试写稿，应报的句子逐条报出
+              ("lantern_trial_s.txt", ["--total", "6"], "总括保证句：「任何时刻」「至少有一部分」——「全片是一个连续镜头"),
+              ("lantern_trial_s.txt", ["--total", "6"], "「倒提」——「图1用于灯笼怪的外形"),
+              ("lantern_trial_s.txt", ["--total", "6"], "「抓着」「倒提」「随它的动作」「晃」——「那颗人头被它抓着长发"),
+              ("lantern_trial_s.txt", ["--total", "6"], "「飞着」「掠过」「前景」——「背景和前景飞着的冤魂"),
+              ("lantern_trial_s.txt", ["--total", "6"], "镜1 总括保证句：「始终」——「整段里，画面深处始终有"),
+              # v23 审查修复：镜内总览句延到句号，“；”接着的分句一并列出
+              ("lantern_trial_s.txt", ["--total", "6"], "「焦点始终留在灯笼怪和那颗人头上」"),
+              ("lantern_trial_v22.txt", ["--total", "6"], "总括保证句：「不断开的连续镜头」「任何时刻」「至少有一部分」"),
+              ("lantern_trial_v22.txt", ["--total", "6"], "「揪着」「倒提」——「图1用于灯笼怪的外形"),
+              ("lantern_trial_v22.txt", ["--total", "6"], "「牙不停地磕」——「那颗人头带着诡异的笑"),
+              ("lantern_trial_v22.txt", ["--total", "6"], "「随动作」「甩开」「慢半拍」「落回」——「长袍被雨淋透"),
+              ("lantern_trial_v22.txt", ["--total", "6"], "「飞着」——「身后的雨夜里始终飞着"),
+              ("lantern_trial_v22.txt", ["--total", "6"], "「掠过」「前景」「镜头」——「前景偶尔有一只贴着镜头"),
+              # v23 审查修复：强档补常见说法（含用户原话“持续出来在镜头中”和换了说法的 L087 锁）
+              ("guarantee_phrasing.txt", [], "总括保证句：「持续出现在镜头」——「灯笼怪持续出现在镜头中」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「始终在画面里」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「全程都在画面里」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「从头到尾没有离开画面」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「都不出画」——「整段里灯笼怪都不出画」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「从不离开画面」——「全片是一个连续镜头"),
+              # v23 审查修复：主体段“手持长剑”是持物，不走镜头性格豁免
+              ("subject_wordlist.txt", [], "「手持」——「他全程手持长剑」（同句总括词「全程」并入本条"),
+              # v23 审查后同日修正：持物提醒说明可裁定（全片不换手的道具归属可以留在主体段）
+              ("subject_wordlist.txt", [], "持物可裁定：这件道具若全片不换手"),
+              # 用户原话“持续出来在镜头中”
+              ("guarantee_phrasing.txt", [], "总括保证句：「持续出来在镜头」——「灯笼怪是持续出来在镜头中的」"),
+              # 镜内“全镜 / 本镜”不再豁免：不点名部位或切线的“始终留在画内 / 全程都在画内 / 从不离开画面”照报
+              ("guarantee_scope.txt", [], "总括保证句：「始终留在画内」——「全镜里灯笼怪始终留在画内」"),
+              ("guarantee_scope.txt", [], "总括保证句：「全程都在画内」「从不离开画面」——「本镜它全程都在画内"),
+              # 场景段的角色活动（冤魂飞过、路人走过）提醒写进情节
+              ("scene_activity.txt", [], "场景段这句写了角色活动：「冤魂」「飞过」「掠过」——「背景里始终有"),
+              ("scene_activity.txt", [], "（同句总括词「始终」并入本条"),
+              ("scene_activity.txt", [], "场景段这句写了角色活动：「路人」「走过」"),
+              # v23 第二次复查修正：取景豁免只给镜头正文里的普通句，主体段与“整段里”总览句照报（成文主规则第 7 条的官方冲突例）
+              ("guarantee_subject_position.txt", ["--labels", "图1,图2"], "总括保证句：「全程」——「两人的左右位置全程不变」"),
+              ("guarantee_subject_position.txt", ["--labels", "图1,图2"], "总括保证句：「全程」——「苏云与罗大娘的左右位置全程保持不变」"),
+              ("guarantee_subject_position.txt", ["--labels", "图1,图2"], "镜1 总括保证句：「全程」——「整段里两人的左右位置全程不变」"),
+              ("guarantee_subject_lantern.txt", [], "总括保证句：「始终留在画面」——「灯笼怪的全身始终留在画面里」"),
+              ("guarantee_subject_lantern.txt", [], "总括保证句：「始终留在画内」——「灯笼怪的头部和双肩始终留在画内」"),
+              # 风格段的角色活动（同一类背景活动换到第三处）
+              ("style_activity.txt", [], "风格段这句写了角色活动：「冤魂」「飞过」「掠过」——「背景里始终有"),
+              ("style_activity.txt", [], "风格段只写画面质感与镜头性格"),
+              ("style_activity.txt", [], "（同句总括词「始终」并入本条"),
+              # 总览句里强档与宽档并成一条，“；”后的分句一并列出；场景段同句的强档并入角色活动提醒
+              ("guarantee_overview_merge.txt", [], "镜1 总括保证句：「始终在画面里」「始终」——「整段里灯笼怪始终在画面里」（用“；”接着的分句同属这段总览，一并处理：「焦点始终留在灯笼上」"),
+              ("guarantee_overview_merge.txt", [], "场景段这句写了角色活动：「冤魂」「飞过」——「冤魂始终在画面里朝左飞过」（同句总括词「始终在画面里」「始终」并入本条"),
+              # 总括提醒里区分主体与背景群体：主体写进每一拍的画框，背景群体每镜第一次出现时写一次
+              ("guarantee_headerless.txt", [], "背景群体按成文主规则第 3 条在每一镜第一次出现时写一次"),
+              # 背景活动词表：主体段与场景段共用
+              ("bg_activity_wordlist.txt", [], "「盘旋」——「冤魂在它身后盘旋」"),
+              ("bg_activity_wordlist.txt", [], "「穿过」——「冤魂从它身后穿过」"),
+              ("bg_activity_wordlist.txt", [], "「飘过」——「冤魂一群群朝左边飘过去」"),
+              ("bg_activity_wordlist.txt", [], "「涌动」——「人群在街上涌动」"),
+              ("bg_activity_wordlist.txt", [], "「发抖」——「它神情惊恐，浑身发抖」"),
+              ("bg_activity_wordlist.txt", [], "场景段这句写了角色活动：「冤魂」「飘过」"),
+              ("bg_activity_wordlist.txt", [], "场景段这句写了角色活动：「路人」「来来往往」"),
+              ("bg_activity_wordlist.txt", [], "场景段这句写了角色活动：「村民」「赶路」"),
+              ("bg_activity_wordlist.txt", [], "场景段这句写了角色活动：「鬼影」「掠过」"),
+              # 强档补说法；部位只是修饰（捧着的人头、腰间的人头）不算取景豁免
+              ("guarantee_phrasing.txt", [], "总括保证句：「一刻也没有离开画面」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「不会离开画面」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「始终处于画面之中」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「始终保留在画面」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「始终位于画面内」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「始终留在画内」——「那颗被它双手捧着的人头始终留在画内」"),
+              ("guarantee_phrasing.txt", [], "总括保证句：「一直在画面里」——「它腰间的人头一直在画面里」")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -237,7 +334,69 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("lantern_v21_trial.txt", [], "镜内标签"),
                  ("lantern_style_draft.txt", [], "镜内标签"),
                  # v22 审查修复：“第N拍”只在句首并紧跟冒号、逗号或句末才算（音乐卡点、拍打次数不报）
-                 ("shot_labels_beat_lookalike.txt", [], "镜内标签")]
+                 ("shot_labels_beat_lookalike.txt", [], "镜内标签"),
+                 # v23：绑定句、静态外形（挑着 / 斜披 / 一直咧到）、不采用分句、数量锁、身份锁、唯一光源、场景天气、
+                 # 风格段全程手持、一镜到底、点名部位的镜内取景约束（头部和双肩始终留在画内）都不报；素材绑定句里的“机位”不算调度；锁定文字不报；局部替换不报父稿主体段
+                 ("subject_clean.txt", [], "主体段这句"),
+                 ("subject_clean.txt", [], "总括保证句"),
+                 ("subject_action.txt", ["--lock", "上下牙不停地磕"], "牙不停地磕"),
+                 ("extend_ok.txt", [], "主体段这句"),
+                 ("guarantee_lock.txt", [], "全程手持"),
+                 ("guarantee_lock.txt", [], "全片只有他"),
+                 ("guarantee_headerless.txt", [], "地平线始终"),
+                 ("guarantee_headerless.txt", [], "全程手持摄影"),
+                 # v23 审查后同日修正：“手持”后面没有道具名词时是镜头性格（手持近距离镜头），不算持物也不算总括
+                 ("guarantee_headerless.txt", [], "手持近距离镜头"),
+                 ("control_valid.txt", [], "主体段这句"),
+                 ("control_valid.txt", [], "总括保证句"),
+                 ("../sample-dialogue-12s.txt", [], "主体段这句"),
+                 ("partial_subject_shot2.txt", ["--baseline", str(C / "subject_action.txt"), "--partial"], "主体段这句"),
+                 # v23：两份试写稿里的数量锁、静态外形、唯一光源、风格段镜头性格不报
+                 ("lantern_trial_s.txt", ["--total", "6"], "画面里只有一个实体的灯笼怪"),
+                 ("lantern_trial_s.txt", ["--total", "6"], "全身被雨淋透"),
+                 ("lantern_trial_s.txt", ["--total", "6"], "全程保持这一种风格"),
+                 ("lantern_trial_v22.txt", ["--total", "6"], "全片只有一个挑着亮灯笼"),
+                 ("lantern_trial_v22.txt", ["--total", "6"], "灯笼是唯一的暖光源"),
+                 ("lantern_trial_v22.txt", ["--total", "6"], "灯笼里点着火"),
+                 # v23 审查修复：单独的“没有出画”、画面里的位置“始终在画面中央”不算总括；晃眼、掠食是外形，伤口持续渗血是伤势
+                 ("guarantee_phrasing.txt", [], "没有出画」"),
+                 ("guarantee_phrasing.txt", [], "画面中央"),
+                 ("subject_wordlist.txt", [], "晃眼"),
+                 ("subject_wordlist.txt", [], "掠食"),
+                 ("subject_wordlist.txt", [], "渗血"),
+                 # v23 审查后同日修正：写明“全片不换手”的道具归属是身份层面的事实，不报；点名部位或切线的镜内取景约束不报
+                 ("subject_wordlist.txt", [], "短刀"),
+                 ("guarantee_scope.txt", [], "「快速后拉到膝盖以上"),
+                 ("guarantee_scope.txt", [], "大小和位置"),
+                 ("guarantee_scope.txt", [], "切在它的膝盖"),
+                 # 场景段的天气与环境反应、鸟群、落叶、“不采用图中人群”不报；镜内的冤魂活动不走场景段提醒
+                 ("scene_activity.txt", [], "雨丝"),
+                 ("scene_activity.txt", [], "破幡"),
+                 ("scene_activity.txt", [], "鸟"),
+                 ("scene_activity.txt", [], "落叶"),
+                 ("scene_activity.txt", [], "不采用图中人群"),
+                 ("scene_activity.txt", [], "主体段这句"),
+                 ("subject_clean.txt", [], "场景段这句"),
+                 # v23 第二次复查修正：镜头正文里的跟拍取景（大小和位置始终不变、头部和双肩始终留在画内）仍不报
+                 ("guarantee_subject_position.txt", ["--labels", "图1,图2"], "大小和位置"),
+                 ("guarantee_subject_lantern.txt", [], "「快速后拉到膝盖以上"),
+                 # 风格段的镜头性格（全程手持）不报；干净稿不报风格段角色活动
+                 ("style_activity.txt", [], "全程手持"),
+                 ("style_activity.txt", [], "主体段这句"),
+                 ("style_clean.txt", [], "风格段这句"),
+                 ("subject_clean.txt", [], "风格段这句"),
+                 ("lantern_trial_v22.txt", ["--total", "6"], "风格段这句"),
+                 # 总览句“；”后的分句不再单独成条；场景段同句不再另报一条总括
+                 ("guarantee_overview_merge.txt", [], "——「焦点始终留在灯笼上」"),
+                 ("guarantee_overview_merge.txt", [], "总括保证句：「始终在画面里」——「冤魂始终在画面里"),
+                 # 麻绳穿过腰间是外形，盔甲经过雨水冲刷是表面状态
+                 ("bg_activity_wordlist.txt", [], "麻绳穿过"),
+                 ("bg_activity_wordlist.txt", [], "盔甲经过"),
+                 # 参考图看不出的外形状态（一直湿透）与身份句（始终是同一颗、同一主体始终是同一个连续对象）不算总括
+                 ("guarantee_exempt_states.txt", [], "总括保证句"),
+                 ("guarantee_exempt_states.txt", [], "主体段这句"),
+                 # 画面里的位置（始终位于画面中央）不算总括
+                 ("guarantee_phrasing.txt", [], "位于画面中央")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -478,8 +637,11 @@ ok = p.returncode == 0
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| lint_cases 当前案例库通过 |", (p.stdout or p.stderr).strip()[:160])
 
-# ---- v21：成功案例不误伤——M001–M004 的提示词原文不许报“整幅遮挡”“发力过程写法” ----
-# 旧外壳会报格式错误，不看退出码；只核对这两类新提醒没有出现。M001–M003 是六段旧稿，M004 按默认口径跑。
+# ---- v21：成功案例不误伤——M001–M004 的提示词原文不许报下面八类提醒 ----
+# 旧外壳会报格式错误，不看退出码；只核对“整幅遮挡”“发力过程写法”“镜内标签”“画质词”“主体段这句”“场景段这句”
+# “风格段这句”“总括保证句”八类提醒不出现。M001–M003 是六段旧稿，按 --format 六段跑；主体段、场景段与风格段提醒只对四段新稿启用，
+# 因为按四段扫时 M002（「镜头」——“全程用右手握棍，他正脸对着镜头时……”）、M003（「握着」）会报主体段动作，
+# 那是旧模板的写法，属预期。M004 是四段稿，按默认四段口径扫也不报。
 SUCCESS_CASES = [("M001", ["--format", "六段"]), ("M002", ["--format", "六段"]),
                  ("M003", ["--format", "六段"]), ("M004", [])]
 cases_text = CASES_MD.read_text(encoding="utf-8")
@@ -499,13 +661,24 @@ with tempfile.TemporaryDirectory() as tmp:
             fails += 1
             print("FAIL", f"| 成功案例 {cid} 不误伤 | 输出不是 JSON：{p.stderr.strip()[:120]}")
             continue
-        hit = [w for w in ws if "整幅遮挡" in w or "发力过程写法" in w or "镜内标签" in w or "画质词" in w]
+        hit = [w for w in ws if "整幅遮挡" in w or "发力过程写法" in w or "镜内标签" in w or "画质词" in w
+               or "主体段这句" in w or "场景段这句" in w or "风格段这句" in w or "总括保证句" in w]
         ok = not hit; fails += 0 if ok else 1
-        print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 不报“整幅遮挡”“发力过程写法”“镜内标签”“画质词” |", hit[:1] or "ok")
+        print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 不报“整幅遮挡”“发力过程写法”“镜内标签”“画质词”“主体段这句”“场景段这句”“风格段这句”“总括保证句” |", hit[:1] or "ok")
+
+# ---- v23 审查修复：input_sha256 是整份输入的哈希（v16 起曾被分句循环变量覆盖，不同的稿算出同一个值） ----
+shas = {}
+for f in ("lantern_trial_s.txt", "lantern_trial_v22.txt"):
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "6"], text=True, capture_output=True)
+    shas[f] = json.loads(p.stdout)["input_sha256"]
+want = hashlib.sha256((C / "lantern_trial_s.txt").read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+ok = len(set(shas.values())) == 2 and shas["lantern_trial_s.txt"] == want
+fails += 0 if ok else 1
+print(("PASS" if ok else "FAIL"), "| 两份不同的稿 input_sha256 不同，且等于整份输入的哈希 |", "ok" if ok else shas)
 
 TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES)
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
-         + 4)
+         + 4 + 1)
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

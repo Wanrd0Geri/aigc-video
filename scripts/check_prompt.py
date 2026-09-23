@@ -36,7 +36,7 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 素材引用：`@图片N`、`图片N`、`图N`、`@视频N`、`视频N`、`@音频N`、`音频N` 一律归一成键 `图N` / `视频N` / `音频N`
   （`--labels` 写 `图1` 或 `图片1` 都行，同样归一）；声明集合、首次出现位置、操作命令必填词都按归一后的键核对。
   **提示词里不写 @**（软件里粘贴后再 @ 出来）：四段新稿出现 @ 引用时提醒一次；继承模式按父稿（父稿用 @ 就不提醒）。
-启发式扫描（空词与解释词、机制词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、关键动作紧挨整幅遮挡、发力过程写法、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
+启发式扫描（空词与解释词、机制词、绝对化的空或黑、非特写镜头里的尺度名词、同一镜里的远处与贴镜、关键动作紧挨整幅遮挡、发力过程写法、静止、景别、焦点落点、弱运镜措辞、动作密度、素材重复绑定、跨段重复长句、风格段里的时序与运镜、主体段里的动作与调度、场景段与风格段里的角色活动、总括保证句）只给警告。动作密度：节拍数用时序词粗估，平均 ≤0.5 秒（每秒 2 拍以上）提醒；
 用户实测（L064）模型多会加速完成密动作，但这是经验线索不是通过保证，仍要按动作依赖与可读性判断。
 v18 的五类提醒（词表都在脚本头部常量里，旁注「可调」）：
   机制词（力从、传到手腕、惯性、过冲、蓄力本身……）只说原因、不产生画面：改写看得见的结果（越转越快、袖子被甩平、下摆整圈张开）；
@@ -51,6 +51,20 @@ v21 两类提醒：关键动作（松手、脱手……）和整幅遮挡（整�
 v22 两类提醒（讲戏口吻，只提醒不拦截，词表 SHOT_LABEL_WORDS / SHOT_QUALITY_RE 在头部常量里、可调）：镜头正文里的标签（“摄影：”“动作：”“动作/表情：”“情感解析：”
   “镜头运动：”“【构图】”“第一拍，”“第4秒：”。标签词在句首并紧跟冒号才算，几个标签词用 / 、 连写也算；【标签】不需要冒号；“第N拍”在句首
   并紧跟冒号、逗号或句末才算；台词与锁定文字不扫，改稿时父稿原样存在的句子不报）；镜头正文里的画质词（电影感、电影级、大片感）。
+v23 三类提醒（只提醒不拦截，词表 SUBJECT_*_RE / BG_ACT / SCENE_*_RE / GUARANTEE_*_RE / FRAME_*_RE 在头部常量里、可调）：
+  主体段写了动作、随动、持物或调度，逐句列出——主体段只写是谁、长什么样、有几个，这些写进情节里它发生的那一拍（背景角色写进每一镜里
+  它第一次出现的那一拍；只扫四段稿，含继承的四段父稿；先挖掉“不采用……”分句；素材绑定句里的“用于 / 采用 / 定义”不算，绑定句里的
+  机位、构图不算调度）；持物提醒说明可裁定：全片不换手的道具归属是身份层面的事实，同句写明“不换手 / 不离手 / 不离身”的不报；
+  场景段或风格段写了角色活动（冤魂、鬼影、喽啰、人群、路人、村民、士兵、群像……后面跟着飞、走、掠、飘过、穿过、经过、盘旋、赶路、
+  来来往往……；背景活动词表主体段与场景段、风格段共用），逐句列出——写进情节里它第一次出现的那一拍（只扫四段稿；天气与环境反应、
+  鸟群、落叶不报；同句的总括词并入这一条）；总括保证句（任何时刻、至少有一部分留在画面、始终留在 / 位于画面、持续出现在镜头中、
+  从不 / 不会 / 一刻也没有离开画面、全片是一个不断开的连续镜头……）——镜内没写出来的总括句补不上，镜内写了的不用再总括。强档全稿、
+  各外壳都扫；取景豁免只给镜头正文里的普通句：点名的部位就是这一分句的主语（头部和双肩始终留在画内；“捧着的人头”“腰间的人头”
+  不算）或分句里有画框切线（画框下缘切在膝盖、在画面里的大小和位置始终不变），“全镜 / 本镜”本身不豁免；主体段、场景段、风格段
+  和镜内以“整段里 / 全片”开头的总览句没有取景豁免（“两人的左右位置全程不变”照报）。宽档（始终、全程、一直、持续……）只扫四段稿
+  主体段和镜内总览句（连同“；”接着的分句到句号，同一段总览的强档与宽档报一条），数量锁、唯一光源、身份锁（是同一颗、同一主体）、
+  全片不换手的道具归属、镜头性格、伤势与外形状态（湿透）不算。改稿时父稿原句照报并标“父稿原有”；--partial 不报父稿原句；
+  锁定文字与 --asks 关键词不报。
 否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外）里句首是
   `不出现|不添加|不得|不要|不能|不许|不可|禁止|避免` 的句子逐句给**提醒**（不是错误）；用 --negative-exception 逐句点名的不再提醒。
   “没有”“无”不当否定句抓。继承的四段稿也逐句提醒；五段 / 六段 / 未知旧外壳仍用结尾段预算：用户逐字锁不计入，新稿超过 4 条报错，
@@ -69,7 +83,7 @@ v22 两类提醒（讲戏口吻，只提醒不拦截，词表 SHOT_LABEL_WORDS /
      （最多 10 句，超出只报数量）；逐镜先精确、再相似地一对一匹配，同镜相近改写不算消失，不跨镜顶替。
      `--partial` 时只比对被替换的那几个镜头。消失的句子里如果含某条已经报"没有落点"的要求的关键词，不重复报。
      删句须按 references/review/revise-rules.md 核对：用户明确删改或替换；授权范围内等义改写 / 合并且所有独立控制有落点；
-     原句仅与本次明确替换的旧字段冲突；获准重写整镜或整拍时，作者自拟、未获认可的装饰层压进主体 / 场景 / 风格段一句。已认可效果、措辞或设计未经用户针对该项允许，不得删除、削弱或实质替换；
+     原句仅与本次明确替换的旧字段冲突；获准重写整镜或整拍时，作者自拟、未获认可的装饰层按 revise-rules 第 11 节第 4 类处理（主体段不写）。已认可效果、措辞或设计未经用户针对该项允许，不得删除、削弱或实质替换；
      新旧受保护要求冲突时保留并说明取舍，冲突本身不构成撤回授权。
   ② 新稿字数（去空白）比父稿多 15% 以上时，仅提醒核对新增必要信息与重复补丁，不强制压缩或为降字数删成功项；无父稿不报。
 
@@ -172,6 +186,76 @@ SHOT_LABEL_RE = re.compile(
     r"|(?i:\b(?:camera|action|beat)\s*\d*\s*[:：])")
 # 画质词写进镜头正文（风格段末尾的画质尾巴不扫，那里归第 77 条）。词表可调
 SHOT_QUALITY_RE = re.compile(r"电影感|电影级|大片感")
+# v23 主体段只写三件事：是谁、长什么样、有几个（seedance-format 第 1 节主体段）。下面四组写在主体段就提醒（只提醒不拦截）：这句写进情节里
+# 它发生的那一拍（背景角色写进每一镜里它第一次出现的那一拍）。只扫四段稿（含继承的四段父稿；五段 / 六段旧稿的主体段按旧模板写，不扫）。
+# 扫描前挖掉“不采用 / 不需要……”排除分句、引号台词、锁定文字；--asks 有效要求的关键词不报。
+# 素材绑定动词（用于、采用、定义、参考）与静态外形词（挑着、披着、穿着、背着、戴着、手中、斜披、悬浮姿态、位于）
+# 不在词表里；数量锁“全片只有 / 画面里只有”不含这些词。“手持”后面四个字以内没有道具名词时是镜头性格，不算持物；
+# “晃眼”“掠食”“掠夺”是外形描述，不算随动或动作。持物（拿着、握着、手持长剑……）照报，但提醒里说明可裁定：全片不换手的
+# 道具归属是身份层面的事实，可以留在主体段（writing-rules 成文主规则第 7 条）；同句写明“不换手 / 不离手 / 不离身”的持物不报。
+# 会在镜内改变的持物状态（扔出、脱手、松手……）照报。四组词表可调
+# “手持”后面四个字以内跟着道具名词（手持长剑、手持那把旧伞）才算持物，否则是镜头性格（手持摄影、手持近距离镜头）
+HANDHELD_PROP = (r"(?:剑|刀|枪|棍|棒|杖|斧|锤|弓|盾|伞|灯笼|刃|鞭|矛|戟|扇|旗|幡|书|卷轴|盒|瓶|碗|火把|蜡烛|烛台|铃|匕首"
+                 r"|令牌|法器|拂尘|念珠|武器)")
+SUBJECT_PROP_RE = re.compile(r"倒提|倒拎|拎着|提着|拿着|握着|攥着|抓着|揪着|捏着|举着|端着|扛着|抱着|叼着"
+                             r"|手持(?=[^，,。；;]{0,4}" + HANDHELD_PROP + r")")   # 持物：全片不换手时可裁定保留
+SUBJECT_PROP_CHANGE_RE = re.compile(r"扔出|抛出|甩出|脱手|(?<!不)离手|松手")         # 会在镜内改变的持物状态
+PROP_FIXED_RE = re.compile(r"不换手|不离手|不离身")                                  # 写明全片不换手的道具归属
+SUBJECT_FOLLOW_RE = re.compile(r"随(?:着)?(?:它|他|她|其)?(?:的)?(?:动作|身体|步伐|转身|转动|摆动|奔跑|风)"
+                               r"|慢半拍|滞后|甩开|甩起|落回|飘起|飘动|摆动|晃(?!眼)")   # 衣物、头发、持物的随动
+# 背景角色的活动动词：主体段与场景段、风格段共用这一张（带后缀的写法，单字“飞 / 走 / 飘”在主体段误报太多，只在场景段、
+# 风格段跟在群体名词后面时另认）。“绳、箭、杆……穿过”是外形（麻绳穿过腰间），“经过雨水冲刷 / 风化”是表面状态，都不算。可调
+BG_ACT = (r"飞(?:着|过|行|舞|来|去|向|掠)|在飞|掠(?:过|去)?(?!食|夺)|飘(?:过|着|来|去|向|荡|移)|浮动|打转|盘旋|游荡|徘徊"
+          r"|穿行|穿梭|(?<![绳线杆棍钉箭针链带索])穿过|经过(?![^，,。；;]{0,6}(?:冲刷|风化|打磨|浸泡|洗礼|日晒|雨淋|雨打))"
+          r"|巡逻|列队|行进|赶路|来来往往|来往|往来|走(?:动|来|去|过|到)|奔(?:跑|走|过)|涌(?:动|过|来)"
+          r"|扑(?:向|过|上|出)|冲(?:向|出|过|上)")
+SUBJECT_ACTION_RE = re.compile(r"不停地?|不断地?|一刻不停|来回|反复|咬合|开合|牙[^，。；]{0,4}磕"
+                               r"|眨眼|转身|转头|回头|抬头|低头|点头|摇头|发抖|颤抖|挥(?:舞|动|手)|" + BG_ACT)  # 动作与表演、背景角色活动
+SUBJECT_CAMERA_RE = re.compile(r"镜头|画框|机位|入画|出画|前景|跟拍|推近|拉远|特写|近景|全景|中景|远景")  # 镜头与调度
+SUBJECT_SKIP_RE = re.compile(r"(?:也)?不(?:采用|需要|要|用|取)[^，。；：]*")
+# v23 场景段只写环境、风格段只写画面质感与镜头性格（writing-rules 成文主规则第 3 条）：角色类背景群体名词后面跟着活动动词的
+# 句子提醒，角色活动写进情节里它第一次出现的那一拍。天气与环境反应（雨丝斜着落下、风吹动破幡）和鸟群、落叶这类环境不在
+# 名词表里，不报。只扫四段稿。两组词表可调
+SCENE_GROUP_RE = re.compile(r"冤魂|鬼魂|幽魂|亡魂|游魂|鬼影|阴兵|喽啰|小妖|妖兵|人群|人流|路人|行人|游人|村民|百姓|士兵|兵士|侍卫|群像")
+SCENE_ACT_RE = re.compile(BG_ACT + r"|飞(?!檐|鱼|天)|走(?!廊|道)着?|跑(?!道)(?:过|动|来|去|着)?|奔|飘(?!带)|涌|挤(?:着|过)?|来回")
+# v23 总括保证句（writing-rules 成文主规则第 7 条）：用“任何时刻 / 至少有一部分留在画面 / 始终留在画面 / 全片是一个不断开的连续镜头”这类句子
+# 保证镜内事件——镜内没写出来的它补不上，只会穿帮或打架。两档，只提醒不拦截：
+#   强档：全稿扫（各外壳都扫，台词与锁定文字不扫）。“始终 / 一直 / 全程 / 持续……（留 / 保留 / 出现 / 出来）在画面、画框、镜头（里）”、
+#         “始终处于 / 位于画面里”和“从不 / 从头到尾没有 / 都不 / 一刻也没有 / 不会……离开画面、出画”都算（用户原话“持续出来在镜头中”）；
+#         “始终在画面中央”这类位置、单独的“没有出画”不算。镜头正文里的普通句（不是主体段、场景段、风格段，也不是以“整段里 /
+#         全片”开头的总览句）有取景豁免：点名的部位就是这一分句的主语（“头部和双肩始终留在画内”，M004 镜头3；“那颗被它双手
+#         捧着的人头”“腰间的人头”里的部位只是修饰，不算），或同一分句里有画框切线词（FRAME_CUT_RE）；只说“某某始终在画面里 /
+#         不离开画面”的照报，前面有“全镜 / 本镜”也照报。“任何时刻 / 至少有一部分 / 不断开的连续镜头”一律照报。
+#   宽档：只扫四段稿的主体段（没有任何段落标题时扫第一个镜头标题之前的文字），以及镜头正文里以“整段里 / 全片 /
+#         从头到尾”开头的总览句（连同用“；”接着的分句，一直到句号；同一段总览里的强档与宽档并成一条）；分句里有数量锁（只有、唯一）、
+#         身份锁（保持……身份 / 数量 / 服装……稳定、“是同一颗 / 同一主体”；“同一个方向”不算）、全片不换手的道具归属、镜头性格（手持、晃动、景深、荷兰角、
+#         风格……；“手持长剑”不算）、伤势与参考图看不出的外形状态（伤口持续渗血、湿透）就不算。这两处都不在镜头正文里，
+#         取景豁免不适用（主体段的“两人的左右位置全程不变”“灯笼怪的全身始终留在画面里”照报）。场景段与风格段不扫宽档
+#         （雨一直下是环境，全程手持是镜头性格）。
+#   “一镜到底”“全片是一个连续镜头”本身是镜头性格，不报；报的是后面附带的“不断开 / 任何时刻 / 留在画面”保证。词表可调
+GUARANTEE_STRONG_RE = re.compile(
+    r"任何时刻|任何时候|每时每刻|无论何时|至少(?:有|留)?一部分"
+    r"|(?:不断开|不间断|不中断|不切断)的?(?:连续)?镜头"
+    r"|(?:始终|一直|全程|持续|自始至终|从头到尾)(?:都)?(?:(?:留|待|保持|保留|出现|出来|处)在(?:画面|画框|画内|镜头)"
+    r"|(?:在|处于|位于)(?:画面|画框|画内|镜头)(?:里|内|之中|之内|中(?![央间心部])|(?=[，,。；;！!？?、\n]|$)))"
+    r"|(?:从不|从没|从未|不曾|绝不|都不|不会|一刻(?:也|都)?(?:没有|没|不)|没有一刻"
+    r"|(?:始终|一直|全程|自始至终|从头到尾)(?:都)?(?:没有|没|不))(?:离开|出)(?:画面|画框|镜头|画)")
+GUARANTEE_ALWAYS_RE = re.compile(r"任何|每时每刻|无论何时|至少|不断开|不间断|不中断|不切断")   # 强档里不看取景豁免的几种
+FRAME_PART = (r"(?:头部|头顶|(?<![人灯石木颗])头(?=和|与|、|及)|双肩|肩膀|肩头|肩部|上半身|下半身|半身|全身|膝盖|腰|胸口|胸部"
+              r"|上胸|脸|面部|五官|下颌|下巴|眼睛|双眼|双手|手臂|双脚|脚尖|腿部|脖子|颈部)")
+FRAME_PART_RE = re.compile(FRAME_PART)   # 取景约束点名的部位
+# 部位是这一分句的主语：分句里命中词前面的文字以部位词结尾（几个部位用“和 / 与 / 、 / 及”连写也算，后面可带“都 / 也 / 仍”）
+FRAME_SUBJECT_RE = re.compile(FRAME_PART + r"(?:(?:和|与|、|及)" + FRAME_PART + r")*(?:都|也|仍|仍然|依然|还)?\s*$")
+# 画框切线词；“大小 / 位置……不变”只认跟拍取景的说法（“在画面里的大小和位置始终不变”），“左右位置全程不变”是站位保证，不算
+FRAME_CUT_RE = re.compile(r"画框[上下左右]?缘|画面[上下左右]缘|边框|切在|切过|切线|裁过|取景"
+                          r"|(?:画面|画框|画内)(?:里|中|内)?的?(?:大小|位置)(?:(?:和|与|、)(?:大小|位置))?[^，,。；;]{0,6}(?:不变|保持)")
+GUARANTEE_BROAD_RE = re.compile(r"始终|一直(?![^，。；]{0,3}到)|全程|自始至终|从头到尾|时时刻刻|持续")
+SHOT_OVERVIEW_RE = re.compile(r"^(?:整段|整个镜头|全片|全程|从头到尾|自始至终)(?:里|中)?[，,]?")
+GUARANTEE_EXEMPT_RE = re.compile(
+    r"只有|唯一|仅有|不换手|不离手|不离身|(?:是|为)同一|同一(?:主体|身份)"
+    r"|保持[^。；]{0,30}(?:身份|数量|服装|外形|造型|体型|比例|归属)|(?:身份|数量|服装|外形|造型|体型|比例|归属)[^。；]{0,30}(?:稳定|不变|一致)"
+    r"|手持(?![^，,。；;]{0,4}" + HANDHELD_PROP + r")|晃动|抖动|偏移|呼吸感|焦段|景深|广角|长焦|荷兰角|地平线|倾斜|风格|画风|渲染|色调|质感"
+    r"|伤口|伤处|渗血|流血|淌血|渗出|渗着|结痂|湿透|淋透|湿发")
 MOTION_WORDS = ["飘", "晃", "摇", "流", "滴", "落", "升", "飞", "滚", "掠", "扫", "涟漪", "风", "雨", "雾", "烟", "尘", "火", "光斑", "闪", "跳", "颤", "摆", "抖", "吹", "涌", "散", "燃", "波", "呼吸", "眨", "滑", "翻", "卷", "溅", "拂", "漾", "抽", "推", "退", "冲", "转", "起伏", "凝结", "飘落", "闪烁", "进入", "入画", "出画", "走", "跑", "奔", "移动", "经过", "靠近", "逼近", "后退", "起身", "坐下", "抬", "垂"]
 QUALITY_ONLY = re.compile(r"(8K|4K|高清|精美|电影感|高级感|电影级|超清)")
 # 固定句：四段新稿用新句，五段 / 六段旧稿用旧句，继承模式按父稿用的那一句。匹配容忍 BGM 前后的空格与末尾句号。
@@ -582,6 +666,64 @@ def force_process_hits(sentence):
     return list(dict.fromkeys(hits))
 
 
+def subject_action_hits(sentence):
+    """主体段一句里的动作、表演、随动、持物状态与调度词（先挖掉“不采用……”排除分句）。
+    返回 (词列表, 其中的持物词)；同句写明“不换手 / 不离手 / 不离身”的持物不报（全片不换手的道具归属是身份层面的事实）。"""
+    s = SUBJECT_SKIP_RE.sub("", sentence)
+    # 素材绑定句（有素材标签又有绑定动词）里的机位、构图、景别是这份素材负责的范围，不算调度；持物与动作照报
+    binding = bool(LABEL_RE.search(s)) and any(v in s for v in BIND_VERBS)
+    fixed = bool(PROP_FIXED_RE.search(s))
+    s = PROP_FIXED_RE.sub("", s)
+    hold = [] if fixed else [m.group(0) for m in SUBJECT_PROP_RE.finditer(s)]
+    rxs = (SUBJECT_PROP_CHANGE_RE, SUBJECT_FOLLOW_RE, SUBJECT_ACTION_RE) + (() if binding else (SUBJECT_CAMERA_RE,))
+    hits = hold + [m.group(0) for rx in rxs for m in rx.finditer(s)]
+    return list(dict.fromkeys(hits)), hold
+
+
+def framing_clause(text, start, end):
+    """强档命中所在的分句是镜内的取景约束：点名的部位就是这一分句的主语（“头部和双肩始终留在画内”；
+    “那颗被它双手捧着的人头”“腰间的人头”里的部位只是修饰，不算），或分句里有画框切线词。"""
+    a = max(text.rfind(c, 0, start) for c in "，,。；;：:！!？?\n") + 1
+    b = min([i for i in (text.find(c, end) for c in "，,。；;！!？?\n") if i >= 0] or [len(text)])
+    return bool(FRAME_SUBJECT_RE.search(text[a:start]) or FRAME_CUT_RE.search(text[a:b]))
+
+
+def strong_guarantee_hits(sentence, in_shot=False):
+    """强档：一句里的总括保证词。只有镜头正文里的普通句（in_shot=True）才看取景豁免；
+    主体段、场景段、风格段和镜内以“整段里 / 全片”开头的总览句不豁免。"""
+    out = []
+    for m in GUARANTEE_STRONG_RE.finditer(sentence):
+        w = m.group(0)
+        if in_shot and not GUARANTEE_ALWAYS_RE.search(w) and framing_clause(sentence, m.start(), m.end()):
+            continue
+        out.append(w)
+    return list(dict.fromkeys(out))
+
+
+def broad_guarantee_hits(sentence, in_shot=False):
+    """宽档：一句里的“始终 / 一直 / 全程 / 持续……”，所在分句有数量锁、身份锁、全片不换手的道具归属、镜头性格、
+    伤势与外形状态就不算。取景豁免（点名部位或切线）只给镜头正文里的普通句（in_shot=True）；宽档扫的主体段和
+    镜内总览句都不是，所以主体段的“两人的左右位置全程不变”“灯笼怪的全身始终留在画面里”照报。"""
+    out = []
+    for clause in re.split(r"[，,：:]", sentence):
+        if GUARANTEE_EXEMPT_RE.search(clause):
+            continue
+        if in_shot and (FRAME_CUT_RE.search(clause) or (FRAME_PART_RE.search(clause) and re.search(r"画内|画面|画框", clause))):
+            continue
+        out += [m.group(0) for m in GUARANTEE_BROAD_RE.finditer(clause)]
+    return list(dict.fromkeys(out))
+
+
+def scene_activity_hits(sentence):
+    """场景段一句里的角色活动：角色类背景群体名词后面跟着活动动词（天气与环境反应不在名词表里）。"""
+    s = SUBJECT_SKIP_RE.sub("", sentence)
+    g = SCENE_GROUP_RE.search(s)
+    if not g:
+        return []
+    acts = [m.group(0) for m in SCENE_ACT_RE.finditer(s, g.start())]
+    return list(dict.fromkeys([g.group(0)] + acts)) if acts else []
+
+
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--prompt", required=True)
@@ -743,7 +885,7 @@ def main():
     if fmt == "四段" and task == "生成" and overview.strip():
         head = " / ".join(l.strip() for l in overview.strip().splitlines() if l.strip())[:40]
         warnings.append(f"情节段开头有总览句：「{head}」；生成类新稿情节段直接从镜头标题开始，时长与镜数由镜头标题表达，"
-                        "控制句写进主体段或镜内，确认是重复就删掉")
+                        "身份与数量写进主体段，其余控制写进它发生的那一拍，确认是重复就删掉")
     command_location = "概述段" if re.search(r"^\s*概述[：:]", text, re.M) else command_zone
     # 四段（含继承）必填句一律在命令区；其它继承旧壳两处都接受（按父稿）。
     m_tail = re.search(r"结尾[：:](.*)$", text, re.S)
@@ -1130,9 +1272,9 @@ def main():
     # 2）跨段重复长句：去掉标点与空白后 ≥12 字、在两个段落里完全相同的子句（台词不参与）
     seen = {}
     for name, body in secs.items():
-        for raw, flat in clauses_of(strip_dialogue(body)):
+        for clause_raw, flat in clauses_of(strip_dialogue(body)):
             if len(flat) >= 12:
-                seen.setdefault(flat, {}).setdefault(name, raw)
+                seen.setdefault(flat, {}).setdefault(name, clause_raw)
     for flat, hits in [(f, h) for f, h in seen.items() if len(h) > 1][:5]:
         sample = next(iter(hits.values()))
         warnings.append(f"跨段重复：「{sample[:24]}」出现在{'与'.join(n + '段' for n in hits)}；同一件事只写一次")
@@ -1148,6 +1290,135 @@ def main():
     m = re.search(r"风格[：:](.*?)(?:\n情节[：:]|\n镜头|$)", text, re.S)
     if m and QUALITY_ONLY.search(m.group(1)) and len(re.sub(r"\s", "", m.group(1))) < 60:
         warnings.append("风格段只有画质词、缺少材质与光的具体句")
+    # 4）v23 总括保证句（强档全稿、各外壳都扫）与主体段只写是谁、长什么样、有几个（四段稿）
+    def _excerpt(s, n=36):
+        return s if len(s) <= n else s[:n] + "…"
+    def _flat(s):
+        return re.sub(r"\s", "", s)
+    def _parent(s):  # 改稿时父稿原样存在的句子照报，但标出来，删改按 revise-rules 核对授权
+        return revision and _flat(s) in base_flat
+    def _skip(s):    # --partial 只改了镜头，父稿原样的句子（主体段整段、没换的镜头）不报
+        return a.partial and _parent(s)
+    def _unlock(t):
+        for lk in sorted(a.lock, key=len, reverse=True):
+            t = t.replace(lk, "")
+        return t
+    four = fmt == "四段"
+    PARENT_NOTE = "；这句父稿原有，删改按 references/review/revise-rules.md 核对授权，用户认可的原句保留"
+    GUAR_TAIL = ("；总括补不上镜内：镜内没写出来的，总括句补不上，只会穿帮或打架；镜内已经写出来的，不用再总括。"
+                 "删掉它，在镜内写清画里有谁：主体与关键物件写进每一拍的画框，背景群体按成文主规则第 3 条在每一镜第一次出现时写一次"
+                 "（同一镜后面的拍只在它参与画面事件时再写），设计里不留空画面的瞬间（L087）；"
+                 "数量锁（全片只有……）、唯一光源、全片不换手的道具归属、风格段的镜头性格、镜头正文里点名部位或画框切线的取景约束"
+                 "（头部和双肩始终留在画内）不算（writing-rules 成文主规则第 7 条）")
+    def _lead(s):    # 去掉句首的段落标题或镜头标题，免得同一句在全稿扫和分段扫里对不上
+        m = KNOWN_HEADER.match(s) or next((m for rx in HEAD_PATTERNS.values() for m in [rx.match(s)] if m), None)
+        return s[m.end():].strip() if m else s
+    # 镜头正文先分成普通句与总览句：以“整段里 / 全片……”开头的总览句从句首一直到句号，用“；”接着的分句同属这段总览，
+    # 强档与宽档并成一条报（只删前半句会留下半截总括）；取景豁免只给普通句
+    shot_plain, overviews = set(), []
+    for k, (h, body_lines, _t) in enumerate(blocks):
+        body = _unlock(strip_dialogue("\n".join(body_lines)))
+        hm = HEAD_PATTERNS[h[1]].match(body)
+        body = body[hm.end():] if hm else body
+        for full in split_sentences(re.sub(r"[；;]", "⁣", body)):
+            parts = [p.strip() for p in full.split("⁣") if p.strip()]
+            if parts and SHOT_OVERVIEW_RE.match(parts[0]):
+                overviews.append((f"镜{h[2] or k + 1}", parts))
+            else:
+                shot_plain.update(_flat(p) for p in parts)
+    overview_flat = {_flat(p) for _tag, parts in overviews for p in parts}
+    # 四段稿场景段、风格段里写了角色活动的句子：同句的总括词并进那条角色活动提醒，不另报（只认行首的段落标题）
+    sec_act = {}
+    for name in ("场景", "风格") if four else ():
+        if not any(re.match(r"\s*" + name + r"\s*[：:]", ln) for ln in lines):
+            continue
+        for s in split_sentences(_unlock(strip_dialogue(secs.get(name) or ""))):
+            if _skip(s):
+                continue
+            hs = [w for w in scene_activity_hits(s) if not _asked(w)]
+            if len(hs) >= 2:
+                sec_act.setdefault(name, []).append((s, hs))
+    act_flat = {_flat(s) for v in sec_act.values() for s, _hs in v}
+    guar_done = set()
+    for s in map(_lead, split_sentences(lock_free)):
+        f = _flat(s)
+        if _skip(s) or f in overview_flat or f in act_flat:
+            continue
+        ws = [w for w in strong_guarantee_hits(s, in_shot=f in shot_plain) if not _asked(w)]
+        if ws:
+            guar_done.add(f)
+            warnings.append(f"总括保证句：{''.join(f'「{w}」' for w in ws)}——「{_excerpt(s)}」{GUAR_TAIL}"
+                            + (PARENT_NOTE if _parent(s) else ""))
+    if four:
+        subj = secs.get("主体")
+        if subj is None and not any(KNOWN_HEADER.match(ln) for ln in lines):
+            subj_is_prefix, subj = True, "\n".join(lines[:first_head] if first_head is not None else lines)
+        else:
+            subj_is_prefix = False
+        subj = _unlock(strip_dialogue(subj or ""))
+        n_subj = 0
+        for s in split_sentences(subj):
+            if _flat(s) in guar_done or _skip(s):
+                continue
+            # 写明“不换手 / 不离手 / 不离身”的道具归属句是身份层面的事实，句里的“全程 / 一直”不算总括
+            gs = [] if PROP_FIXED_RE.search(s) else [w for w in broad_guarantee_hits(s) if not _asked(w)]
+            acts, held = ([], []) if subj_is_prefix else subject_action_hits(s)
+            acts = [w for w in acts if not _asked(w)]
+            if acts:
+                n_subj += 1
+                if n_subj > 6:
+                    continue
+                note = f"（同句总括词{''.join(f'「{w}」' for w in gs)}并入本条：总括补不上镜内）" if gs else ""
+                prop = ("；持物可裁定：这件道具若全片不换手、一直在同一只手里，是身份层面的事实，可以留在主体段"
+                        "（写明“全片不换手”就不再报），会在镜内拿起、扔出、被接住、换手的写进那一镜的开场现状和变化那一拍的终态"
+                        if any(w in held for w in acts) else "")
+                warnings.append(f"主体段这句写了动作、随动、持物状态或调度：{''.join(f'「{w}」' for w in acts[:5])}"
+                                f"——「{_excerpt(s)}」{note}；主体段只写是谁、长什么样、有几个，这句写进情节里它发生的那一拍"
+                                f"（背景角色写进每一镜里它第一次出现的那一拍）；衣物、头发的随动只在它是关键动作的可见结果时写，"
+                                f"否则交给模型{prop}（seedance-format 第 1 节主体段；writing-rules 成文主规则第 3、7 条）"
+                                + (PARENT_NOTE if _parent(s) else ""))
+            elif gs:
+                guar_done.add(_flat(s))
+                warnings.append(f"总括保证句：{''.join(f'「{w}」' for w in gs)}——「{_excerpt(s)}」{GUAR_TAIL}"
+                                + (PARENT_NOTE if _parent(s) else ""))
+        if n_subj > 6:
+            warnings.append(f"主体段还有 {n_subj - 6} 句写了动作、随动、持物状态或调度（只列前 6 句）")
+        # 场景段只写环境、风格段只写画面质感与镜头性格：角色类背景群体名词后面跟着活动动词的句子（天气与环境反应不报）
+        SEC_WHY = {"场景": "场景段只写全片贯穿的环境与天气反应，角色活动不算环境",
+                   "风格": "风格段只写画面质感与镜头性格，角色活动不算质感"}
+        for name in ("场景", "风格"):
+            for s, hs in sec_act.get(name, []):
+                gs = list(dict.fromkeys([w for w in strong_guarantee_hits(s) if not _asked(w)]
+                                        + [w for w in broad_guarantee_hits(s) if not _asked(w)]))
+                guar_done.add(_flat(s))
+                note = f"（同句总括词{''.join(f'「{w}」' for w in gs)}并入本条：总括补不上镜内）" if gs else ""
+                warnings.append(f"{name}段这句写了角色活动：{''.join(f'「{w}」' for w in hs[:5])}——「{_excerpt(s)}」{note}；"
+                                f"{SEC_WHY[name]}，写进情节里每一镜它第一次出现的那一拍，"
+                                f"同一镜后面的拍只在它参与画面事件（贴着镜头掠过）时再写（writing-rules 成文主规则第 3 条）"
+                                + (PARENT_NOTE if _parent(s) else ""))
+    # 镜头正文里以“整段里 / 全片 / 从头到尾”开头的总览句：强档各外壳都报，宽档只报四段稿；同一段总览报一条
+    def _overview_hits(p):
+        hs = [w for w in strong_guarantee_hits(p) if not _asked(w)]
+        if four:
+            hs += [w for w in broad_guarantee_hits(p) if not _asked(w)]
+        return hs
+    for tag, parts in overviews:
+        todo = [p for p in parts if _flat(p) not in guar_done and not _skip(p)]
+        gs = list(dict.fromkeys(w for p in todo for w in _overview_hits(p)))
+        if not gs:
+            continue
+        guar_done.update(_flat(p) for p in parts)
+        cont = ""
+        if len(todo) > 1:
+            shown = []
+            for p in todo[1:]:
+                ex = _excerpt(p, 24)
+                shown.append(ex)
+                shown += [c.strip() for c in re.split(r"[，,：:]", p)
+                          if c.strip() and _overview_hits(c) and c.strip() not in ex]
+            cont = "（用“；”接着的分句同属这段总览，一并处理：" + "".join(f"「{x}」" for x in shown) + "）"
+        warnings.append(f"{tag} 总括保证句：{''.join(f'「{w}」' for w in gs)}——「{_excerpt(todo[0])}」{cont}{GUAR_TAIL}"
+                        + (PARENT_NOTE if any(_parent(p) for p in todo) else ""))
 
     checked_sha = sha(text)
     # 交付出去的那段正文（--partial 时是局部段本身，否则就是整稿）；规范化方式与 hooks/stop_gate.py 的 digest 一致
