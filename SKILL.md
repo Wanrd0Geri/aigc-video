@@ -31,7 +31,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 
 | 任务 | 本次必读 | 交付 |
 |---|---|---|
-| 写新提示词 | lessons 按题材 grep 两三个分类 → 两份 cases 各只读索引：my-cases 取最接近的 1 条，只读“可复用点/关联经验”，类型与素材形态都相同且确需抄句式时才展开原文；official-cases 取 1–2 条看“原案例结构” → [seedance-format.md](references/seedance-format.md) → [writing-rules.md](references/writing-rules.md) → [directing-upgrade.md](references/craft/directing-upgrade.md) 与所有适用工艺卡 → 按题材在 [references/lexicon/](references/lexicon/) 对应表 grep 用户白话里的动作与效果，每个挑 1 个推荐 + 1–2 个备选写进表头“升级”行（每稿默认最多查 5 个小类，镜头多于 4 个或打斗特效密集时可到 8 个，同一小类只算一次，只读命中的小类、禁止整份读；读法与升级写法见 lexicon/README「词库升级」） | 默认表头 + 完整提示词 + 检查行；用户要先看分镜或已有审核节点时先交镜头表 |
+| 写新提示词 | lessons 按题材 grep 两三个分类 → 两份 cases 各只读索引：my-cases 取最接近的 1 条，只读“可复用点/关联经验”，类型与素材形态都相同且确需抄句式时才展开原文；official-cases 取 1–2 条看“原案例结构” → [seedance-format.md](references/seedance-format.md) → [writing-rules.md](references/writing-rules.md) → [directing-upgrade.md](references/craft/directing-upgrade.md) 与所有适用工艺卡 → 按题材在 [references/lexicon/](references/lexicon/) 对应表 grep 用户白话里的动作与效果，每个挑 1 个推荐 + 1–2 个备选写进表头“升级”行（每稿最多查 5 个小类、只读命中的小类、禁止整份读；读法与升级写法见 lexicon/README「词库升级」） | 默认表头 + 完整提示词 + 检查行；用户要先看分镜或已有审核节点时先交镜头表 |
 | 改现有提示词 | lessons 按分类 grep → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 完整受影响单元 + ≤3 行变更摘要 + 检查行；不为表头全文加载新稿格式或严格审文件 |
 | 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons 的 `操作命令/` 及题材分类 | 四段完整操作命令；旧稿修订按父稿外壳 |
 | 输入「自检」 | [qa-checklist.md](references/review/qa-checklist.md) + `scripts/check_prompt.py`；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 一句结论 + 六维综合表 + 必要问题；自检不自动改稿 |
