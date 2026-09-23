@@ -108,7 +108,7 @@ CASES = [
     ("g02 例外重复同一句不计数", "five_section_six_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "不出现水印。；不出现水印。"], 1),
     ("g03 例外写成片段不计数", "five_section_six_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "水；印"], 1),
     ("六条否定：两条独立整句例外放行", "five_section_six_negatives.txt", ["--format", "五段", "--total", "12", "--negative-exception", "不出现水印。；不出现反光。"], 0),
-    ("密度：每秒 2 拍也提醒（只提醒）", "dense_two_per_second.txt", ["--total", "12"], 0),
+    ("密度：正好 0.5 秒一拍（2 秒 4 拍）不提醒，通过", "dense_two_per_second.txt", ["--total", "12"], 0),
     ("弱运镜措辞只提醒", "weak_motion.txt", ["--total", "12"], 0),
     ("四段生成稿情节段开头有总览句：只提醒", "four_section_overview_warning.txt", ["--total", "12"], 0),
     ("动作过密只提醒", "dense_beats.txt", ["--total", "12"], 0),
@@ -165,6 +165,22 @@ CASES = [
     ("总览句的强档与“；”后分句并一条、场景段强档并入角色活动：只提醒", "guarantee_overview_merge.txt", ["--total", "12", "--labels", "图1"], 0),
     ("背景活动词表（盘旋、穿过、飘过、涌动、发抖、来来往往、赶路、鬼影）：只提醒", "bg_activity_wordlist.txt", ["--total", "12", "--labels", "图1"], 0),
     ("外形状态与身份句（一直湿透、始终是同一颗、同一主体）：通过", "guarantee_exempt_states.txt", ["--total", "12", "--labels", "图1"], 0),
+    # ---- v24（2026-09-23 用户“按建议”）：密度按“不到 0.5 秒一拍”才提醒；有意的纯黑写明时长、范围或曝光依据不报；全局段材质词不扫 ----
+    ("密度：正好 0.5 秒一拍（3 秒 6 拍，时码带小数）不提醒，通过", "dense_exact_half_second.txt", ["--total", "12"], 0),
+    ("密度：1 秒里超过 2 拍（3 秒 7 拍）只提醒", "dense_over_two_per_second.txt", ["--total", "12"], 0),
+    ("有意的纯黑（开始的一秒、画面九成、按灯笼的光曝光）：通过且不提醒", "void_intentional.txt", ["--total", "12"], 0),
+    ("纯黑只有镜头标题的时码：只提醒", "void_heading_only.txt", ["--total", "12"], 0),
+    ("纯黑只带“第8秒”时间点，另有“什么都没有”：只提醒", "void_time_point.txt", ["--total", "12"], 0),
+    ("“上半身沉进纯黑里”（上半身不算范围）：只提醒", "void_body_half.txt", ["--total", "12"], 0),
+    ("主体、场景、风格段的材质词（织纹、毛孔、纤维）不扫：通过", "micro_scale_in_global.txt", ["--total", "12"], 0),
+    # ---- v24 审查修复：已试否定例外可点名；“先”“同时”不另算一拍；只写曝光不算有意纯黑；“不采用图中的纯黑背景”不扫；哪只手握棍不算总括 ----
+    ("已试否定例外（句中否定）整句点名：通过", "tried_negative_exception.txt", ["--total", "12", "--negative-exception", "开始的一秒画面是纯黑，看不到任何轮廓、光点或亮边；暗部不做任何补光"], 0),
+    ("已试否定例外只点名片段：拦下", "tried_negative_exception.txt", ["--total", "12", "--negative-exception", "看不到任何轮廓"], 1),
+    ("密度：“先……接着……”与“同时”写的正好 0.5 秒一拍：通过", "dense_xian_tongshi.txt", ["--total", "12"], 0),
+    ("纯黑只写按哪处光曝光：只提醒", "void_exposure_only.txt", ["--total", "12"], 0),
+    ("纯黑同句只有“一成不变”“大半圈”：只提醒", "void_not_range.txt", ["--total", "12"], 0),
+    ("主体段“不采用图中的纯黑背景”+ 镜内有意纯黑：通过", "void_ref_bg_excluded.txt", ["--total", "12", "--labels", "图1"], 0),
+    ("主体段“白猿全程用右手握棍”（E1 身份事实）：通过", "prop_hand_in_subject.txt", ["--total", "12"], 0),
     ("样例：打斗 12 秒", "../sample-combat-12s.txt", ["--total", "12", "--labels", "图片1,图片2,图片3"], 0),
     ("样例：对话 12 秒", "../sample-dialogue-12s.txt", ["--total", "12", "--labels", "图片1,图片2"], 0),
 ]
@@ -179,7 +195,7 @@ for name, f, args, want in CASES:
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} | exit {p.returncode} (期望 {want}) | errors={d.get('errors', [])[:2]}")
 # 弱运镜与密度提醒必须真的出现在 warnings 里
-WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节拍"), ("dense_two_per_second.txt", [], "节拍"),
+WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节拍"),
               ("four_section_overview_warning.txt", [], "总览句"),
               ("at_refs_in_new_draft.txt", [], "新稿不写 @"), ("asset_bound_twice.txt", [], "都写了职责"),
               ("cross_section_dup.txt", [], "跨段重复"), ("style_has_sequence.txt", [], "风格段里有时序"),
@@ -287,7 +303,22 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("guarantee_phrasing.txt", [], "总括保证句：「始终保留在画面」"),
               ("guarantee_phrasing.txt", [], "总括保证句：「始终位于画面内」"),
               ("guarantee_phrasing.txt", [], "总括保证句：「始终留在画内」——「那颗被它双手捧着的人头始终留在画内」"),
-              ("guarantee_phrasing.txt", [], "总括保证句：「一直在画面里」——「它腰间的人头一直在画面里」")]
+              ("guarantee_phrasing.txt", [], "总括保证句：「一直在画面里」——「它腰间的人头一直在画面里」"),
+              # v24：密度提醒按新口径（不到 0.5 秒一拍，1 秒里超过 2 个互不相连的动作才算太密）
+              ("dense_over_two_per_second.txt", [], "镜1 约 7 个动作节拍挤在 3 秒里（平均不到 0.5 秒一拍"),
+              ("dense_beats.txt", [], "1 秒里超过 2 个互不相连的不同动作才算太密"),
+              # v24：纯黑没写时长、范围或曝光依据仍报（标题时码、“第N秒”、“上半身”都不算），提醒里给出有意纯黑的写法；压死的黑、什么都没有、再没有第三样照报
+              ("void_heading_only.txt", [], "绝对化的空或黑：「纯黑」"),
+              ("void_heading_only.txt", [], "有意的纯黑在同一句写明持续多久或占多大范围"),
+              ("void_time_point.txt", [], "绝对化的空或黑：「纯黑」"),
+              ("void_time_point.txt", [], "绝对化的空或黑：「什么都没有」"),
+              ("void_body_half.txt", [], "绝对化的空或黑：「纯黑」"),
+              ("absolute_void.txt", [], "绝对化的空或黑：「再没有第三样」"),
+              # v24：主体段随动提醒说明镜内每拍可写一处衣物、头发或持物的可见结果
+              ("subject_action.txt", [], "衣物、头发、持物的可见结果写进镜内那一拍，每拍一处"),
+              # v24 审查修复：只写曝光、“一成不变”“大半圈”都不算有意纯黑
+              ("void_exposure_only.txt", [], "绝对化的空或黑：「纯黑」"),
+              ("void_not_range.txt", [], "绝对化的空或黑：「纯黑」")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -396,7 +427,20 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("guarantee_exempt_states.txt", [], "总括保证句"),
                  ("guarantee_exempt_states.txt", [], "主体段这句"),
                  # 画面里的位置（始终位于画面中央）不算总括
-                 ("guarantee_phrasing.txt", [], "位于画面中央")]
+                 ("guarantee_phrasing.txt", [], "位于画面中央"),
+                 # v24：正好 0.5 秒一拍不报密度；有意的纯黑不报；“压死的黑”的提醒不带有意纯黑的写法；全局段材质词不扫；随动提醒不再说“交给模型”
+                 ("dense_two_per_second.txt", [], "节拍"),
+                 ("dense_exact_half_second.txt", [], "节拍"),
+                 ("void_intentional.txt", [], "绝对化的空或黑"),
+                 ("absolute_void.txt", [], "有意的纯黑"),
+                 ("micro_scale_in_global.txt", [], "尺度名词"),
+                 ("subject_action.txt", [], "否则交给模型"),
+                 # v24 审查修复：“先”“同时”不另算一拍；“不采用图中的纯黑背景”不扫；全程用右手握棍不算总括也不算主体段动作
+                 ("dense_xian_tongshi.txt", [], "节拍"),
+                 ("void_ref_bg_excluded.txt", ["--labels", "图1"], "绝对化的空或黑"),
+                 ("prop_hand_in_subject.txt", [], "总括保证句"),
+                 ("prop_hand_in_subject.txt", [], "主体段这句"),
+                 ("tried_negative_exception.txt", ["--negative-exception", "开始的一秒画面是纯黑，看不到任何轮廓、光点或亮边；暗部不做任何补光"], "否定句")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -436,6 +480,8 @@ ASK_DETAIL_CASES = [
     ("列数不对报格式错误", "asks_draft.txt", ["--asks", str(C / "asks_bad_format.txt")], "errors", "列数不对"),
     ("状态不是有效 / 撤回报格式错误", "asks_draft.txt", ["--asks", str(C / "asks_bad_format.txt")], "errors",
      "状态不是「有效」或「撤回（时间＋用户原话）」"),
+    ("已试否定例外点名后在 checked 行里记数", "tried_negative_exception.txt",
+     ["--negative-exception", "开始的一秒画面是纯黑，看不到任何轮廓、光点或亮边；暗部不做任何补光"], "checked", "已试否定例外 2 句已点名"),
     ("消失的句子已被 A 的错误覆盖：不重复报", "revise_dropped_two.txt",
      ["--baseline", str(C / "revise_parent.txt"), "--asks", str(C / "asks_lost_overlap.txt")], "warnings",
      "父稿有 1 句在新稿里消失：「后景虚化成一片柔光」"),
@@ -666,6 +712,21 @@ with tempfile.TemporaryDirectory() as tmp:
         ok = not hit; fails += 0 if ok else 1
         print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 不报“整幅遮挡”“发力过程写法”“镜内标签”“画质词”“主体段这句”“场景段这句”“风格段这句”“总括保证句” |", hit[:1] or "ok")
 
+# v24：成功案例里 E8、E9 口径的直接出处——M001 的“开始的一秒画面是纯黑”“画面九成落在纯黑里”（L073、L074 已试）不报绝对化的空或黑；
+# M003 镜1 按时序词粗估 7 秒 8 拍（“先”“同时”不另算；审查修复前算作 14 拍、正好 0.5 秒一拍），不报动作密度
+SUCCESS_EXTRA = [("M001", ["--format", "六段"], "绝对化的空或黑"), ("M003", ["--format", "六段"], "节拍"),
+                 # 审查修复：M002、M003 素材绑定句里的“不采用图中的纯黑背景”说的是参考图，不报
+                 ("M002", ["--format", "六段"], "绝对化的空或黑"), ("M003", ["--format", "六段"], "绝对化的空或黑")]
+with tempfile.TemporaryDirectory() as tmp:
+    for cid, extra, key in SUCCESS_EXTRA:
+        m = re.search(r"^### " + cid + r"\b.*?提示词原文[^\n]*\n\s*```text\n(.*?)\n```", cases_text, re.S | re.M)
+        pf = pathlib.Path(tmp) / f"{cid}.txt"
+        pf.write_text((m.group(1) if m else "") + "\n", encoding="utf-8")
+        p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), *extra], text=True, capture_output=True)
+        hit = [w for w in json.loads(p.stdout)["warnings"] if key in w] if m else ["找不到提示词原文"]
+        ok = not hit; fails += 0 if ok else 1
+        print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 不报“{key}” |", hit[:1] or "ok")
+
 # ---- v23 审查修复：input_sha256 是整份输入的哈希（v16 起曾被分句循环变量覆盖，不同的稿算出同一个值） ----
 shas = {}
 for f in ("lantern_trial_s.txt", "lantern_trial_v22.txt"):
@@ -679,6 +740,6 @@ print(("PASS" if ok else "FAIL"), "| 两份不同的稿 input_sha256 不同，�
 TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES)
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
-         + 4 + 1)
+         + 4 + len(SUCCESS_EXTRA) + 1)
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)
