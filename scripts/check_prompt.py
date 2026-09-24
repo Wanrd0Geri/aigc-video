@@ -44,7 +44,8 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
   **提示词里不写 @**（软件里粘贴后再 @ 出来）：四段新稿出现 @ 引用时提醒一次；继承模式按父稿（父稿用 @ 就不提醒）。
 启发式扫描（空词与解释词、机制词、绝对化的空或黑、非特写取景里的尺度名词、同一镜里的远处与贴镜、关键动作紧挨整幅遮挡、发力过程写法、
   摄影运动、景别、焦点落点、弱运镜措辞、动作密度、“能装下什么”的取景措辞、镜头标题的非整数秒、素材写法与重复绑定、跨段重复长句、
-  风格段里的时序、运镜、随动与表演、主体段里的动作、情绪与调度、场景段与风格段里的角色活动、各段的画质词、总括保证句与站位保证）只给警告。
+  风格段里的时序、运镜、随动与表演、主体段里的动作、情绪与调度、场景段与风格段里的角色活动、各段的画质词、总括保证句与站位保证、
+  压缩审校的复读、虚词与字数密度）只给警告。
 动作密度：估算拍数 = max(时序词数 + 1, ⌈镜内句数 / 2⌉)。时序词（接着、紧接着、随后、随即、然后、最后、再抬……；“先”“同时”不另算一拍）
   照顾清单式写法；句数（按句号、分号、问号、感叹号和换行切，去掉台词和镜头标题本身）照顾讲戏口吻的短句。平均不到 0.5 秒一拍
   （1 秒里超过 2 拍）才提醒，正好 0.5 秒不报；checked 里逐镜列出句数与估算拍数。
@@ -96,6 +97,20 @@ v23 三类提醒（只提醒不拦截，词表 SUBJECT_*_RE / BG_ACT / SCENE_*_R
   同一段总览的强档与宽档报一条），数量锁、唯一光源、身份锁（是同一颗、同一主体）、道具归属（属于、拿在谁手里、全程用右手握棍、
   全程右手握着铁棒、不换手）、镜头性格、伤势与外形状态（湿透、亮着、熄着、是湿的）不算。改稿时父稿原句照报并标“父稿原有”；
   --partial 不报父稿原句；锁定文字与 --asks 关键词不报。
+压缩审校三条提醒（writing-rules 成文主规则第 5 条，2026-09-24；都只提醒不拦截，按第 5 条逐条裁定，常量在头部、可调）：
+  复读：只扫镜头正文（去掉镜头标题、台词与说话人前缀、音效 <…>、锁定文字、--negative-exception 点名的句子和每镜照写的固定句），
+  按标点切开后取连续 6 个字的窗口（含标点的窗口跳过），全稿出现 ≥2 次的窗口向两边扩成最长公共短语，按出现先后每份稿最多报 5 条。
+  豁免：主体段、场景段里也有的 6 字窗口（人物短外貌短语、地点名）；含素材短名（图N / 视频N / 音频N）的短语整条不报；
+  结构词不算内容——画框切线（切线到分句末尾）、出画入画、画面坐标与画面里的大小（画面左上方、大半个画面）、位置与站位、
+  纯时间点（第4秒）、运镜景别机位的多字术语（镜头缓缓推近、仰拍特写、四分之三侧），短语两头的虚字和量词也不算——每一处出现
+  在原句里去掉这些以后不足 6 个字的不报（“画框下缘切在灯笼……”“朝画面左上方”“画面左侧 / 右侧的那半边脸”是不同的东西落在
+  同一条切线、同一个坐标上，两镜各写一次“镜头缓缓推近”是两次运镜，都不是复述）；--asks 有效要求的关键词不报；
+  改稿时只报本轮新增的重复（父稿里同一短语已有的次数不算）。
+  虚词：每镜数 逐渐 / 渐渐 / 缓缓 / 一路 / 此时 / 这时 / 继续 / 不断地 / 随之（FILLER_WORDS），超过 3 个提醒；
+  “慢慢”“急速”是速度，“先 / 接着 / 随后 / 最后 / 同时”是时序词（第 71 条），“开始的一秒 / 开始时 / 一开始”是时间点，都不计；
+  锁定文字与点名的否定句不数。
+  密度：有时码的镜头，正文字数（去标题、去台词、去空白）÷ 时长超过 DENSITY_CHARS_PER_SEC（默认 200 字 / 秒，--density-line 可调，暂定，待 A/B 实测，
+  L104）时提醒，checked 里逐镜列出字数与每秒字数。改稿时和父稿逐字相同的镜头不报虚词与密度（压缩只用于本轮获准改写的部分）。
 否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外，先去掉段落标题与镜头标题，紧跟标题的第一句也算）里
   句首是 `不出现|不添加|不得|不要|不能|不许|不可|不允许|禁止|避免|严禁|请勿|别` 的句子逐句给**提醒**（不是错误）；用 --negative-exception
   逐句点名的不再提醒（“主体：不要任何声音。”点名“不要任何声音。”）。位置按 writing-rules 第 62 条：只管一镜的写那一镜；全片级的写一次——
@@ -435,6 +450,42 @@ SENT_SIMILAR = 0.6
 LENGTH_BUDGET = 1.15
 # 即梦提示词长度上限（seedance-format 第 7 节）：正文超过就报错误
 PROMPT_CHAR_LIMIT = 15000
+# 压缩审校（writing-rules 成文主规则第 5 条）三条提醒：复读、虚词、密度。都只提醒不拦截，按第 5 条逐条裁定；承重句（画框切线、
+# 画面坐标、秒数、数量、关键事件、每拍的运镜与终态、素材职责、官方必填句、用户原话……）不为消提醒去删。词表与阈值可调
+# 字数密度参考线（字 / 秒）：可调、待实测。灯笼怪同一设计两版（L104）：不用 skill 版镜内约 78 字 / 秒，用户评价自然；
+# skill v23 版约 136 字 / 秒；官方案例多在 20–40 字 / 秒。只作提醒线，不是上限，两版管线不同，不能单独归因于字数
+DENSITY_CHARS_PER_SEC = 200   # 三个多镜成功案例最高 200 字/秒（M003），线放在它之上只抓极端过载；命令行 --density-line 可调，待 A/B
+# 虚词：顺序和时间已经清楚时可删。“慢慢”“急速”是速度，“先 / 接着 / 随后 / 最后 / 同时”是时序词（第 71 条），都不在表里；
+# 只认“不断地”（“右缘不断扫进新的雨丝”不算）；“开始的一秒”“开始时”“一开始”是时间点（L073 的已试写法），不算
+FILLER_WORDS = ["逐渐", "渐渐", "缓缓", "一路", "此时", "这时", "继续", "不断地", "随之"]   # “开始”标记镜内起点，不算虚词
+FILLER_RE = re.compile("|".join(FILLER_WORDS))
+FILLER_LIMIT = 3            # 每镜超过这个数才提醒
+# 复读：镜头正文按标点切开后取连续 REPEAT_WINDOW 个字的窗口，全稿出现 ≥2 次就扩成最长公共短语，每份稿最多报 REPEAT_MAX 条
+REPEAT_WINDOW = 6
+REPEAT_MAX = 5
+# 复读里不算内容的结构词：画框切线（切线后面到分句末尾都是承重的切线位置）、出画入画、画面坐标与画面里的大小、位置与站位、纯时间点、素材短名，
+# 以及每拍各自的运镜、景别与机位（两镜各写一次“镜头缓缓推近”是两次运镜，不是复述；只认多字术语，单字的推、拉、移不算，
+# 免得“重心移到左脚”这类动作被当成运镜挖掉）。短语去掉这些（和主体段、场景段里也有的窗口）以后不足 REPEAT_WINDOW 个字就不报。可调
+REPEAT_CAMERA = (r"镜头|摄影机|机位|运镜|环绕|围绕|移焦|变焦|横移|平移|推近|推进|慢推|缓推|前推|急推|后拉|后撤|拉远|拉近|急拉"
+                 r"|甩镜|手持|跟拍|跟住|跟随|跟着|跟上|跟回|摇跟|[左右上下]摇|摇回|摇向|摇起|摇镜|升降"
+                 r"|俯拍|仰拍|平拍|顶拍|俯视|仰视|平视|四分之三侧[面脸前后]?|正侧面|侧面|正面|背面"
+                 r"|大特写|特写|中近景|近景|中全景|中景|大全景|全景|大远景|远景|起幅|落幅")
+# 公共短语两头的虚字和量词不算内容（两处在“被 / 的 / 在……”这里分岔，“身上的白烟被”其实只重复了“身上的白烟”）。可调
+REPEAT_EDGE_CHARS = "的地得了着被把将在从朝向往到和与及跟也都又还就才并且而一个只片条道颗张块根"
+REPEAT_STRUCT_RE = re.compile(
+    r"(?:(?:画框|画面)[上下左右]?(?:缘|边缘|边)?|[上下左右](?:缘|边缘))(?:切|升|降|压|卡|停|落|退|贴|顶)(?:在|到|过|住).*"
+    r"|切(?:在|过|到).*|(?:以下|以上)?(?:出画|入画)"
+    r"|(?:整个|大半个|半个|小半个)?(?:画面|画框|画内|画外)(?:里|中|内|外|的)?"
+    r"|[左右][上下](?:方|角|侧)?|[上下左右](?:方|侧|半幅|半边|半|缘|边缘|边|角)|正中(?:央|间|心)?|中(?:央|间|心)"
+    r"|三分线|三分之一|一角|大半|一半|(?:相对|左右)?位置|站位"
+    r"|第\s*[\d一二两三四五六七八九十]+(?:\.\d+)?\s*秒"
+    r"|@?(?:图片|视频|音频|图)\s?\d+"
+    r"|" + REPEAT_CAMERA)
+# 每镜照写的固定句不扫复读：口型句、台词语言句、延长官方约束句（末行固定句本来就不在镜头正文里）
+REPEAT_FIXED_RE = re.compile(r"要求口型与说话时间一致|台词语言\s*[：:][^。；;\n]*|" + re.escape(EXTEND_CONSTRAINT))
+# 说话人前缀（苏云压低声音说：“……”、罗大娘（OS，位于画面右侧外）：{……}）：冒号后面紧跟台词的那一段
+SPEAKER_PREFIX_RE = re.compile(r"[^，,。；;！!？?\n：:]*[：:]\s*(?=[“\"「『{])")
+SOUND_MARK_RE = re.compile(r"<[^<>\n]*>")   # 音效 <…>（seedance-format 第 5 节）
 
 
 def cjk_to_int(s):
@@ -993,6 +1044,101 @@ def scene_activity_hits(sentence):
     return list(dict.fromkeys([g.group(0)] + acts)) if acts else []
 
 
+def shot_key(h):
+    """认同一镜：有镜号按镜号，“a-b秒：”这类没有镜号的标题按时码。"""
+    return h[2] if h[2] is not None else (h[3], h[4])
+
+
+def shot_text(h, body_lines):
+    """一镜的正文：去掉镜头标题本身，台词还在（调用处按需要去掉）。"""
+    body = "\n".join(body_lines)
+    hm = HEAD_PATTERNS[h[1]].match(body)
+    return body[hm.end():] if hm else body
+
+
+def repeat_segments(body, drop=()):
+    """复读扫描用的一镜片段：去掉说话人前缀、台词、音效 <…>、每镜照写的固定句和 drop 里的文字（锁定文字、点名的否定句），
+    再按标点与空白切成只含字与数字的片段。"""
+    t = SPEAKER_PREFIX_RE.sub("\n", body)
+    t = DIALOGUE_RE.sub("\n", t)
+    t = SOUND_MARK_RE.sub("\n", t)
+    t = REPEAT_FIXED_RE.sub("\n", t)
+    for d in sorted((x for x in drop if x.strip()), key=len, reverse=True):
+        t = t.replace(d, "\n")
+    return re.findall(r"[^\W_]+", t)
+
+
+def repeat_masks(segs, fixed_grams, w=REPEAT_WINDOW):
+    """每个片段逐字标出不算内容的位置：结构词（画框切线、画面坐标与大小、运镜景别机位、时间点、素材短名）和主体段、场景段里
+    也有的 w 字窗口。在片段上下文里算，免得“画面左侧的那半边脸”“画面右侧的那半边脸”分岔后剩下的“侧的那半边脸”被当成内容。"""
+    masks = []
+    for s in segs:
+        mask = [False] * len(s)
+        spans = [m.span() for m in REPEAT_STRUCT_RE.finditer(s)]
+        spans += [(i, i + w) for i in range(len(s) - w + 1) if s[i:i + w] in fixed_grams]
+        for a, b in spans:
+            mask[a:b] = [True] * (b - a)
+        masks.append(mask)
+    return masks
+
+
+def repeat_core_len(seg, mask, start, end):
+    """片段 seg 里 [start, end) 这一处短语还剩几个内容字：去掉掩码位置，两头的虚字和量词也不算。"""
+    idx = [i for i in range(start, end) if not mask[i]]
+    while idx and seg[idx[0]] in REPEAT_EDGE_CHARS:
+        idx.pop(0)
+    while idx and seg[idx[-1]] in REPEAT_EDGE_CHARS:
+        idx.pop()
+    return len(idx)
+
+
+def repeat_phrases(segs, fixed_grams, w=REPEAT_WINDOW):
+    """复读（成文主规则第 5 条）：segs 是按出现先后排好的片段。连续 w 个字的窗口全稿出现 ≥2 次（主体段、场景段里也有的窗口不算；
+    同一片段里互相重叠的两处不算），每对出现位置向两边扩到不再相同，得到最长公共短语。返回 [(短语, 次数)]，按首次出现先后排：
+    含素材短名的整条不报；每一处出现都去掉结构词、主体段与场景段也有的窗口、两头的虚字，剩下不足 w 个字的不报；
+    被更长的入选短语包含的只留长的。"""
+    idx = {}
+    for s in segs:
+        for i in range(len(s) - w + 1):
+            g = s[i:i + w]
+            if g not in fixed_grams:
+                occ = idx.setdefault(g, {})
+                occ[(s, i)] = occ.get((s, i), 0) + 1
+    found = set()
+    for occ in idx.values():
+        if sum(occ.values()) < 2:
+            continue
+        keys = list(occ)
+        found.update(a for (a, _i), c in occ.items() if c >= 2)   # 两处片段一字不差：整段就是公共短语
+        for x, (a, ia) in enumerate(keys):
+            for b, ib in keys[x + 1:]:
+                if a == b and abs(ia - ib) < w:
+                    continue
+                left = 0
+                while ia - left > 0 and ib - left > 0 and a[ia - left - 1] == b[ib - left - 1]:
+                    left += 1
+                right = w
+                while ia + right < len(a) and ib + right < len(b) and a[ia + right] == b[ib + right]:
+                    right += 1
+                found.add(a[ia - left:ia + right])
+    masks = repeat_masks(segs, fixed_grams, w)
+    counted = []
+    for ph in found:
+        where = [(k, m.start()) for k, s in enumerate(segs) for m in re.finditer(re.escape(ph), s)]
+        n = sum(s.count(ph) for s in segs)
+        if n < 2 or LABEL_RE.search(ph):
+            continue
+        core = min(repeat_core_len(segs[k], masks[k], i, i + len(ph)) for k, i in where)
+        if core >= w:
+            counted.append((ph, n))
+    keep = []
+    for ph, n in sorted(counted, key=lambda x: (-len(x[0]), x[0])):
+        if not any(ph in k for k, _n in keep):
+            keep.append((ph, n))
+    first = {ph: next(k for k, s in enumerate(segs) if ph in s) for ph, _n in keep}
+    return sorted(keep, key=lambda x: (first[x[0]], segs[first[x[0]]].find(x[0])))
+
+
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--prompt", required=True)
@@ -1001,6 +1147,7 @@ def main():
     ap.add_argument("--format", dest="fmt", default=None, choices=["四段", "五段", "六段", "继承"])
     ap.add_argument("--total", type=float, default=None)
     ap.add_argument("--untimed", action="store_true")
+    ap.add_argument("--density-line", type=float, default=None, help="字数密度参考线（字/秒），默认取 DENSITY_CHARS_PER_SEC")
     ap.add_argument("--labels", default="", help="本次素材集合，逗号分开；`图1` 与 `图片1` 两种写法都接受（归一成 图N / 视频N / 音频N 再核对）")
     ap.add_argument("--baseline", default=None)
     ap.add_argument("--partial", action="store_true")
@@ -1013,6 +1160,7 @@ def main():
     ap.add_argument("--report", default=None, help="把机械检查结果另存为 JSON（kind=light），供 hooks/stop_gate.py 守门核对；有错误也写（ready=false）")
     ap.add_argument("--negative-exception", default="", help="要逐句点名的必要否定句本身，多句用“；”分开。四段稿（位置按 writing-rules 第 62 条：只管一镜的写那一镜；全片级的写一次——身份数量类（含静音“不要任何声音”）写主体段末尾，环境、光、文字水印类写场景段末尾；操作类写命令区）：点名的否定句不再提醒（其余每句给一条提醒），第 62 条的已试例外（句中否定）稿里有这一整句就不报错；五段 / 六段 / 继承旧稿：每句必须与结尾段里一条独立否定条款整句一致，数量要覆盖超出 4 条预算（含旧固定句）的部分。最终放行仍须审查")
     a = ap.parse_args()
+    density_line = a.density_line if a.density_line is not None else DENSITY_CHARS_PER_SEC
 
     def bail(msg):
         print(json.dumps({"ok": False, "errors": [msg], "warnings": [], "checked": []}, ensure_ascii=False, indent=2))
@@ -1442,6 +1590,10 @@ def main():
     # --- 每镜摄影运动、弱运镜与动作密度（提醒）---
     # 命令区写了参考视频N的运镜 / 白模 / 沿用视频N的镜头时，摄影由参考片承担，不报“未识别到摄影运动”
     cam_from_ref = bool(re.search(r"参考@?视频\s?\d+的[^。；;\n]*(?:运镜|镜头|切镜)|白模|粗模|沿用@?视频\s?\d+的镜头", operation_text(text)))
+    # 压缩审校（成文主规则第 5 条）的虚词与密度提醒：改稿时和父稿逐字相同的镜头不报（压缩只用于本轮获准改写的部分）
+    parent_shots = {shot_key(bh): norm_shot(bbody) for bh, bbody, _bt in baseline_blocks} if revision else {}
+    named_neg = [x.strip().rstrip("。；;") for x in a.negative_exception.replace(";", "；").split("；") if x.strip()]
+    compress_drop = sorted(set(a.lock) | set(named_neg), key=len, reverse=True)   # 锁定文字与点名的否定句：不数虚词、不扫复读
     for k, (h, body_lines, _t) in enumerate(blocks):
         body = "\n".join(body_lines)
         tag = f"镜{h[2] or k + 1}"
@@ -1466,6 +1618,27 @@ def main():
                                 f"按时序词 {n_seq} 个与镜内 {n_sent} 句粗估）；"
                                 f"一条连续动作每拍 0.5 秒可行，1 秒里超过 2 个互不相连的不同动作才算太密——核对这几拍是不是一条连续动作，"
                                 f"真要看清的动作单独给时间（L064 是经验线索，不是通过条件）")
+        # 压缩审校：虚词（每镜超过 FILLER_LIMIT 个）与字数密度（正文去标题、去台词、去空白后每秒字数超过参考线）
+        same_as_parent = parent_shots.get(shot_key(h)) == norm_shot(body_lines)
+        fscan = sbody
+        for d in compress_drop:
+            fscan = fscan.replace(d, "\n")
+        fills = [m.group(0) for m in FILLER_RE.finditer(fscan) if not _asked(m.group(0))]
+        if len(fills) > FILLER_LIMIT and not same_as_parent:
+            counts = {}
+            for w in fills:
+                counts[w] = counts.get(w, 0) + 1
+            shown = "、".join(w + (f"×{c}" if c > 1 else "") for w, c in counts.items())
+            warnings.append(f"{tag} 虚词 {len(fills)} 个（{shown}），顺序和时间已清楚的可删，逐渐、缓缓改成具体变化或速度而不是删（成文主规则第 5 条）")
+        if h[3] is not None and h[4] is not None and h[4] > h[3]:
+            dur = h[4] - h[3]
+            n_chars = nonspace_len(DIALOGUE_RE.sub("", shot_text(h, body_lines)))
+            cps = n_chars / dur
+            cps_txt = f"{cps:.0f}" if abs(round(cps) - density_line) >= 1 else f"{cps:.1f}"   # 贴着参考线时带一位小数
+            checked.append(f"{tag} 字数密度：{n_chars} 字，{dur:g} 秒，每秒 {cps_txt} 字（参考线 {density_line:g}，暂定）")
+            if cps > density_line and not same_as_parent:
+                warnings.append(f"{tag} 每秒 {cps_txt} 字，超过参考线 {density_line:g}（暂定，待 A/B 实测）；"
+                                f"看看有没有复述或模型自己会补的东西（成文主规则第 5 条）")
 
     # --- 景别与内容（提醒；按实际取景判断，焦距不等于景别）---
     TIGHT, BODY_WIDE = ["特写", "大特写"], ["全身", "双脚", "脚下的", "整个房间", "整条街", "远处的山", "整片"]
@@ -1632,6 +1805,23 @@ def main():
     for flat, hits in [(f, h) for f, h in seen.items() if len(h) > 1][:5]:
         sample = next(iter(hits.values()))
         warnings.append(f"跨段重复：「{sample[:24]}」出现在{'与'.join(n + '段' for n in hits)}；同一件事只写一次")
+    # 2b）压缩审校·复读（成文主规则第 5 条）：镜头正文里连续 6 个字以上、全稿出现 ≥2 次的短语，最多报 REPEAT_MAX 条。
+    #     主体段、场景段里也有的窗口（人物短外貌短语、地点名）不算；改稿时只报本轮新增的重复（父稿里同一短语的次数不算）
+    fixed_grams = set()
+    for name in ("主体", "场景"):
+        for seg in re.findall(r"[^\W_]+", strip_dialogue(secs.get(name) or "")):
+            fixed_grams.update(seg[i:i + REPEAT_WINDOW] for i in range(len(seg) - REPEAT_WINDOW + 1))
+    rep_segs = [seg for h, body_lines, _t in blocks for seg in repeat_segments(shot_text(h, body_lines), compress_drop)]
+    reps = [(ph, n) for ph, n in repeat_phrases(rep_segs, fixed_grams) if not _asked(ph)]
+    if revision and reps:
+        b_segs = [seg for bh, bbody, _bt in baseline_blocks for seg in repeat_segments(shot_text(bh, bbody), compress_drop)]
+        reps = [(ph, n) for ph, n in reps if n > sum(seg.count(ph) for seg in b_segs)]
+    for ph, n in reps[:REPEAT_MAX]:
+        shown = ph if len(ph) <= 30 else ph[:30] + "…"
+        warnings.append(f"复读提醒：「{shown}」在情节里出现 {n} 次，第二次起可能是复述，留不留你定；落幅、焦点落点、每镜自足的句子照留（成文主规则第 5 条）")
+    if not reps:
+        checked.append(f"情节里没有本轮新增的复读短语（{REPEAT_WINDOW} 字以上）" if revision
+                       else f"情节里没有 {REPEAT_WINDOW} 字以上的复读短语")
     # 3）风格段只写画面质感与镜头性格：时序与具体运镜路径、动作、衣物随动、表演写进镜内
     if "风格" in secs:
         scan = STYLE_CAMERA_SHAKE_RE.sub("", strip_dialogue(secs["风格"]))

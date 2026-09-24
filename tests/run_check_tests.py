@@ -223,6 +223,14 @@ CASES = [
     ("--task 推断：a-b秒 标题 + 风格段视频1 + 镜内“雨势增加”仍是生成，通过", "rain_increase_seconds_heads.txt", ["--total", "8", "--labels", "视频1"], 0),
     ("--task 编辑但命令区没有动词：拦下（报错列出移除）", "rain_increase_seconds_heads.txt", ["--task", "编辑", "--labels", "视频1"], 1),
     ("A6 旧壳结尾段计数认“严禁 / 请勿”：5 条拦下", "five_section_yanjin.txt", ["--format", "五段", "--total", "12"], 1),
+    # ---- 压缩审校（2026-09-24，writing-rules 成文主规则第 5 条）：复读、虚词、密度三条提醒都只提醒，不拦 ----
+    ("压缩审校·密度：镜1 305 字 / 3 秒超过参考线 90：只提醒", "density_over_line.txt", ["--total", "12"], 0),
+    ("压缩审校·密度：去掉台词后 208 字 / 3 秒（连台词约 98 字 / 秒）：通过", "density_under_line.txt", ["--total", "12"], 0),
+    ("压缩审校·复读：镜内“她的影子长长地拖在石阶上”写了两次：只提醒", "repeat_phrase.txt", ["--total", "12"], 0),
+    ("压缩审校·复读：主体段外貌短语、场景地点名、画框切线、画面坐标、运镜、台词、素材短名在镜内重复：通过", "repeat_phrase_exempt_subject.txt", ["--total", "12"], 0),
+    ("压缩审校·复读改稿：父稿只写一次、新稿写成两次：只提醒", "repeat_phrase.txt", ["--baseline", str(C / "repeat_phrase_parent.txt"), "--total", "12"], 0),
+    ("压缩审校·虚词：一镜 5 个（逐渐、缓缓、一路、随之、此时）：只提醒", "filler_words_over.txt", ["--total", "12"], 0),
+    ("压缩审校·虚词：时序词、慢慢、急速、不断、开始的一秒与 3 个以内的虚词：通过", "filler_words_ok.txt", ["--total", "12"], 0),
 ]
 fails = 0
 for name, f, args, want in CASES:
@@ -425,7 +433,17 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("../sample-dialogue-12s.txt", [], "镜3 未识别到摄影运动"),
               # B2：正文里有素材引用而没给 --labels 才提醒；B5 对照：没给 --asks 时“震撼”照报空词
               ("at_refs_in_new_draft.txt", [], "没有给 --labels，素材集合未核对"),
-              ("asks_empty_word_draft.txt", [], "空词：震撼")]
+              ("asks_empty_word_draft.txt", [], "空词：震撼"),
+              # ---- 压缩审校（2026-09-24，成文主规则第 5 条）：三条提醒的原文 ----
+              ("density_over_line.txt", ["--density-line", "90"], "镜1 每秒 102 字，超过参考线 90（暂定，待 A/B 实测）；看看有没有复述或模型自己会补的东西（成文主规则第 5 条）"),
+              ("repeat_phrase.txt", [], "复读提醒：「她的影子长长地拖在石阶上」在情节里出现 2 次，第二次起可能是复述，留不留你定；落幅、焦点落点、每镜自足的句子照留（成文主规则第 5 条）"),
+              ("repeat_phrase.txt", ["--baseline", str(C / "repeat_phrase_parent.txt")], "复读提醒：「她的影子长长地拖在石阶上」在情节里出现 2 次"),
+              ("filler_words_over.txt", [], "镜1 虚词 5 个（逐渐、缓缓、一路、随之、此时），顺序和时间已清楚的可删，逐渐、缓缓改成具体变化或速度而不是删（成文主规则第 5 条）"),
+              # 灯笼怪 v23 试写（notes 原稿副本）：镜1 806 字 / 6 秒；落幅把“一个挑着暖光的小身影”又写了一遍
+              ("lantern_v23_trial.txt", ["--total", "6", "--density-line", "90"], "镜1 每秒 134 字，超过参考线 90"),
+              ("lantern_v23_trial.txt", ["--total", "6"], "复读提醒：「一个挑着暖光的小身影」在情节里出现 2 次"),
+              ("lantern_trial_v22.txt", ["--total", "6", "--density-line", "90"], "镜1 每秒 120 字，超过参考线 90"),
+              ("lantern_trial_s.txt", ["--total", "6"], "镜1 虚词 4 个（一路×3、继续）")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -595,7 +613,26 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  # B2：正文里没有素材引用时不提醒 --labels
                  ("control_valid.txt", [], "没有给 --labels"),
                  # B5：--asks 有效要求里的空词不报
-                 ("asks_empty_word_draft.txt", ["--asks", str(C / "asks_empty_word.txt")], "空词：震撼")]
+                 ("asks_empty_word_draft.txt", ["--asks", str(C / "asks_empty_word.txt")], "空词：震撼"),
+                 # ---- 压缩审校（2026-09-24）：台词不算字数；豁免的重复；时序词与速度词；改稿时父稿原样的部分；锁定文字 ----
+                 ("density_under_line.txt", [], "参考线"),
+                 ("repeat_phrase_exempt_subject.txt", [], "复读提醒"),
+                 ("repeat_phrase.txt", [], "画框下缘切在"),
+                 ("filler_words_ok.txt", [], "虚词"),
+                 ("lantern_v23_trial.txt", ["--total", "6"], "超过参考线"),   # 默认参考线 200：v23 的 134 字/秒不报
+                 ("repeat_phrase.txt", ["--baseline", str(C / "repeat_phrase.txt")], "复读提醒"),
+                 ("density_over_line.txt", ["--baseline", str(C / "density_over_line.txt")], "参考线"),
+                 ("filler_words_over.txt", ["--baseline", str(C / "filler_words_over.txt")], "虚词"),
+                 ("filler_words_over.txt", ["--lock", "他从画面右下方逐渐走进画面，镜头缓缓后拉"], "虚词"),
+                 # 旧夹具里的同形不同事：“画框下缘切在灯笼后方…/切在它的小腿”“朝画面左上方”“贴着 / 擦着镜头从画面…”
+                 # “镜头跟着大幅度”“在画面左上方 ×3”“它下方的雪面”都是切线、坐标或各拍自己的运镜，不报复读
+                 ("lantern_trial_v22.txt", ["--total", "6"], "复读提醒"),
+                 ("lantern_v21_trial.txt", [], "复读提醒"),
+                 ("lantern_trial_s.txt", ["--total", "6"], "复读提醒"),
+                 ("../sample-combat-12s.txt", [], "复读提醒"),
+                 ("control_valid.txt", [], "复读提醒"),
+                 ("control_valid.txt", [], "参考线"),
+                 ("control_valid.txt", [], "虚词")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -668,6 +705,11 @@ DETAIL_CASES = [
      "errors", "编辑 / 替换 / 删除 / 增加 / 移除 / 修改"),
     ("A6 旧壳结尾段计数认严禁 / 请勿（5 条）", "five_section_yanjin.txt", ["--format", "五段", "--total", "12"], "errors", "结尾段否定句 5 条"),
     ("B2 没有素材引用时 checked 写明素材集合为空", "control_valid.txt", ["--total", "12"], "checked", "正文里没有 图N / 视频N / 音频N 引用"),
+    ("压缩审校·checked 逐镜列出字数密度（v23 试写 806 字 / 6 秒，去掉镜头标题）", "lantern_v23_trial.txt",
+     ["--total", "6", "--labels", "图1,图2", "--density-line", "90"], "checked", "镜1 字数密度：806 字，6 秒，每秒 134 字（参考线 90，暂定）"),
+    ("压缩审校·台词不算字数（镜1 去掉台词 208 字 / 3 秒）", "density_under_line.txt", ["--total", "12"], "checked",
+     "镜1 字数密度：208 字，3 秒，每秒 69 字"),
+    ("压缩审校·没有复读时 checked 写明", "repeat_phrase_exempt_subject.txt", ["--total", "12"], "checked", "情节里没有 6 字以上的复读短语"),
 ]
 for name, f, args, field, needle in DETAIL_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
@@ -711,6 +753,22 @@ with tempfile.TemporaryDirectory() as tmp:
         ok = has == want_err and (p.returncode == 1) == want_err and (len(body) > 15000) == want_err
         fails += 0 if ok else 1
         print(("PASS" if ok else "FAIL"), f"| A20 {label}（实际 {len(body)} 字符）|", d["errors"][:1])
+
+# ---- 压缩审校：复读每份稿最多报 5 条（7 组不同的重复只报前 5 组，按出现先后）----
+with tempfile.TemporaryDirectory() as tmp:
+    reps7 = ["老人把烟袋锅磕在门槛上", "黄狗叼着一只破草鞋跑过", "晾衣绳上的蓝布衫鼓起来", "井台边的木桶晃了两下",
+             "屋檐下的风铃叮当作响", "墙头的南瓜藤垂到窗前", "灶台上的铁锅冒着白气"]
+    shot = "，".join(reps7) + "。镜头慢推，" + "，".join(reps7) + "。"
+    draft = ("主体：\n一位穿灰衣的老人。\n场景：\n午后的农家小院。\n风格：\n写实，暖黄阳光。\n情节：\n"
+             f"镜头1（0-12秒）：{shot}\n全片不添加BGM，不添加字幕。\n")
+    pf = pathlib.Path(tmp) / "reps7.txt"
+    pf.write_text(draft, encoding="utf-8")
+    p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), "--total", "12"], text=True, capture_output=True)
+    d = json.loads(p.stdout)
+    got = [w for w in d["warnings"] if w.startswith("复读提醒")]
+    ok = p.returncode == 0 and len(got) == 5 and all(f"「{r}」" in g for r, g in zip(reps7, got))
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), "| 压缩审校·复读每份稿最多报 5 条（7 组重复按出现先后列前 5 组）|", len(got), got[:1])
 
 # --report 里记 asks_checked（没给 --asks 时是 null）
 with tempfile.TemporaryDirectory() as tmp:
@@ -1001,7 +1059,9 @@ with tempfile.TemporaryDirectory() as tmp:
 # M003 镜1 按时序词粗估 7 秒 8 拍（“先”“同时”不另算；审查修复前算作 14 拍、正好 0.5 秒一拍），不报动作密度
 SUCCESS_EXTRA = [("M001", ["--format", "六段"], "绝对化的空或黑"), ("M003", ["--format", "六段"], "节拍"),
                  # 审查修复：M002、M003 素材绑定句里的“不采用图中的纯黑背景”说的是参考图，不报
-                 ("M002", ["--format", "六段"], "绝对化的空或黑"), ("M003", ["--format", "六段"], "绝对化的空或黑")]
+                 ("M002", ["--format", "六段"], "绝对化的空或黑"), ("M003", ["--format", "六段"], "绝对化的空或黑"),
+                 # 压缩审校：M001（已试成功，镜1 约 59 字 / 秒）不报字数密度与虚词（“开始的一秒”不算虚词由 filler_words_ok 专门测）
+                 ("M001", ["--format", "六段"], "参考线"), ("M001", ["--format", "六段"], "虚词")]
 with tempfile.TemporaryDirectory() as tmp:
     for cid, extra, key in SUCCESS_EXTRA:
         m = re.search(r"^### " + cid + r"\b.*?提示词原文[^\n]*\n\s*```text\n(.*?)\n```", cases_text, re.S | re.M)
@@ -1027,6 +1087,7 @@ TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CAS
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
          + 4 + len(SUCCESS_EXTRA) + 1
          + len(DETAIL_CASES) + len(INFER_CASES) + 2
-         + len(REVIEW_CHECKS) + len(SCRIPT_GUARD_CASES) + 1)
+         + len(REVIEW_CHECKS) + len(SCRIPT_GUARD_CASES) + 1
+         + 1)  # 压缩审校：复读每份稿最多报 5 条
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)
