@@ -42,6 +42,11 @@ def main():
     dst_path = os.path.expanduser(a.dst)
     dst = open(dst_path, encoding="utf-8").read()
     se, de = entries(src), entries(dst)
+    # 目标同目录的 archive.md（v31）：已归档的编号不算"新增"，不会被加回主库
+    darch = os.path.join(os.path.dirname(os.path.abspath(dst_path)), "archive.md")
+    if os.path.isfile(darch):
+        for k, v in entries(open(darch, encoding="utf-8").read()).items():
+            de.setdefault(k, v)
     bad = []
     for k in sorted(se):
         parts = se[k].split(" | ")

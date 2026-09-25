@@ -443,7 +443,10 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("lantern_v23_trial.txt", ["--total", "6", "--density-line", "90"], "镜1 每秒 134 字，超过参考线 90"),
               ("lantern_v23_trial.txt", ["--total", "6"], "复读提醒：「一个挑着暖光的小身影」在情节里出现 2 次"),
               ("lantern_trial_v22.txt", ["--total", "6", "--density-line", "90"], "镜1 每秒 120 字，超过参考线 90"),
-              ("lantern_trial_s.txt", ["--total", "6"], "镜1 虚词 4 个（一路×3、继续）")]
+              ("lantern_trial_s.txt", ["--total", "6"], "镜1 虚词 4 个（一路×3、继续）"),
+              # v31：没有终点的程度词（L098）、串行运镜句数
+              ("open_degree.txt", ["--total", "6"], "程度词没有终点"),
+              ("serial_camera.txt", ["--total", "6"], "串行运镜 7 句挤在 6 秒里")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -632,7 +635,10 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("../sample-combat-12s.txt", [], "复读提醒"),
                  ("control_valid.txt", [], "复读提醒"),
                  ("control_valid.txt", [], "参考线"),
-                 ("control_valid.txt", [], "虚词")]
+                 ("control_valid.txt", [], "虚词"),
+                 # v31：程度词后面有终点不报；三句运镜不到镜长一半不报，宾语位置的“镜头”不算主语
+                 ("open_degree_with_end.txt", ["--total", "6"], "程度词没有终点"),
+                 ("serial_camera_ok.txt", ["--total", "6"], "串行运镜")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -956,6 +962,58 @@ with tempfile.TemporaryDirectory() as tmp:
         fails += 0 if not why else 1
         print(("PASS" if not why else "FAIL"), f"| {name} |", "；".join(why) or "ok")
 
+# ---- v31：archive.md 出口——取号看合集、体检查合集与重复、案例引用归档编号、写入提醒、整理清单第五第六节 ----
+REVIEW = ROOT / "scripts" / "review_lessons.py"
+ARCHIVE_CASES = []
+with tempfile.TemporaryDirectory() as tmp:
+    d = pathlib.Path(tmp)
+    lf, af = d / "lessons.md", d / "archive.md"
+    ROW = "L{n:03d} | {date} | 通用/占位{n} | 现象 | 写法A → 效果 | — | {concl} | 未试 | {src}\n"
+    lf.write_text("# 临时经验库\n\n## 七、诊断新增\n<!-- 整理于 2026-09-01 L001 -->\n" + ROW.format(n=1, date="2026-09-01", concl="结论", src="来源"), encoding="utf-8")
+    af.write_text("# 归档\n\n## 已升级为规则\n\n" + ROW.format(n=2, date="2026-09-02", concl="结论【已升级为规则：writing-rules.md 第 1 条】", src="来源"), encoding="utf-8")
+    common = ["--phenomenon", "现象", "--conclusion", "结论", "--confidence", "未试"]
+    p = run([LINT, "--file", lf])
+    ARCHIVE_CASES.append(("lint_lessons 主库 L001 + archive L002：合集连续，通过", p.returncode == 0 and "archive 另有 1 条" in p.stdout, (p.stdout + p.stderr)[:100]))
+    p = run([LOG, "--file", lf, "--topic", "通用/取号", "--a", "写法A → 效果", "--source", "a.mp4 与 b.mp4 对照", *common])
+    ARCHIVE_CASES.append(("log_lesson 取号跨 archive：L003 而不是 L002", p.stdout.strip() == "L003", p.stdout.strip() + p.stderr[:60]))
+    p = run([LOG, "--file", lf, "--topic", "通用/超长", "--a", "写" * 90, "--source", "a.mp4 与 b.mp4 对照", *common])
+    ARCHIVE_CASES.append(("log_lesson 写法A 90 字：写入但提醒超过 80 字", p.returncode == 0 and "超过 80 字" in p.stderr, p.stderr[:80]))
+    p = run([LOG, "--file", lf, "--topic", "通用/单条", "--a", "写法A → 效果", "--source", "jimeng-2026-09-25-1641.mp4", *common])
+    ARCHIVE_CASES.append(("log_lesson 来源只有一条成片、没标单次观察：提醒", p.returncode == 0 and "单次观察" in p.stderr, p.stderr[:80]))
+    # 标记 L001 之后已有 L003–L005 三条，手工补 L006–L011 六条，再写一条 L012 正好第 10 条触发整理提醒
+    for k in range(6, 12):
+        lf.write_text(lf.read_text(encoding="utf-8") + ROW.format(n=k, date="2026-09-10", concl="结论", src="x.mp4 对照 y.mp4"), encoding="utf-8")
+    p = run([LOG, "--file", lf, "--topic", "通用/第十条", "--a", "写法A → 效果", "--source", "x.mp4 对照 y.mp4", *common])
+    ARCHIVE_CASES.append(("log_lesson 整理标记之后满 10 条：提醒该整理", p.returncode == 0 and "该跑「整理经验」" in p.stderr, p.stderr[:80]))
+    cf = d / "cases.md"
+    cf.write_text(case_md("- 「那句句式」 → L002", rel="L002"), encoding="utf-8")
+    p = run([LINTC, "--file", cf, "--lessons", lf])
+    ARCHIVE_CASES.append(("lint_cases 可复用点指向 archive 里的 L002：通过", p.returncode == 0, (p.stdout + p.stderr)[:80]))
+    dup = d / "dup.md"
+    dup.write_text("# 归档\n\n" + ROW.format(n=1, date="2026-09-01", concl="结论", src="来源"), encoding="utf-8")
+    p = run([LINT, "--file", lf, "--archive", dup])
+    ARCHIVE_CASES.append(("lint_lessons 同一编号主库和 archive 都有：拦下", p.returncode == 1 and "都有" in p.stderr, p.stderr[:80]))
+    gap = d / "gap.md"
+    gap.write_text("# 归档\n\n" + ROW.format(n=13, date="2026-09-01", concl="结论", src="来源"), encoding="utf-8")
+    p = run([LINT, "--file", lf, "--archive", gap])
+    ARCHIVE_CASES.append(("lint_lessons 合集断档（主库缺 L002、archive 只有 L013）：拦下", p.returncode == 1 and "编号不连续" in p.stderr, p.stderr[:80]))
+    # review_lessons：第五节列漏搬的（主库里带【并入】）；第六节按 --today 列满 30 天的单次观察，有对照的不列
+    lf2 = d / "l2.md"
+    lf2.write_text("# 临时\n\n" + ROW.format(n=1, date="2026-09-01", concl="单次观察：结论", src="a.mp4")
+                   + ROW.format(n=2, date="2026-09-01", concl="单次观察：结论", src="a.mp4 对照 b.mp4")
+                   + ROW.format(n=3, date="2026-09-25", concl="单次观察：结论", src="c.mp4")
+                   + ROW.format(n=4, date="2026-09-01", concl="结论【并入 L001】", src="d.mp4"), encoding="utf-8")
+    out = run([REVIEW, "--file", lf2, "--cases", cf, "--archive", af, "--today", "2026-10-05"]).stdout
+    six = out[out.index("## 六"):]
+    ARCHIVE_CASES.append(("review_lessons 第六节：满 30 天的单次观察 L001 列出，有对照的 L002 和只有 10 天的 L003 不列",
+                          "| L001 |" in six and "| L002 |" not in six and "| L003 |" not in six, six[:160]))
+    five = out[out.index("## 五"):out.index("## 六")]
+    ARCHIVE_CASES.append(("review_lessons 第五节：主库里带【并入】没搬走的 L004 列为漏搬，并报 archive 现有 1 条",
+                          "L004" in five and "并入 L001" in five and "archive.md 现有 1 条" in five, five[-200:]))
+for name, ok, detail in ARCHIVE_CASES:
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {name} |", "ok" if ok else detail)
+
 # ---- v25 五：review_lessons 认三位编号的“见 Lxxx”，多个升级标记显示最后一个 ----
 REVIEW = ROOT / "scripts" / "review_lessons.py"
 REVIEW_CHECKS = [
@@ -1088,6 +1146,7 @@ TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CAS
          + 4 + len(SUCCESS_EXTRA) + 1
          + len(DETAIL_CASES) + len(INFER_CASES) + 2
          + len(REVIEW_CHECKS) + len(SCRIPT_GUARD_CASES) + 1
+         + len(ARCHIVE_CASES)  # v31 archive 出口
          + 1)  # 压缩审校：复读每份稿最多报 5 条
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)

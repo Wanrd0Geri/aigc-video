@@ -51,11 +51,17 @@ def strip_fences(text):
 
 
 def lesson_ids(path):
+    """主库 + 同目录 archive.md（v31 归档出口）里的全部编号：案例引用归档里的条目照样成立。"""
     ids = set()
-    for ln in open(path, encoding="utf-8"):
-        m = re.match(r"^(L\d{3})\s*\|", ln)
-        if m:
-            ids.add(m.group(1))
+    files = [path]
+    arch = os.path.join(os.path.dirname(os.path.abspath(path)), "archive.md")
+    if os.path.isfile(arch):
+        files.append(arch)
+    for f in files:
+        for ln in open(f, encoding="utf-8"):
+            m = re.match(r"^(L\d{3})\s*\|", ln)
+            if m:
+                ids.add(m.group(1))
     return ids
 
 
