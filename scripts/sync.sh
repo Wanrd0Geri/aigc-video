@@ -20,7 +20,8 @@ report_pulled() {
     files="$(git diff --name-only "$1" HEAD)"
     echo "拉到了别处的改动："
     echo "${files}"
-    if grep -qE '^(SKILL\.md$|scripts/|tests/|references/)' <<< "${files}"; then
+    # 经验库（references/lessons/）只是数据，不算规则或脚本改动；不用 grep -q，避免 pipefail 下被提前关管道误判
+    if [ -n "$(grep -vE '^references/lessons/' <<< "${files}" | grep -E '^(SKILL\.md$|scripts/|tests/|references/)' || true)" ]; then
       echo "其中有规则或脚本改动，用之前跑一遍五套测试（见 SETUP.md 第 3 节）"
     fi
   fi

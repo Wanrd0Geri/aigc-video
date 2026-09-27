@@ -82,6 +82,7 @@ class LessonScripts(unittest.TestCase):
             self.assertNotIn("| L001 |", sec)
 
     # 3. 并发写入：5 个进程同时写，编号不撞、条目不丢、没有临时文件残留
+    @unittest.skipIf(fcntl is None, "本平台无 fcntl，log_lesson 不加锁，不测并发")
     def test_log_concurrent_writes_get_distinct_ids(self):
         with tempfile.TemporaryDirectory() as tmp:
             d = Path(tmp)
