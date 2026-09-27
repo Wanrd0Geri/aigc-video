@@ -65,7 +65,7 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 ## 5 日常同步
 
 - 改了任何文件、或用 `scripts/log_lesson.py` 写了经验：`bash ~/Documents/Codex/aigc-video/scripts/sync.sh 备注`。
-- 开始用之前想拿到另一台电脑的改动：同样跑 `sync.sh`（它先拉后推）。
+- 开始用之前想拿到另一台电脑的改动：跑 `bash ~/Documents/Codex/aigc-video/scripts/sync.sh --pull`（只拉不推；本机有未提交改动时会先列出来让你决定）。
 - 这台电脑连 GitHub 需要代理的话，把代理地址写进 `~/.aigc-video-proxy`（一行，例如 `http://127.0.0.1:7897`），`sync.sh` 会自动使用；不需要代理就不建这个文件。
 - 拉取时报冲突：只会发生在两台电脑改了同一行。经验库冲突时保留双方条目、编号只递增（可用 `scripts/merge_lessons.py` 按编号合并），改完 `git add -A && git rebase --continue` 再 `git push`。不要用 `--force`。（merge_lessons.py 退出码 3 = 有同编号不同内容的条目待人工裁定，合并没算完）
 
