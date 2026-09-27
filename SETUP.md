@@ -44,6 +44,8 @@ cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tai
 
 期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；每行都没有失败（项数随版本增加）。
 
+脚本通过、Skill 实际执行和成片与声音各自证明什么，见 [tests/cases.md「验证分层」](tests/cases.md#验证分层)；对照运行用该节模板记录。
+
 ## 4 挂守门钩子（Claude Code；可选但推荐）
 
 钩子配置不在仓库里，每台电脑单独挂。它在模型交付提示词时自动核对：有本轮检查报告就放行；没有报告的四段完整稿由钩子代跑 `scripts/check_prompt.py`（一律按四段新稿查），有错打回、无错放行并提示"作者未自己跑检查"；局部镜头、不带四段外壳的裸命令和五段 / 六段旧壳没报告则打回。第二次仍不过会放行并附警告，不会死锁。
