@@ -8,6 +8,7 @@ log_lesson.py — 向经验库追加一条记录，自动编号。
       --a "写画外人物状态→被拉进画面" --b "删掉该句→未出现" \
       --conclusion "画外人物不写" --confidence 已试 --source "0916 jimeng-...-3612.mp4"
 可选：--date 2026-09-17  --file <经验库路径>
+补充主库原记录：--supplement L0xx --source "新来源" [--conclusion-append "补充结论"]；与新增字段互斥。
 `--topic` 必须写成 `分类/主题`，分类只能用 12 个固定分类之一，脚本强制校验，不合规不写入。
 置信度只有两档：已试（本项目有能定位的成片或截图对得上，或用户本人的实测反馈——来源注明“用户实测，未绑定具体成片”并写日期）/ 未试（没有）。
 只在获得当次授权后运行；来源要能定位（模型版本、提交稿、成片文件名）。
@@ -58,18 +59,36 @@ def reminders(a, text_after):
 
 def main():
     ap = argparse.ArgumentParser()
-    for k in ("topic", "phenomenon", "a", "conclusion", "confidence", "source"):
-        ap.add_argument(f"--{k}", required=True)
-    ap.add_argument("--b", default="—")
+    new_fields = ("topic", "phenomenon", "a", "b", "conclusion", "confidence")
+    for k in new_fields:
+        ap.add_argument(f"--{k}")
+    ap.add_argument("--source", required=True)
+    ap.add_argument("--supplement", metavar="L0xx", help="补充主库已有编号的来源；不新增编号")
+    ap.add_argument("--conclusion-append", help="补充模式中追加结论，不替换原结论")
     ap.add_argument("--date", default=datetime.date.today().isoformat())
     ap.add_argument("--file", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references", "lessons", "seedance-2.5.md"))
     a = ap.parse_args()
-    err = topic_error(a.topic)
-    if err:
-        sys.exit(f"--topic 必须写成 `分类/主题`：{err}\n" + cats_hint())
-    if a.confidence not in CONF:
-        sys.exit(f"置信度必须是 {CONF} 之一")
-    if any("\n" in x or " | " in x for x in (a.date, a.topic, a.phenomenon, a.a, a.b, a.conclusion, a.source)):
+    if a.supplement:
+        if not re.fullmatch(r"L\d{3}", a.supplement):
+            ap.error("--supplement 必须是主库经验编号 L0xx")
+        if any(getattr(a, k) is not None for k in new_fields):
+            ap.error("--supplement 与 --topic/--phenomenon/--a/--b/--conclusion/--confidence 互斥")
+    else:
+        if a.conclusion_append is not None:
+            ap.error("--conclusion-append 只能与 --supplement 一起使用")
+        missing = [k for k in new_fields if k != "b" and getattr(a, k) is None]
+        if missing:
+            ap.error("新增记录缺少参数：" + ", ".join("--" + k for k in missing))
+        a.b = "—" if a.b is None else a.b
+        err = topic_error(a.topic)
+        if err:
+            sys.exit(f"--topic 必须写成 `分类/主题`：{err}\n" + cats_hint())
+        if a.confidence not in CONF:
+            sys.exit(f"置信度必须是 {CONF} 之一")
+    if not a.source.strip():
+        ap.error("--source 不能为空")
+    values = [a.date, a.source, a.conclusion_append, *(getattr(a, k) for k in new_fields)]
+    if any("\n" in x or "\r" in x or " | " in x for x in values if x is not None):
         sys.exit("条目字段不能含换行或字段分隔符")
     path = os.path.abspath(a.file)
     # 同目录 .lock 文件互斥：读主库、读 archive、取号、拼新文本、写入都在锁内完成
@@ -80,15 +99,32 @@ def main():
         else:
             print("提醒：本平台无 fcntl，未加锁", file=sys.stderr)
         text = open(path, encoding="utf-8").read()
-        nums = [int(n) for n in re.findall(r"^L(\d{3})\s*\|", text, re.M)]
-        apath = archive_path_for(path)
-        if apath:   # 归档只搬行、不腾编号：取号要把 archive 里的编号一起算上
-            nums += [int(n) for n in re.findall(r"^L(\d{3})\s*\|", open(apath, encoding="utf-8").read(), re.M)]
-        nid = f"L{(max(nums) + 1) if nums else 1:03d}"
-        line = f"{nid} | {a.date} | {a.topic} | {a.phenomenon} | {a.a} | {a.b} | {a.conclusion} | {a.confidence} | {a.source}"
-        if SECTION not in text:
-            text = text.rstrip("\n") + f"\n\n{SECTION}\n\n"
-        text = text.rstrip("\n") + "\n" + line + "\n"
+        if a.supplement:
+            lines = text.splitlines(keepends=True)
+            matches = [i for i, line in enumerate(lines) if re.match(re.escape(a.supplement) + r"\s*\|", line)]
+            if len(matches) != 1:
+                ap.error(f"{a.supplement} 不在主库或编号重复；归档条目与不存在的编号不能补充")
+            i = matches[0]
+            original = lines[i].rstrip("\r\n")
+            parts = original.split(" | ")
+            if len(parts) != 9:
+                ap.error(f"{a.supplement} 不是九字段条目，未写入")
+            parts[8] += "；" + a.source
+            if a.conclusion_append is not None:
+                parts[6] += f"【补充 {a.date}：{a.conclusion_append}】"
+            lines[i] = " | ".join(parts) + lines[i][len(original):]
+            text = "".join(lines)
+            nid = a.supplement
+        else:
+            nums = [int(n) for n in re.findall(r"^L(\d{3})\s*\|", text, re.M)]
+            apath = archive_path_for(path)
+            if apath:   # 归档只搬行、不腾编号：取号要把 archive 里的编号一起算上
+                nums += [int(n) for n in re.findall(r"^L(\d{3})\s*\|", open(apath, encoding="utf-8").read(), re.M)]
+            nid = f"L{(max(nums) + 1) if nums else 1:03d}"
+            line = f"{nid} | {a.date} | {a.topic} | {a.phenomenon} | {a.a} | {a.b} | {a.conclusion} | {a.confidence} | {a.source}"
+            if SECTION not in text:
+                text = text.rstrip("\n") + f"\n\n{SECTION}\n\n"
+            text = text.rstrip("\n") + "\n" + line + "\n"
         # 原子替换：先写同目录临时文件，再 os.replace；出错删掉临时文件
         tmp = path + ".tmp." + str(os.getpid())
         try:
@@ -100,7 +136,7 @@ def main():
                 os.remove(tmp)
             raise
     print(nid)
-    for r in reminders(a, text):
+    for r in ([] if a.supplement else reminders(a, text)):
         print("提醒：" + r, file=sys.stderr)
 
 

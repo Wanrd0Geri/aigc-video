@@ -160,5 +160,40 @@ class LessonScripts(unittest.TestCase):
             self.assertIn("本次写入 1 条", p.stdout)
 
 
+    def test_supplement_appends_without_changing_other_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lib = Path(tmp) / "lessons.md"
+            original = HEAD + row("L001") + "\n" + row("L002", source="other.mp4") + "\n"
+            lib.write_text(original, encoding="utf-8")
+            p = run(LOG, "--file", lib, "--supplement", "L001", "--source", "new.mp4",
+                    "--conclusion-append", "补充观察", "--date", "2026-09-27")
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertEqual(p.stdout.strip(), "L001")
+            expected = original.replace("单次观察：测试 | 已试 | a.mp4",
+                                        "单次观察：测试【补充 2026-09-27：补充观察】 | 已试 | a.mp4；new.mp4")
+            self.assertEqual(lib.read_text(encoding="utf-8"), expected)
+            p = run(LOG, "--file", lib, "--supplement", "L001", "--source", "third.mov")
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertEqual(lib.read_text(encoding="utf-8"), expected.replace("a.mp4；new.mp4", "a.mp4；new.mp4；third.mov"))
+            self.assertEqual(list(Path(tmp).glob("*.tmp.*")), [])
+
+    def test_supplement_rejects_missing_archived_and_new_arguments(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lib, arch = Path(tmp) / "lessons.md", Path(tmp) / "archive.md"
+            original = HEAD + row("L001") + "\n"
+            archived = row("L002") + "\n"
+            lib.write_text(original, encoding="utf-8")
+            arch.write_text(archived, encoding="utf-8")
+            for args in [("--supplement", "L003", "--source", "new.mp4"),
+                         ("--supplement", "L002", "--source", "new.mp4"),
+                         ("--supplement", "L001"),
+                         ("--supplement", "L001", "--source", "new.mp4", "--topic", "摄影/测试")]:
+                with self.subTest(args=args):
+                    p = run(LOG, "--file", lib, *args)
+                    self.assertEqual(p.returncode, 2, p.stderr)
+                    self.assertEqual(lib.read_text(encoding="utf-8"), original)
+                    self.assertEqual(arch.read_text(encoding="utf-8"), archived)
+
+
 if __name__ == "__main__":
     unittest.main()
