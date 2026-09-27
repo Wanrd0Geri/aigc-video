@@ -84,4 +84,4 @@ tests/test_stop_gate.py      stop_gate 判定回归（71 项）
 - 换机器：`git clone https://github.com/Wanrd0Geri/aigc-video ~/Documents/Codex/aigc-video && bash ~/Documents/Codex/aigc-video/install.sh`，再按 `hooks/README.md` 挂钩子。
 - 不要在 skills 目录里另放一份拷贝，也不要 `git clone` 覆盖软链；拉取用 `git pull`。
 
-**维护者改 skill 的地方**：改动在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里做，四套测试跑过之后再合并到 main，然后在 `~/Documents/Codex/aigc-video` 跑 `bash scripts/sync.sh 备注`。main 是安装位（两个宿主的 skills 都软链到它），改到一半的文件不会影响正在使用的会话。
+**维护者改 skill 的地方**：改动在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里做，五套测试跑过之后再合并到 main，然后在 `~/Documents/Codex/aigc-video` 跑 `bash scripts/sync.sh 备注`。main 是安装位（两个宿主的 skills 都软链到它），改到一半的文件不会影响正在使用的会话。

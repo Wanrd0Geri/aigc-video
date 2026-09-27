@@ -14,8 +14,11 @@ log_lesson.py — 向经验库追加一条记录，自动编号。
 v31 起：编号从主库与同目录 archive.md 的合集里取最大值加一（归档只搬行、不腾编号）；写入后给三种非阻断提醒（stderr）：
   写法 A / B 超过 80 字（整句放案例库，这里只写关键短语）；来源只有一条成片、结论又没标"单次观察"；
   主库里 `<!-- 整理于 … L0xx -->` 标记之后新增满 10 条（该跑「整理经验」了）。
+并发写入靠同目录的 `.lock` 文件互斥，只保证本机；跨机器靠 git 合并与 `merge_lessons.py`。
 """
 import argparse, datetime, os, re, sys
+try: import fcntl
+except ImportError: fcntl = None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lint_lessons import cats_hint, topic_error, archive_path_for  # 12 个分类的唯一代码副本在 lint_lessons.py（与 README 同步）
@@ -69,17 +72,33 @@ def main():
     if any("\n" in x or " | " in x for x in (a.date, a.topic, a.phenomenon, a.a, a.b, a.conclusion, a.source)):
         sys.exit("条目字段不能含换行或字段分隔符")
     path = os.path.abspath(a.file)
-    text = open(path, encoding="utf-8").read()
-    nums = [int(n) for n in re.findall(r"^L(\d{3})\s*\|", text, re.M)]
-    apath = archive_path_for(path)
-    if apath:   # 归档只搬行、不腾编号：取号要把 archive 里的编号一起算上
-        nums += [int(n) for n in re.findall(r"^L(\d{3})\s*\|", open(apath, encoding="utf-8").read(), re.M)]
-    nid = f"L{(max(nums) + 1) if nums else 1:03d}"
-    line = f"{nid} | {a.date} | {a.topic} | {a.phenomenon} | {a.a} | {a.b} | {a.conclusion} | {a.confidence} | {a.source}"
-    if SECTION not in text:
-        text = text.rstrip("\n") + f"\n\n{SECTION}\n\n"
-    text = text.rstrip("\n") + "\n" + line + "\n"
-    open(path, "w", encoding="utf-8").write(text)
+    # 同目录 .lock 文件互斥：读主库、读 archive、取号、拼新文本、写入都在锁内完成
+    lock_path = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".lock")
+    with open(lock_path, "a+") as lk:
+        if fcntl is not None:
+            fcntl.flock(lk, fcntl.LOCK_EX)
+        else:
+            print("提醒：本平台无 fcntl，未加锁", file=sys.stderr)
+        text = open(path, encoding="utf-8").read()
+        nums = [int(n) for n in re.findall(r"^L(\d{3})\s*\|", text, re.M)]
+        apath = archive_path_for(path)
+        if apath:   # 归档只搬行、不腾编号：取号要把 archive 里的编号一起算上
+            nums += [int(n) for n in re.findall(r"^L(\d{3})\s*\|", open(apath, encoding="utf-8").read(), re.M)]
+        nid = f"L{(max(nums) + 1) if nums else 1:03d}"
+        line = f"{nid} | {a.date} | {a.topic} | {a.phenomenon} | {a.a} | {a.b} | {a.conclusion} | {a.confidence} | {a.source}"
+        if SECTION not in text:
+            text = text.rstrip("\n") + f"\n\n{SECTION}\n\n"
+        text = text.rstrip("\n") + "\n" + line + "\n"
+        # 原子替换：先写同目录临时文件，再 os.replace；出错删掉临时文件
+        tmp = path + ".tmp." + str(os.getpid())
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(text)
+            os.replace(tmp, path)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise
     print(nid)
     for r in reminders(a, text):
         print("提醒：" + r, file=sys.stderr)

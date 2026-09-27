@@ -7,14 +7,15 @@ review_lessons.py — 「整理经验」用的候选清单生成器：只读、�
   python3 review_lessons.py [--file <经验库>] [--cases <案例库>]
 
 输出一份 Markdown 清单，六节：
-  一、被 2 条以上案例引用的经验（多次复用，优先考虑升级成规则）
+  一、被 2 条以上案例引用的经验（多次复用，优先考虑升级成规则；主库里没有的编号连 archive.md 一起查，显示它的归档去向）
   二、同分类里主题相近、可能能合并的条目对
   三、结论里写了"修正"或"见 Lxxx"的条目（互相修正，可能已经冲突；三位编号都认，L100 以后的也算）
   四、各分类条目数（超过 15 条的点名）
   五、主库里还带着「已升级为规则」「已撤回推荐」「并入」标记没搬走的条目（v31 起这三种都该整行在 archive.md，主库里出现就是漏搬），
       以及 archive.md 现有条目数
   六、单次观察保质期：结论里标了「单次观察」、记录满 30 天、来源没有第二条成片或对照的条目——归档候选（用户 2026-09-25：
-      经验库里有抽卡也有写得不到位的，要甄别；只出现过一次的观察不当定律）
+      经验库里有抽卡也有写得不到位的，要甄别；只出现过一次的观察不当定律）；"第二个来源"除了认对照、两跑这类词，
+      也数来源里的成片文件名（先数 .mp4 / .mov，没有再数 jimeng-… / 视频节点 / 截图），数到 2 个就算，与 log_lesson.py 同一口径
 
 清单只是候选，改不改、怎么改由用户挑（v31 起三种整理都是"标记 + 整行搬到 archive.md"，主库只留活条目，编号不腾不重用）：
   - 升级到 SKILL.md、writing-rules.md、review/revise-rules.md 或工艺卡的，把规则写进那份文件，原条目「结论」列末尾加
@@ -42,6 +43,9 @@ SINGLE_DAYS = 30        # 单次观察满这么多天还没第二个来源就列
 MERGED_MARK = re.compile(r"【并入\s*(L\d{3})】")
 SINGLE_MARK = "单次观察"
 SOURCE_MULTI = re.compile(r"对照|两跑|两次|三版|三跑|多版|各跑|[2-9]\s*条|[两三四五六七八九]条|用户实测")
+# 来源里像成片定位的东西：有扩展名按扩展名数，没有再按文件名样式数，数到 2 个就算有第二个来源。与 log_lesson.py 同步
+SOURCE_FILE = re.compile(r"\.mp4|\.mov")
+SOURCE_NAME = re.compile(r"jimeng-\d{4}-\d{2}-\d{2}-\d+|视频节点\s?\d+|截图")
 # 「结论」列最前面的撤回标注：【<日期> 已撤回推荐：<一句话>，见末尾注记】
 WITHDRAWN = re.compile(r"【(\d{4}-\d{2}-\d{2})\s*已撤回推荐[：:]([^】]*)】")
 # 结论里点到别的条目：“见 L071”“见L101”（三位编号，L100 以后也认）
@@ -63,6 +67,20 @@ def read_lessons(path):
                           phenomenon=p[3], a=p[4], b=p[5], conclusion=p[6],
                           confidence=p[7], source=p[8])
     return rows
+
+
+def archive_status(conclusion):
+    """archive 条目的去向（第一节用），按结论列的标记取：升级、并入、撤回，都没有就是已归档。"""
+    marks = UPGRADE_MARK.findall(conclusion)
+    if marks:   # 多个时最后一个是规则现在的位置（与第五节同一取法）
+        return f"已升级为规则 → {marks[-1][1].strip() or '（没写去向）'}"
+    m = MERGED_MARK.search(conclusion)
+    if m:
+        return f"已并入 {m.group(1)}"
+    m = WITHDRAWN.search(conclusion)
+    if m:
+        return f"已撤回推荐（{m.group(1)}）"
+    return "已归档"
 
 
 def read_case_refs(path):
@@ -125,7 +143,14 @@ def main():
         out.append("|---|---|---|---|---|")
         for lid, mids in hot:
             r = rows.get(lid)
-            topic = r["topic"] if r else "（经验库里没有这条）"
+            ar = None if r else arch.get(lid)   # 主库查不到再查 archive：归档条目照样被案例引用
+            if r:
+                topic = r["topic"]
+            elif ar:
+                topic = f"{ar['topic']}（archive：{archive_status(ar['conclusion'])}）"
+            else:
+                topic = "（经验库里没有这条）"
+            r = r or ar   # 置信度与结论摘要照常取（归档行也一样）
             conf = r["confidence"] if r else "—"
             concl = (r["conclusion"][:60] + "…") if r and len(r["conclusion"]) > 60 else (r["conclusion"] if r else "—")
             out.append(f"| {lid} | {topic} | {'、'.join(mids)} | {conf} | {concl} |")
@@ -224,7 +249,9 @@ def main():
     # 六、单次观察保质期
     aged = []
     for r in rows.values():
-        if SINGLE_MARK not in r["conclusion"] or SOURCE_MULTI.search(r["source"]):
+        src = r["source"]
+        second = SOURCE_MULTI.search(src) or (len(SOURCE_FILE.findall(src)) or len(SOURCE_NAME.findall(src))) >= 2
+        if SINGLE_MARK not in r["conclusion"] or second:
             continue
         try:
             days = (today - datetime.date.fromisoformat(r["date"])).days

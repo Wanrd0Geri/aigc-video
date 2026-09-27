@@ -11,6 +11,10 @@ merge_lessons.py — 把另一份经验库（通常是安装位）里的新条�
       两边都有但内容不同的编号 → 不动，打印出来由人判断（候选版可能有意改写了那条）。
       来源里只要有条目的主题列缺合法 `分类/主题` 前缀 → 整次合并拒绝，退出码 1，列出违规编号；
       不静默接受，先去来源里把前缀补上再合。
+输出（stdout）四行：`新增 N 条：[...]`／`相同 N 条`／`冲突 N 条（同编号不同内容，未裁定，保留目标）：[...]`／
+      `本次写入 N 条`（--dry-run 时是 `dry-run：未写入`）。目标文件先写同目录临时文件，再 os.replace 原子替换。
+退出码：0 = 没有冲突；1 = 来源不合法，整次拒绝；3 = 有同编号不同内容的条目——新增条目照常写入（或 dry-run），
+      冲突条目保留目标内容、未裁定，合并没算完，待人工裁定。
 """
 import argparse, os, re, sys
 
@@ -60,12 +64,11 @@ def main():
         sys.exit("来源经验库有条目的主题列不合法，拒绝合并（先在来源里补成 `分类/主题` 再合）：\n  "
                  + "\n  ".join(bad) + "\n" + cats_hint())
     new = [k for k in sorted(se) if k not in de]
+    same = [k for k in sorted(se) if k in de and se[k] == de[k]]
     diff = [k for k in sorted(se) if k in de and se[k] != de[k]]
-    print(f"来源 {len(se)} 条，目标 {len(de)} 条；新增 {len(new)} 条：{new}；两边都有但不同 {len(diff)} 条：{diff}（未裁定；保留目标内容，不代表冲突已解决）")
-    if not new:
-        return
-    if SECTION not in dst:
-        dst = dst.rstrip("\n") + f"\n\n{SECTION}\n\n"
+    print(f"新增 {len(new)} 条：{new}")
+    print(f"相同 {len(same)} 条")
+    print(f"冲突 {len(diff)} 条（同编号不同内容，未裁定，保留目标）：{diff}")
     pending = []
     for k in new:
         parts = se[k].split(" | ")
@@ -75,10 +78,26 @@ def main():
         parts[7] = "未试（合并待审）"
         pending.append(" | ".join(parts))
     if a.dry_run:
-        return
-    dst = dst.rstrip("\n") + "\n" + "\n".join(pending) + "\n"
-    open(dst_path, "w", encoding="utf-8").write(dst)
-    print(f"已追加 {len(new)} 条到 {dst_path}")
+        print("dry-run：未写入")
+    elif pending:
+        if SECTION not in dst:
+            dst = dst.rstrip("\n") + f"\n\n{SECTION}\n\n"
+        dst = dst.rstrip("\n") + "\n" + "\n".join(pending) + "\n"
+        # 原子替换：先写同目录临时文件，再 os.replace；出错删掉临时文件（与 log_lesson.py 同一写法）
+        tmp = dst_path + ".tmp." + str(os.getpid())
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(dst)
+            os.replace(tmp, dst_path)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise
+        print(f"本次写入 {len(pending)} 条")
+    else:
+        print("本次写入 0 条")
+    if diff:   # 有同编号不同内容：新增已照常处理，但合并没算完，退出码 3 留给人工裁定
+        sys.exit(3)
 
 
 if __name__ == "__main__":

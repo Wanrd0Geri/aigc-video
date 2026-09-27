@@ -39,7 +39,7 @@ git clone https://github.com/Wanrd0Geri/aigc-video ~/Documents/Codex/aigc-video 
 
 ```bash
 ls -l ~/.claude/skills/aigc-video ~/.codex/skills/aigc-video
-cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tail -1 && python3 -X utf8 tests/test_revision_checks.py 2>&1 | tail -1 && python3 -X utf8 tests/test_delivery_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_stop_gate.py 2>&1 | tail -1
+cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tail -1 && python3 -X utf8 tests/test_revision_checks.py 2>&1 | tail -1 && python3 -X utf8 tests/test_delivery_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_stop_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_lesson_scripts.py 2>&1 | tail -1
 ```
 
 期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；每行都没有失败（项数随版本增加）。
@@ -67,7 +67,7 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 - 改了任何文件、或用 `scripts/log_lesson.py` 写了经验：`bash ~/Documents/Codex/aigc-video/scripts/sync.sh 备注`。
 - 开始用之前想拿到另一台电脑的改动：同样跑 `sync.sh`（它先拉后推）。
 - 这台电脑连 GitHub 需要代理的话，把代理地址写进 `~/.aigc-video-proxy`（一行，例如 `http://127.0.0.1:7897`），`sync.sh` 会自动使用；不需要代理就不建这个文件。
-- 拉取时报冲突：只会发生在两台电脑改了同一行。经验库冲突时保留双方条目、编号只递增（可用 `scripts/merge_lessons.py` 按编号合并），改完 `git add -A && git rebase --continue` 再 `git push`。不要用 `--force`。
+- 拉取时报冲突：只会发生在两台电脑改了同一行。经验库冲突时保留双方条目、编号只递增（可用 `scripts/merge_lessons.py` 按编号合并），改完 `git add -A && git rebase --continue` 再 `git push`。不要用 `--force`。（merge_lessons.py 退出码 3 = 有同编号不同内容的条目待人工裁定，合并没算完）
 
 ## 6 常见错误
 
@@ -81,8 +81,8 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 
 ## 7 做完后报告给用户
 
-一句话说清：软链指向哪里、四套测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
+一句话说清：软链指向哪里、五套测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
 
 ## 8 维护 skill 本身（改 skill 的人看）
 
-改 skill 的文件在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里改，四套测试跑过之后再合并到 main 并 `sync.sh`。main 是安装位，改到一半的文件不会影响正在使用的会话。
+改 skill 的文件在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里改，五套测试跑过之后再合并到 main 并 `sync.sh`。main 是安装位，改到一半的文件不会影响正在使用的会话。

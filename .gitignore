@@ -3,3 +3,5 @@ __pycache__/
 .DS_Store
 # 作者本地的试写稿与待定清单，不进仓库
 notes/
+references/lessons/.*.lock
+references/lessons/*.tmp.*
