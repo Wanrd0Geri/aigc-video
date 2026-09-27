@@ -17,7 +17,7 @@ import argparse, os, re, sys
 CATS = ["打斗", "多人与站位", "摄影", "景别与画外", "特效与形态", "表演与对白",
         "光影与风格", "素材与参考", "操作命令", "密度与节奏", "声音与文字", "通用"]
 
-LINE = re.compile(r"^(L\d{3})\s*\|")
+LINE = re.compile(r"^(L\d{3,})\s*\|")
 DEFAULT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "..", "references", "lessons", "seedance-2.5.md")
 

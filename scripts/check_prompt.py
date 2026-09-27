@@ -2087,6 +2087,7 @@ def main():
         if rp.parent and str(rp.parent) not in ("", "."):
             rp.parent.mkdir(parents=True, exist_ok=True)
         report = {
+            **__import__("report_metadata").report_metadata(),
             "kind": "light", "ready": not errors,
             "checked_sha256": checked_sha, "delivered_sha256": delivered_sha,
             "task": task, "format": requested_fmt, "effective_format": fmt, "partial": bool(a.partial),

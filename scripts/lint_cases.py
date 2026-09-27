@@ -26,8 +26,8 @@ FENCE = re.compile(r"^(`{3,})")
 HEADING = re.compile(r"^(#{2,6})\s+(.*)$")
 CASE_HEADING = re.compile(r"^(#{2,6})\s+(M\d{3})\s*[｜|]")
 INDEX_ROW = re.compile(r"^\|\s*(M\d{3})\s*\|")
-LESSON_ID = re.compile(r"L(\d{3})")
-KNOWLEDGE = re.compile(r"→\s*L\d{3}")
+LESSON_ID = re.compile(r"L(\d{3,})")
+KNOWLEDGE = re.compile(r"→\s*L\d{3,}")
 FIELDS = ["素材：", "成片文件名：", "我的评价：", "关联经验：", "可复用点：", "提示词原文"]
 
 
@@ -59,7 +59,7 @@ def lesson_ids(path):
         files.append(arch)
     for f in files:
         for ln in open(f, encoding="utf-8"):
-            m = re.match(r"^(L\d{3})\s*\|", ln)
+            m = re.match(r"^(L\d{3,})\s*\|", ln)
             if m:
                 ids.add(m.group(1))
     return ids

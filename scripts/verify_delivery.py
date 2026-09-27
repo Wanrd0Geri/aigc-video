@@ -29,6 +29,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from report_metadata import report_metadata
 
 DOMAINS = ['intent_assets', 'composition_camera', 'action_performance',
            'timing_continuity', 'materials_light_vfx', 'sound_delivery']
@@ -340,6 +341,7 @@ def main():
     # 本轮绑定：放行钩子用 created_at 判断报告是不是在本轮用户消息之后生成的，用 session_id 判断是不是同一个会话。
     result['created_at'] = time.time()
     result['session_id'] = os.environ.get('AIGC_SESSION_ID') or None
+    result.update(report_metadata())
     data = json.dumps(result, ensure_ascii=False, indent=2)
     if args.report:
         Path(args.report).write_text(data + '\n', encoding='utf-8')

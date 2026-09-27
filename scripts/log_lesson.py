@@ -28,7 +28,7 @@ CONF = ["已试", "未试"]
 SECTION = "## 七、诊断新增"
 WAY_LIMIT = 80          # 写法 A / B 列的建议上限（字），超过只提醒。可调
 TIDY_EVERY = 10         # 整理标记之后新增满这么多条就提醒跑「整理经验」。可调
-TIDY_MARK = re.compile(r"<!--\s*整理于\s*(\d{4}-\d{2}-\d{2})\s*L(\d{3})\s*-->")
+TIDY_MARK = re.compile(r"<!--\s*整理于\s*(\d{4}-\d{2}-\d{2})\s*L(\d{3,})\s*-->")
 # 来源里像成片定位的东西：mp4 / mov / jimeng-… / 视频节点… / 截图；数到一个且没写"对照 / 两跑 / 三版"就算单条成片
 SOURCE_FILE = re.compile(r"\.mp4|\.mov")
 SOURCE_NAME = re.compile(r"jimeng-\d{4}-\d{2}-\d{2}-\d+|视频节点\s?\d+|截图")
@@ -49,7 +49,7 @@ def reminders(a, text_after):
     m = list(TIDY_MARK.finditer(text_after))
     if m:
         last = int(m[-1].group(2))
-        nums = [int(n) for n in re.findall(r"^L(\d{3})\s*\|", text_after, re.M)]
+        nums = [int(n) for n in re.findall(r"^L(\d{3,})\s*\|", text_after, re.M)]
         added = len([n for n in nums if n > last])
         if added >= TIDY_EVERY:
             out.append(f"整理标记 L{last:03d} 之后主库已新增 {added} 条（≥{TIDY_EVERY}）：该跑「整理经验」了"
@@ -69,7 +69,7 @@ def main():
     ap.add_argument("--file", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references", "lessons", "seedance-2.5.md"))
     a = ap.parse_args()
     if a.supplement:
-        if not re.fullmatch(r"L\d{3}", a.supplement):
+        if not re.fullmatch(r"L\d{3,}", a.supplement):
             ap.error("--supplement 必须是主库经验编号 L0xx")
         if any(getattr(a, k) is not None for k in new_fields):
             ap.error("--supplement 与 --topic/--phenomenon/--a/--b/--conclusion/--confidence 互斥")
@@ -116,10 +116,10 @@ def main():
             text = "".join(lines)
             nid = a.supplement
         else:
-            nums = [int(n) for n in re.findall(r"^L(\d{3})\s*\|", text, re.M)]
+            nums = [int(n) for n in re.findall(r"^L(\d{3,})\s*\|", text, re.M)]
             apath = archive_path_for(path)
             if apath:   # 归档只搬行、不腾编号：取号要把 archive 里的编号一起算上
-                nums += [int(n) for n in re.findall(r"^L(\d{3})\s*\|", open(apath, encoding="utf-8").read(), re.M)]
+                nums += [int(n) for n in re.findall(r"^L(\d{3,})\s*\|", open(apath, encoding="utf-8").read(), re.M)]
             nid = f"L{(max(nums) + 1) if nums else 1:03d}"
             line = f"{nid} | {a.date} | {a.topic} | {a.phenomenon} | {a.a} | {a.b} | {a.conclusion} | {a.confidence} | {a.source}"
             if SECTION not in text:

@@ -116,7 +116,7 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual((self.d/'delivered.txt').read_text(),'\n'.join(BASE.splitlines()))
 
     def test_report_records_round_binding_fields(self):
-        """报告必须带 created_at 与 session_id：Stop 钩子靠它们判断这份放行是不是本轮、本会话的。"""
+        """报告记录本轮绑定、报告格式版本和 Skill 版本；轻量与全套同口径。"""
         self.setup_gate()
         report = self.d/'report.json'
         import os as _os
@@ -135,6 +135,14 @@ class DeliveryTests(unittest.TestCase):
             self.assertIn(key, d); self.assertIn(key, saved)
         self.assertIsInstance(saved['created_at'], float)
         self.assertEqual(saved['session_id'], 'unit-session')
+        expected_version = next(ln.split()[1] for ln in (ROOT/'CHANGELOG.md').read_text().splitlines()
+                                if ln.startswith('## v'))
+        light_path = self.d/'light.json'
+        light_code, _ = self.checker(args=['--report', str(light_path)])
+        self.assertEqual(light_code, 0)
+        for data in (d, saved, json.loads(light_path.read_text())):
+            self.assertEqual(data['report_version'], 1)
+            self.assertEqual(data['skill_version'], expected_version)
 
     def test_gate_missing_domain_blocks_export(self):
         self.setup_gate();self.review['checks'].pop()

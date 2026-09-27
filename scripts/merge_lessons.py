@@ -21,7 +21,7 @@ import argparse, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lint_lessons import cats_hint, topic_error  # 12 个分类的唯一代码副本在 lint_lessons.py（与 README 同步）
 
-LINE = re.compile(r"^(L\d{3})\s*\|", re.M)
+LINE = re.compile(r"^(L\d{3,})\s*\|", re.M)
 SECTION = "## 七、诊断新增"
 
 

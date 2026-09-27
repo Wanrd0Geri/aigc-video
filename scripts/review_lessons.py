@@ -10,7 +10,7 @@ review_lessons.py — 「整理经验」用的候选清单生成器：只读、�
   一、被 2 条以上案例引用的经验（引用次数只决定先审谁；列出来源待核对、修法待验及多/单来源的证据状态，
       不代表满足升级条件；主库里没有的编号连 archive.md 一起查，显示它的归档去向）
   二、同分类里主题相近、可能能合并的条目对
-  三、结论里写了"修正"或"见 Lxxx"的条目（互相修正，可能已经冲突；三位编号都认，L100 以后的也算）
+  三、结论里写了"修正"或"见 Lxxx"的条目（互相修正，可能已经冲突；三位及以上编号都认）
   四、各分类条目数（超过 15 条的点名）
   五、主库里还带着「已升级为规则」「已撤回推荐」「并入」标记没搬走的条目（v31 起这三种都该整行在 archive.md，主库里出现就是漏搬），
       以及 archive.md 现有条目数
@@ -37,11 +37,11 @@ from lint_cases import strip_fences, split_entries, LESSON_ID  # 案例解析与
 
 DEFAULT_LESSONS = os.path.join(HERE, "..", "references", "lessons", "seedance-2.5.md")
 DEFAULT_CASES = os.path.join(HERE, "..", "references", "cases", "my-cases.md")
-ENTRY = re.compile(r"^(L\d{3})\s*\|")
+ENTRY = re.compile(r"^(L\d{3,})\s*\|")
 CJK = re.compile(r"[一-鿿]+")
 BIG_CAT = 15
 SINGLE_DAYS = 30        # 单次观察满这么多天还没第二个来源就列为归档候选。可调
-MERGED_MARK = re.compile(r"【并入\s*(L\d{3})】")
+MERGED_MARK = re.compile(r"【并入\s*(L\d{3,})】")
 SINGLE_MARK = "单次观察"
 SOURCE_MULTI = re.compile(r"对照|两跑|两次|三版|三跑|多版|各跑|[2-9]\s*条|[两三四五六七八九]条|用户实测")
 # 来源里像成片定位的东西：有扩展名按扩展名数，没有再按文件名样式数，数到 2 个就算有第二个来源。与 log_lesson.py 同步
@@ -49,8 +49,8 @@ SOURCE_FILE = re.compile(r"\.mp4|\.mov")
 SOURCE_NAME = re.compile(r"jimeng-\d{4}-\d{2}-\d{2}-\d+|视频节点\s?\d+|截图")
 # 「结论」列最前面的撤回标注：【<日期> 已撤回推荐：<一句话>，见末尾注记】
 WITHDRAWN = re.compile(r"【(\d{4}-\d{2}-\d{2})\s*已撤回推荐[：:]([^】]*)】")
-# 结论里点到别的条目：“见 L071”“见L101”（三位编号，L100 以后也认）
-SEE_OTHER = re.compile(r"见\s*L\d{3}")
+# 结论里点到别的条目：“见 L071”“见L101”（三位及以上编号）
+SEE_OTHER = re.compile(r"见\s*L\d{3,}")
 # 升级去向标记：【已升级为规则：…】与后来补的【规则位置更新：…】，多个时最后一个是规则现在的位置
 UPGRADE_MARK = re.compile(r"【(已升级为规则|规则位置更新)[：:]([^】]*)】")
 

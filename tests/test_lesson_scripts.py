@@ -220,5 +220,32 @@ class LessonScripts(unittest.TestCase):
                     self.assertEqual(arch.read_text(encoding="utf-8"), archived)
 
 
+    def test_log_ids_expand_past_999_and_lint_stays_continuous(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lib, arch = Path(tmp) / "lessons.md", Path(tmp) / "archive.md"
+            lib.write_text(HEAD + row("L998") + "\n" + row("L999") + "\n", encoding="utf-8")
+            # 从 L001 起连续的规则不变：早期编号在归档，主库只留边界两条。
+            archived = "\n".join(row(f"L{n:03d}") for n in range(1, 998)) + "\n"
+            arch.write_text(archived, encoding="utf-8")
+            for expected in ("L1000", "L1001"):
+                p = run(LOG, *LOG_ARGS, "--file", lib)
+                self.assertEqual(p.returncode, 0, p.stderr)
+                self.assertEqual(p.stdout.strip(), expected)
+            self.assertEqual([ln.split(" | ")[0] for ln in lesson_rows(lib)],
+                             ["L998", "L999", "L1000", "L1001"])
+            p = run(SCRIPTS / "lint_lessons.py", "--file", lib)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertIn("经验库 4 条（archive 另有 997 条，编号合集连续）", p.stdout)
+            p = run(LOG, "--file", lib, "--supplement", "L1000", "--source", "four-digit.mov")
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertEqual(p.stdout.strip(), "L1000")
+            self.assertEqual(arch.read_text(encoding="utf-8"), archived)
+            lib.write_text("\n".join(ln for ln in lib.read_text(encoding="utf-8").splitlines()
+                                     if not ln.startswith("L1000 | ")) + "\n", encoding="utf-8")
+            p = run(SCRIPTS / "lint_lessons.py", "--file", lib)
+            self.assertEqual(p.returncode, 1, p.stderr)
+            self.assertIn("这里应当是 L1000", p.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
