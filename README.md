@@ -56,7 +56,7 @@ tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案�
 tests/test_revision_checks.py 修订格式、旧稿兼容与丢句匹配回归（18 项）
 tests/test_delivery_gate.py  verify_delivery 放行行为回归（53 项）
 tests/test_stop_gate.py      stop_gate 判定回归（71 项）
-tests/test_lesson_scripts.py 经验库脚本行为回归：整理清单查归档与数来源、写入加锁与原子替换、合并退出码（5 项）
+tests/test_lesson_scripts.py 经验库脚本行为回归：归档与证据状态、写入加锁与补充、合并退出码、编号扩位（9 项）
 ```
 
 ## hooks/（可选）
