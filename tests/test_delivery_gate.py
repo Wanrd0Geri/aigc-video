@@ -35,7 +35,7 @@ class DeliveryTests(unittest.TestCase):
 
     def setup_gate(self, text=BASE, check_args=()):
         self.prompt.write_text(text)
-        # 全套路径恒为 complex=true（由严格审 / 审核节点触发，要求独立复核）
+        # 全套路径恒为 complex=true（由严格审 / 约定的技术验收触发，要求独立复核）
         self.req = {'request':'12秒两镜行走，没有参考素材。', 'task':'生成', 'labels':[], 'assets':[], 'total':12,
                     'exact_locks':[], 'requirements':[{'id':'R1','source':'两镜行走','text':'两个镜头行走'}],
                     'complex':True,'complexity_reason':'用户要求严格审；单人行走，供机械测试的固定样本'}

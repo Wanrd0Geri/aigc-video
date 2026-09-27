@@ -13,7 +13,7 @@ python3 scripts/verify_delivery.py --prompt prompt.txt --requirements requiremen
 requirements.json 里与机械检查有关的字段（quality-gate.md 模板）：
   format   四段 / 五段 / 六段 / 继承；缺省时有父稿按“继承”、无父稿按“四段”，原样转给 check_prompt --format。
   asks     多轮任务的 asks.txt 路径（相对路径先按当前目录找，找不到再按 requirements.json 所在目录找），转给 check_prompt --asks；单轮写 null。
-  complex  全套路径恒为 true（由严格审 / 审核节点触发，要求独立复核）；缺省或 false 报错不放行。
+  complex  全套路径恒为 true（由严格审 / 约定的技术验收触发，要求独立复核）；缺省或 false 报错不放行。
 局部修订（--partial）合成完整稿时按父稿的实际外壳切镜头块（与 check_prompt 同一口径），四段父稿镜内的否定句不会被当成结尾丢掉。
 
 Schema and workflow: references/review/quality-gate.md. Exit 0 ready, 1 not ready, 2 invalid input.
@@ -102,11 +102,11 @@ def evaluate(args):
         effective_locks = [spoken if x == original else x for x in effective_locks]
     if req.get('pronunciation_policy', 'homophone_allowed') not in ['homophone_allowed', 'exact_only']:
         errors.append('未知 pronunciation_policy')
-    # 全套路径只由“严格审 / 审核节点”触发，恒要独立复核：complex 缺省或不是 true 一律不放行
+    # 全套路径只由“严格审 / 约定的技术验收”触发，恒要独立复核：complex 缺省或不是 true 一律不放行
     if req.get('complex') is not True:
-        errors.append('全套路径 complex 必须为 true（需独立复核）；本脚本只用于严格审或事先约定的审核节点，轻量路径不跑 verify_delivery')
+        errors.append('全套路径 complex 必须为 true（需独立复核）；本脚本只用于严格审或事先约定的技术验收，轻量路径不跑 verify_delivery')
     if not isinstance(req.get('complexity_reason', ''), str) or not req.get('complexity_reason', '').strip():
-        raise ValueError('必须写 complexity_reason：本次是用户要求严格审，还是事先约定的审核节点')
+        raise ValueError('必须写 complexity_reason：本次是用户要求严格审，还是事先约定的技术验收')
     # 外壳：缺省时有父稿按“继承”、无父稿按“四段”（与 check_prompt 同口径），原样转给 check_prompt
     fmt = req.get('format') or ('继承' if args.baseline else '四段')
     if fmt not in ['四段', '五段', '六段', '继承']:
