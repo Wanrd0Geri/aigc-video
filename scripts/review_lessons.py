@@ -7,7 +7,8 @@ review_lessons.py — 「整理经验」用的候选清单生成器：只读、�
   python3 review_lessons.py [--file <经验库>] [--cases <案例库>]
 
 输出一份 Markdown 清单，六节：
-  一、被 2 条以上案例引用的经验（多次复用，优先考虑升级成规则；主库里没有的编号连 archive.md 一起查，显示它的归档去向）
+  一、被 2 条以上案例引用的经验（引用次数只决定先审谁；列出来源待核对、修法待验及多/单来源的证据状态，
+      不代表满足升级条件；主库里没有的编号连 archive.md 一起查，显示它的归档去向）
   二、同分类里主题相近、可能能合并的条目对
   三、结论里写了"修正"或"见 Lxxx"的条目（互相修正，可能已经冲突；三位编号都认，L100 以后的也算）
   四、各分类条目数（超过 15 条的点名）
@@ -112,6 +113,20 @@ def bigrams(s):
     return out
 
 
+def has_second_source(src):
+    return bool(SOURCE_MULTI.search(src) or (len(SOURCE_FILE.findall(src)) or len(SOURCE_NAME.findall(src))) >= 2)
+
+
+def evidence_status(row):
+    if not row:
+        return "—"
+    states = ["来源待核对"] if "待核对" in row["source"] else []
+    if re.search(r"待验|没试过|未试|已被否定", " ".join(row[k] for k in ("conclusion", "a", "b"))):
+        states.append("修法待验")
+    states.append("多来源" if has_second_source(row["source"]) else "单来源")
+    return "、".join(states)
+
+
 def main():
     ap = argparse.ArgumentParser(description="整理经验：生成候选清单，不做修改")
     ap.add_argument("--file", default=DEFAULT_LESSONS)
@@ -139,8 +154,8 @@ def main():
     out.append(f"## 一、被 2 条以上案例引用的经验（{len(hot)} 条）")
     out.append("")
     if hot:
-        out.append("| 编号 | 分类/主题 | 引用它的案例 | 置信度 | 结论摘要 |")
-        out.append("|---|---|---|---|---|")
+        out.append("| 编号 | 分类/主题 | 引用它的案例 | 置信度 | 证据状态 | 结论摘要 |")
+        out.append("|---|---|---|---|---|---|")
         for lid, mids in hot:
             r = rows.get(lid)
             ar = None if r else arch.get(lid)   # 主库查不到再查 archive：归档条目照样被案例引用
@@ -153,7 +168,7 @@ def main():
             r = r or ar   # 置信度与结论摘要照常取（归档行也一样）
             conf = r["confidence"] if r else "—"
             concl = (r["conclusion"][:60] + "…") if r and len(r["conclusion"]) > 60 else (r["conclusion"] if r else "—")
-            out.append(f"| {lid} | {topic} | {'、'.join(mids)} | {conf} | {concl} |")
+            out.append(f"| {lid} | {topic} | {'、'.join(mids)} | {conf} | {evidence_status(r)} | {concl} |")
     else:
         out.append("（没有被 2 条以上案例引用的条目）")
     out.append("")
@@ -250,7 +265,7 @@ def main():
     aged = []
     for r in rows.values():
         src = r["source"]
-        second = SOURCE_MULTI.search(src) or (len(SOURCE_FILE.findall(src)) or len(SOURCE_NAME.findall(src))) >= 2
+        second = has_second_source(src)
         if SINGLE_MARK not in r["conclusion"] or second:
             continue
         try:

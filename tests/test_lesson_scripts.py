@@ -81,6 +81,31 @@ class LessonScripts(unittest.TestCase):
             self.assertIn("| L002 |", sec)
             self.assertNotIn("| L001 |", sec)
 
+    def test_review_hot_evidence_states(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lib, cases = Path(tmp) / "lessons.md", Path(tmp) / "cases.md"
+            records = [row("L001", source="a.mp4，待核对"),
+                       row("L002", conclusion="修法已被否定", source="a.mp4；b.mov"),
+                       row("L003", source="用户实测"),
+                       row("L004", source="视频节点 1；视频节点 2"),
+                       row("L005", conclusion="修法待验", source="a.mp4，待核对"),
+                       row("L006").replace("写法A", "没试过"),
+                       row("L007").replace(" | — | ", " | 未试 | ")]
+            lib.write_text(HEAD + "\n".join(records) + "\n", encoding="utf-8")
+            refs = "、".join(f"L{n:03d}" for n in range(1, 8))
+            cases.write_text(f"## M001｜案例一\n关联经验：{refs}\n\n## M002｜案例二\n关联经验：{refs}\n", encoding="utf-8")
+            p = run(REVIEW, "--file", lib, "--cases", cases)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            sec = section(p.stdout, "## 一、", "## 二、")
+            self.assertIn("| 证据状态 |", sec)
+            expected = {"L001": "来源待核对、单来源", "L002": "修法待验、多来源",
+                        "L003": "多来源", "L004": "多来源", "L005": "来源待核对、修法待验、单来源",
+                        "L006": "修法待验、单来源", "L007": "修法待验、单来源"}
+            for lid, state in expected.items():
+                with self.subTest(lid=lid):
+                    line = next(ln for ln in sec.splitlines() if ln.startswith(f"| {lid} |"))
+                    self.assertEqual(line.split(" | ")[4], state)
+
     # 3. 并发写入：5 个进程同时写，编号不撞、条目不丢、没有临时文件残留
     @unittest.skipIf(fcntl is None, "本平台无 fcntl，log_lesson 不加锁，不测并发")
     def test_log_concurrent_writes_get_distinct_ids(self):
