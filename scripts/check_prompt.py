@@ -45,7 +45,7 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 启发式扫描（空词与解释词、机制词、绝对化的空或黑、非特写取景里的尺度名词、同一镜里的远处与贴镜、关键动作紧挨整幅遮挡、发力过程写法、
   摄影运动、景别、焦点落点、弱运镜措辞、动作密度、“能装下什么”的取景措辞、镜头标题的非整数秒、素材写法与重复绑定、跨段重复长句、
   风格段里的时序、运镜、随动与表演、主体段里的动作、情绪与调度、场景段与风格段里的角色活动、各段的画质词、总括保证句与站位保证、
-  压缩审校的复读、虚词与字数密度、没有终点的程度词、串行运镜句数）只给警告。
+  压缩审校的复读、虚词与字数密度、没有终点的程度词、串行运镜句数、表演排队）只给警告。
 v31 两项（L098、2026-09-22 灯笼怪复盘）：同一句里有“越来越 / 越变越 / 不时 / 不断”这类渐进或频率短语、又没有可观察终点
   （到…为止、停住、占满、出画、切出画框、涨到、退到……）时提醒——没有完成条件的程度词，模型做一点就算做完；
   一镜到底里相机动作是串行的、每个至少 0.5 秒，镜内以镜头 / 相机 / 摄影机 / 机位为主语的运动句数 × 0.5 超过镜长一半时提醒，
@@ -115,6 +115,15 @@ v23 三类提醒（只提醒不拦截，词表 SUBJECT_*_RE / BG_ACT / SCENE_*_R
   锁定文字与点名的否定句不数。
   密度：有时码的镜头，正文字数（去标题、去台词、去空白）÷ 时长超过 DENSITY_CHARS_PER_SEC（默认 200 字 / 秒，--density-line 可调，暂定，待 A/B 实测，
   L104）时提醒，checked 里逐镜列出字数与每秒字数。改稿时和父稿逐字相同的镜头不报虚词与密度（压缩只用于本轮获准改写的部分）。
+v35 表演排队提醒（writing-rules 成文主规则第 8 条，用户 2026-09-28；只提醒不拦截，一镜合并一条，常量 QUEUE_* 在头部、可调）：
+  只扫情节段各镜头正文（去掉镜头标题、剥掉台词、锁定文字不扫），报“说完 / 听完 / 话音（刚 / 一）落”“等…说完 / 做完 / 停下 / 结束”
+  （本小句内，到最近第一次结束词即止）“之后才 / 然后才 / 随后才 / 接着才”“才 + 开口 / 抬头 / 回头 / 转身 / 回应 / 接话 / 答话 / 回答 /
+  反应 / 说 / 看”；“然后 / 随后 / 接着”单独出现不报。报告模式与豁免模板在同一份剥完台词的字符串上 finditer，逐命中按 span 包含裁定，
+  不做主谓宾解析：交叠短语（没说完、还没说完、话还没说完、“(没|不|未)等…结束词”到最近第一次结束词即止）与两侧都是摄影术语的
+  “之后才”（镜头推近之后才移焦、后拉之后才移焦；“推到 + 胸口 / 面部 / 特写 / 画框下缘……”必须有“镜头 / 摄影机”显式主语，各部分之间
+  只容许空格）只豁免完整落在模板里的命中；“推门之后才抬头”“拉住手之后才回应”“摇头之后才开口”照报，同一小句另有摄影关系也只豁免
+  摄影那一段。摘录按小句取，豁免掉的部分不进摘录；“才…”起头的连上逗号紧接的前一小句。物理依赖（放下杯子之后才去开门）也会报，
+  按第 8 条裁定保留。
 否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外，先去掉段落标题与镜头标题，紧跟标题的第一句也算）里
   句首是 `不出现|不添加|不得|不要|不能|不许|不可|不允许|禁止|避免|严禁|请勿|别` 的句子逐句给**提醒**（不是错误）；用 --negative-exception
   逐句点名的不再提醒（“主体：不要任何声音。”点名“不要任何声音。”）。位置按 writing-rules 第 62 条：只管一镜的写那一镜；全片级的写一次——
@@ -300,6 +309,31 @@ CAMERA_SUBJECT_RE = re.compile(
     r"(?:^|[，,。；;：:、\n])\s*(?:镜头|相机|摄影机|机位)(?![性前后边缘外里内下上])[^，,。；;\n]{0,8}?"
     r"(?:推|拉|摇|移|跟|退|升|降|甩|急|切|转|绕|俯冲|仰起|抬起|压低|沉下|扫过|掠|冲|荡|收住|停住|落幅)")
 CAMERA_SERIAL_SECONDS = 0.5
+# v35 表演排队提醒（writing-rules 成文主规则第 8 条；只提醒不拦截，一镜合并一条，逐命中裁定）。只扫情节段各镜头正文，
+# 先用 DIALOGUE_RE 剥掉台词，报告模式和豁免模板都在这同一份字符串上 finditer，按 span 包含判定，不做主谓宾解析。
+# 小句按 clauses_of 那套标点切；“等…结束词”与豁免“(没|不|未)等…结束词”都只在本小句内、到最近第一次结束词即止。
+# “然后 / 随后 / 接着”单独出现不报（第 71 条认可的时序词）；“话音未落”“说到一半”本身不触发。词表可调
+QUEUE_CLAUSE_CH = r"[^，,。.；;：:！!？?、\n]"
+QUEUE_END_WORDS = r"说完|做完|停下|结束"
+QUEUE_WAIT_TAIL = r"(?:(?!" + QUEUE_END_WORDS + r")" + QUEUE_CLAUSE_CH + r"){0,8}(?:" + QUEUE_END_WORDS + r")"
+QUEUE_CAI_RE = re.compile(r"才(?:开口|抬头|回头|转身|回应|接话|答话|回答|反应|说|看)")
+QUEUE_REPORT_RES = [
+    re.compile(r"说完|听完|话音(?:刚|一)?落"),
+    re.compile(r"等" + QUEUE_WAIT_TAIL),
+    re.compile(r"之后才|(?:然后|随后|接着)才"),
+    QUEUE_CAI_RE,
+]
+# 豁免模板：只豁免完整落在模板 span 里的命中。交叠短语；摄影机顺序只认两侧都是只可能是镜头在做的术语（主语可省，
+# 成文主规则第 6 条），“推到 + 终点”必须有“镜头 / 摄影机”显式主语；各部分之间只容许空格。裸“推 / 拉 / 摇 / 移”不算
+QUEUE_CAM_AFTER = r"\s*之后才\s*(?:移焦|横移|跟拍|落幅|后拉|推近)"
+QUEUE_EXEMPT_RES = [
+    re.compile(r"话还没说完|还没说完|没说完"),
+    re.compile(r"(?:没|不|未)等" + QUEUE_WAIT_TAIL),
+    re.compile(r"(?:(?:镜头|摄影机)\s*)?(?:推近|后拉|横移|跟拍|升降|环绕|移焦|慢推|急推)" + QUEUE_CAM_AFTER),
+    re.compile(r"(?:镜头|摄影机)\s*推到\s*(?:胸口|面部|肩部|腰部|特写|近景|中景|全景|画框上缘|画框下缘|画框左缘|画框右缘)"
+               + QUEUE_CAM_AFTER),
+]
+QUEUE_SHOW_MAX = 5          # 一镜最多列几处
 # v22 讲戏口吻：镜头正文不加标签（只提醒）。标签词出现在句首（行首或句号、分号、逗号之后）并紧跟冒号
 # （几个标签词用 / ／ 、 连写也算，如官方案例的“动作/表情：”），或写成【标签】；“第N拍”在句首并紧跟冒号、逗号
 # 或句末才算（“音乐的第一拍重音”“第三拍下去”不算）；“第N秒：”带冒号算（写成“第N秒，”不算）。台词、锁定文字不扫；
@@ -976,6 +1010,58 @@ def force_process_hits(sentence):
             hits = [t for t in trig if not re.search(r"[传力劲]", t)]
         hits += chain
     return list(dict.fromkeys(hits))
+
+
+def perf_queue_scan(text):
+    """表演排队（成文主规则第 8 条）：在同一份已剥台词的镜头正文上分别 finditer 报告模式与豁免模板，逐命中按 span 包含裁定——
+    命中完整落在某个豁免模板的 span 里才豁免，其余照报。返回 (要报的命中, 豁免的命中, 豁免模板 span)，命中是 (起, 止, 原文)。"""
+    exempt_spans = sorted({m.span() for rx in QUEUE_EXEMPT_RES for m in rx.finditer(text)})
+    hits = sorted({(m.start(), m.end(), m.group(0)) for rx in QUEUE_REPORT_RES for m in rx.finditer(text)})
+    reported, exempted = [], []
+    for h in hits:
+        (exempted if any(a <= h[0] and h[1] <= b for a, b in exempt_spans) else reported).append(h)
+    return reported, exempted, exempt_spans
+
+
+def perf_queue_excerpts(text):
+    """要报的命中整理成摘录：同一小句里重叠或相接的命中并成一处；摘录只取本小句里夹在别的命中、豁免模板之间的那一段
+    （豁免掉的交叠短语与摄影关系不进摘录）；以“才…”起头、本小句前面没有别的命中或豁免模板的，连上用逗号紧接的前一小句作关系上下文。
+    只用于显示，裁定只看 perf_queue_scan 的 span。"""
+    reported, _exempted, exempt_spans = perf_queue_scan(text)
+    if not reported:
+        return []
+    clauses = [m.span() for m in re.finditer(QUEUE_CLAUSE_CH + "+", text)]
+
+    def clause_of(pos):
+        return next(((a, b) for a, b in clauses if a <= pos < b), (pos, pos))
+
+    groups = []   # [起, 止, 第一个命中的起点]
+    for s, e, _w in reported:
+        if groups and s <= groups[-1][1] and clause_of(s) == clause_of(groups[-1][2]):
+            groups[-1][1] = max(groups[-1][1], e)
+        else:
+            groups.append([s, e, s])
+    pieces = []
+    for k, (s, e, first) in enumerate(groups):
+        cs, ce = clause_of(first)
+        others = [(a, b) for a, b in exempt_spans if a < ce and b > cs]
+        others += [(g[0], g[1]) for j, g in enumerate(groups) if j != k and cs <= g[2] < ce]
+        left = max([cs] + [b for a, b in others if b <= s])
+        right = min([ce] + [a for a, b in others if a >= e])
+        if right - left > 30:   # 长小句只留命中两边
+            left, right = max(left, s - 14), min(right, e + 10)
+        piece = text[left:right].strip()
+        if QUEUE_CAI_RE.match(text, s) and left == cs and cs >= 2 and text[cs - 1] in "，,":
+            prev = next(((a, b) for a, b in clauses if b == cs - 1), None)
+            if prev:
+                ptxt = text[prev[0]:prev[1]].strip()
+                piece = (("…" + ptxt[-12:]) if len(ptxt) > 12 else ptxt) + "，" + piece
+        pieces.append(piece.replace("“”", "“…”"))
+    out = []
+    for p in pieces:
+        if p and p not in out and not any(p != q and p in q for q in pieces):
+            out.append(p)
+    return out
 
 
 def subject_action_hits(sentence):
@@ -1756,6 +1842,16 @@ def main():
             note = f"（同句机制词{''.join(f'「{w}」' for w in mech)}并入本条）" if mech else ""
             force_sents_all.extend(fsents)
             warnings.append(f"{tag} 发力过程写法：{''.join(f'「{w}」' for w in fwords)}{note}；这类过程在灯笼怪实测里大多没被执行（L102，单次观察），改写看得见的结果（越转越快、袖子被甩平、下摆整圈张开）；用户点名要的部位细节保留")
+        # v35 表演排队（成文主规则第 8 条）：tbody 已去标题、剥台词；锁定文字不扫（换成换行，免得前后粘成一句）
+        qbody = tbody
+        for lk in sorted(a.lock, key=len, reverse=True):
+            qbody = qbody.replace(lk, "\n")
+        qshown = perf_queue_excerpts(qbody)
+        if qshown:
+            qmore = f"…（共 {len(qshown)} 处）" if len(qshown) > QUEUE_SHOW_MAX else ""
+            warnings.append(f"{tag} 可能的表演排队：{''.join(f'「{x}」' for x in qshown[:QUEUE_SHOW_MAX])}{qmore}；"
+                            f"按成文主规则第 8 条，只核对本镜拍得到的人：反应从实际可感知的进行中起头，画里人物此前有可见的活动或注意；"
+                            f"感知、身体条件或观看目的确需先后时可保留（逐条裁定）")
     for name, rx in MECHANISM_RES:
         if _asked(name):
             continue

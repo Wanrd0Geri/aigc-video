@@ -231,6 +231,9 @@ CASES = [
     ("压缩审校·复读改稿：父稿只写一次、新稿写成两次：只提醒", "repeat_phrase.txt", ["--baseline", str(C / "repeat_phrase_parent.txt"), "--total", "12"], 0),
     ("压缩审校·虚词：一镜 5 个（逐渐、缓缓、一路、随之、此时）：只提醒", "filler_words_over.txt", ["--total", "12"], 0),
     ("压缩审校·虚词：时序词、慢慢、急速、不断、开始的一秒与 3 个以内的虚词：通过", "filler_words_ok.txt", ["--total", "12"], 0),
+    # ---- v35 表演排队（writing-rules 成文主规则第 8 条）：只提醒，不拦 ----
+    ("v35 表演排队（说完……才抬头、才开口、放下杯子之后才去开门）：只提醒", "perf_queue_report.txt", ["--total", "12"], 0),
+    ("v35 交叠短语、摄影机顺序、台词里的说完、单独的然后 / 随后 / 接着：通过且不提醒", "perf_queue_overlap_ok.txt", ["--total", "12"], 0),
 ]
 fails = 0
 for name, f, args, want in CASES:
@@ -446,7 +449,21 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("lantern_trial_s.txt", ["--total", "6"], "镜1 虚词 4 个（一路×3、继续）"),
               # v31：没有终点的程度词（L098）、串行运镜句数
               ("open_degree.txt", ["--total", "6"], "程度词没有终点"),
-              ("serial_camera.txt", ["--total", "6"], "串行运镜 7 句挤在 6 秒里")]
+              ("serial_camera.txt", ["--total", "6"], "串行运镜 7 句挤在 6 秒里"),
+              # v35 表演排队：正例应报（一镜合并一条，逐处列出）；物理依赖（放下杯子之后才去开门）也报——合法误报，裁定保留
+              ("perf_queue_report.txt", [], "镜1 可能的表演排队：「说完“…”，苏云才抬头」「他停顿一下，才开口」；按成文主规则第 8 条"),
+              ("perf_queue_report.txt", [], "镜2 可能的表演排队：「他放下杯子之后才去开门」；"),
+              ("perf_queue_report.txt", [], "感知、身体条件或观看目的确需先后时可保留（逐条裁定）"),
+              # “推到胸口之后才移焦”没有显式摄影主体、也不是纯摄影动词对：保留警告交 AI 裁定
+              ("perf_queue_camera_subject.txt", [], "镜1 可能的表演排队：「推到胸口之后才移焦」；"),
+              # 混合语境：每镜只报人物排队那一处（摘录后紧跟“；”，说明没有别的摘录）
+              ("perf_queue_mixed.txt", [], "镜1 可能的表演排队：「苏云推门之后才抬头」；"),
+              ("perf_queue_mixed.txt", [], "镜2 可能的表演排队：「说完才回应」；"),
+              ("perf_queue_mixed.txt", [], "镜3 可能的表演排队：「说完才转身」；"),
+              ("perf_queue_mixed.txt", [], "镜4 可能的表演排队：「他又说完才回应」；"),
+              ("perf_queue_mixed.txt", [], "镜5 可能的表演排队：「苏云推门之后才抬头」；"),
+              # 样例对话稿镜头3 的“说完嘴角向下一沉”是应报提醒（D2 baseline 预记，不算误报）
+              ("../sample-dialogue-12s.txt", [], "镜3 可能的表演排队：「“…”说完嘴角向下一沉」")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -638,7 +655,15 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("control_valid.txt", [], "虚词"),
                  # v31：程度词后面有终点不报；三句运镜不到镜长一半不报，宾语位置的“镜头”不算主语
                  ("open_degree_with_end.txt", ["--total", "6"], "程度词没有终点"),
-                 ("serial_camera_ok.txt", ["--total", "6"], "串行运镜")]
+                 ("serial_camera_ok.txt", ["--total", "6"], "串行运镜"),
+                 # v35 表演排队：没等她说完 / 话音未落 / 说到一半 / 镜头推到胸口之后才移焦 / 后拉之后才移焦 / 不等他做完、
+                 # 台词里的“你说完了吗”、单独的然后 / 随后 / 接着都不报；锁定文字不报；样例打斗稿、对话稿镜1–2 不报
+                 ("perf_queue_overlap_ok.txt", [], "表演排队"),
+                 ("perf_queue_report.txt", ["--lock", "他放下杯子之后才去开门"], "镜2 可能的表演排队"),
+                 ("../sample-combat-12s.txt", [], "表演排队"),
+                 ("../sample-dialogue-12s.txt", [], "镜1 可能的表演排队"),
+                 ("../sample-dialogue-12s.txt", [], "镜2 可能的表演排队"),
+                 ("control_valid.txt", [], "表演排队")]
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -743,6 +768,43 @@ for name, text, want in INFER_CASES:
     got = CP.infer_task_from_text(text)
     ok = got == want; fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| infer_task_from_text：{name} |", got)
+
+# ---- v35 表演排队：逐命中按 span 包含裁定（报告模式与豁免模板在同一份剥完台词的字符串上算；writing-rules 成文主规则第 8 条）----
+# (名称, 镜头正文（先按 check_prompt 剥台词）, 期望要报的命中 [(起, 止, 原文)], 期望豁免的命中或 None 不核对)
+QUEUE_SPAN_CASES = [
+    ("正例：说完……才抬头两处都报", "罗大娘说完，苏云才抬头", [(3, 5, "说完"), (8, 11, "才抬头")], []),
+    ("反例1：没等她说完他就开口（等她说完与其中说完都在模板里）", "没等她说完他就开口", [], [(1, 5, "等她说完"), (3, 5, "说完")]),
+    ("反例1：话音未落本身不触发", "话音未落他抬头", [], []),
+    ("反例1：说到一半本身不触发", "他说到一半停住", [], []),
+    ("反例1：话还没说完", "话还没说完，他就转身", [], [(3, 5, "说完")]),
+    ("反例2：镜头推到胸口之后才移焦（显式主语 + 终点）", "镜头推到胸口之后才移焦", [], [(6, 9, "之后才")]),
+    ("反例2：后拉之后才移焦（两侧都是摄影术语，主语可省）", "后拉之后才移焦", [], [(2, 5, "之后才")]),
+    ("反例2：推到胸口之后才移焦无显式摄影主体，保留警告", "推到胸口之后才移焦", [(4, 7, "之后才")], []),
+    ("反例2：不等他做完就开口", "不等他做完就开口", [], [(1, 5, "等他做完")]),
+    ("反例3：台词引号里的说完不算", CP.strip_dialogue("他低声说：“你说完了吗？”"), [], []),
+    ("混合：摄影之后才豁免，人物推门之后才抬头照报", "镜头推到胸口之后才移焦，苏云推门之后才抬头",
+     [(16, 19, "之后才"), (18, 21, "才抬头")], [(6, 9, "之后才")]),
+    ("混合：逗号换成空格仍只报人物命中", "镜头推到胸口之后才移焦 苏云推门之后才抬头",
+     [(16, 19, "之后才"), (18, 21, "才抬头")], [(6, 9, "之后才")]),
+    ("混合：话音未落他抬头；说完才回应只报第二处", "话音未落他抬头；说完才回应", [(8, 10, "说完"), (10, 13, "才回应")], []),
+    ("混合：没等她说完，他就开口；说完才转身只报末次", "没等她说完，他就开口；说完才转身",
+     [(11, 13, "说完"), (13, 16, "才转身")], [(1, 5, "等她说完"), (3, 5, "说完")]),
+    ("同一小句：只豁免第一次说完，后半真排队照报（豁免模板到最近第一次结束词即止）", "没等她说完他又说完才回应",
+     [(7, 9, "说完"), (9, 12, "才回应")], [(1, 5, "等她说完"), (3, 5, "说完")]),
+    ("报告模式“等…结束词”也到第一次结束词即止", "等她说完他又说完才回应",
+     [(0, 4, "等她说完"), (2, 4, "说完"), (6, 8, "说完"), (8, 11, "才回应")], []),
+    ("物理依赖：放下杯子之后才去开门照报（合法误报，裁定保留）", "放下杯子之后才去开门", [(4, 7, "之后才")], []),
+    ("人物推门之后才抬头照报", "推门之后才抬头", [(2, 5, "之后才"), (4, 7, "才抬头")], []),
+    ("人物拉住手之后才回应照报（裸“拉”不算摄影）", "拉住手之后才回应", [(3, 6, "之后才"), (5, 8, "才回应")], []),
+    ("人物摇头之后才开口照报（裸“摇”不算摄影）", "摇头之后才开口", [(2, 5, "之后才"), (4, 7, "才开口")], []),
+    ("然后 / 随后 / 接着单独出现不报", "然后他抬头，随后转身，接着开口", [], []),
+    ("然后才照报", "然后才抬头", [(0, 3, "然后才"), (2, 5, "才抬头")], []),
+    ("话音刚落照报", "话音刚落，她抬头", [(0, 4, "话音刚落")], []),
+]
+for name, text, want, want_ex in QUEUE_SPAN_CASES:
+    got, got_ex, _spans = CP.perf_queue_scan(text)
+    ok = got == want and (want_ex is None or got_ex == want_ex); fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| 表演排队 span：{name} |", got, got_ex)
 
 # ---- v25 A20：正文超过 15000 字符报错误；15000 以内不报 ----
 with tempfile.TemporaryDirectory() as tmp:
@@ -1144,7 +1206,7 @@ TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CAS
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
          + 4 + len(SUCCESS_EXTRA) + 1
-         + len(DETAIL_CASES) + len(INFER_CASES) + 2
+         + len(DETAIL_CASES) + len(INFER_CASES) + len(QUEUE_SPAN_CASES) + 2
          + len(REVIEW_CHECKS) + len(SCRIPT_GUARD_CASES) + 1
          + len(ARCHIVE_CASES)  # v31 archive 出口
          + 1)  # 压缩审校：复读每份稿最多报 5 条
