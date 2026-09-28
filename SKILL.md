@@ -16,7 +16,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 5. **经验有证据边界。** 具体任务明确后，写稿前按题材 grep [seedance-2.5.md](references/lessons/seedance-2.5.md) 的两三个分类，禁止整份读；已试不等于稳定成功，未试可用但不得冒称已验证。案例只借适配的镜内组织与句式；外壳、段落归属与固定句按 seedance-format（新稿四段、改稿继承父稿），摄影按用户偏好第 1 条。
 6. **操作命令不得漏官方必填项。** 做延长、编辑、衔接、首尾帧、关键帧、宫格、白模、绿幕或一键成片时，必读 [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节；四段新稿的必填句和官方约束句全在情节命令区，旧稿修订按父稿。
 7. **每次生成独立自洽。** 每镜、每稿自足：上一镜完成的动作写成本镜现状，反馈改在引出问题的原句上、写成当前应有状态；禁止项每轮从零推导（writing-rules 第 8、60、61 条）。
-8. **写法分主次。** 每拍三样打底（镜头在做什么、画框切在哪与画里有什么、主体那一件主事和结束时的样子），叠加项按 writing-rules 的「成文主规则去处表」（第 1 条指向它）。每镜首句按画面实际层次交代取景与焦点；什么时候写三层、什么时候只写焦点，按成文主规则第 1 条与去处表。每镜先定 1–2 个观众必须看清的关键事件，放在看得见、有光的位置；运镜可以同一瞬呈现它，要错开的靠换拍、不靠停镜（成文主规则第 2 条、writing-rules 第 29 条）。作者自加的装饰层不逐拍写，衣物、头发、持物的可见结果每拍最多一处，主体段不写（成文主规则第 3 条）；“全片、始终、任何时刻”这类总括保证句不代替镜内描述（成文主规则第 7 条）。口吻是导演加摄影指导在现场讲戏，不设字数上限（成文主规则第 5、6 条），成文后按成文主规则第 5 条压缩审校。细则只在 [writing-rules.md](references/writing-rules.md)「成文主规则」维护，这里不复述。
+8. **写法分主次。** 每拍三样打底（镜头在做什么、画框切在哪与画里有什么、主体那一件主事和结束时的样子），叠加项按 writing-rules 的「成文主规则去处表」（第 1 条指向它）。每镜首句按画面实际层次交代取景与焦点；什么时候写三层、什么时候只写焦点，按成文主规则第 1 条与去处表。每镜先定 1–2 个观众必须看清的关键事件，放在看得见、有光的位置；运镜可以同一瞬呈现它，要错开的靠换拍、不靠停镜（成文主规则第 2 条、writing-rules 第 29 条）。作者自加的装饰层不逐拍写，衣物、头发、持物的可见结果每拍最多一处，主体段不写（成文主规则第 3 条）；“全片、始终、任何时刻”这类总括保证句不代替镜内描述（成文主规则第 7 条）。口吻是导演加摄影指导在现场讲戏，不设字数上限（成文主规则第 5、6 条），成文后按成文主规则第 5 条压缩审校。多人同框或连串动作按流动写：只写本镜当前画幅拍得到的人，画里相关人物的注意或活动可见且可延续；反应从实际可感知的进行中起头，等待也有可见表演，必要先后按感知、身体条件与观看目的安排（成文主规则第 8 条）。细则只在 [writing-rules.md](references/writing-rules.md)「成文主规则」维护，这里不复述。
 
 ## 用户偏好与改稿保护
 
@@ -32,7 +32,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 
 | 任务 | 本次必读 | 交付 |
 |---|---|---|
-| 写新提示词 | lessons 按题材 grep 两三个分类 → 案例先查索引：类型与素材形态相同才读其“可复用点/关联经验”（官方案例读“原案例结构/什么时候选它”），确需抄句式才展开原文；没有适配案例就在内部记“未参考案例”，不硬凑两套 → [seedance-format.md](references/seedance-format.md) 必读 → [writing-rules.md](references/writing-rules.md) 的「成文主规则」（第 1–7 条与去处表）必读；第零组到第十组按本稿题材经去处表与分组标题定位，只读相关组（先用 `grep -n '^## 第' references/writing-rules.md` 看组名，再 sed 读对应组） → [directing-upgrade.md](references/craft/directing-upgrade.md) 与适用工艺卡 → 用户白话里有动作、效果、运镜词才查 [references/lexicon/](references/lexicon/) 对应表，每个词挑 1 个推荐写进表头“升级”行，备选只在意图不清或用户要选方向时给（读法与升级写法见 lexicon/README「词库升级」） | 默认表头 + 完整提示词 + 检查行；用户要先看分镜、先选方向或有分镜审批环节时先交镜头表 |
+| 写新提示词 | lessons 按题材 grep 两三个分类 → 案例先查索引：类型与素材形态相同才读其“可复用点/关联经验”（官方案例读“原案例结构/什么时候选它”），确需抄句式才展开原文；没有适配案例就在内部记“未参考案例”，不硬凑两套 → [seedance-format.md](references/seedance-format.md) 必读 → [writing-rules.md](references/writing-rules.md) 的「成文主规则」（第 1–8 条与去处表）必读；第零组到第十组按本稿题材经去处表与分组标题定位，只读相关组（先用 `grep -n '^## 第' references/writing-rules.md` 看组名，再 sed 读对应组） → [directing-upgrade.md](references/craft/directing-upgrade.md) 与适用工艺卡 → 用户白话里有动作、效果、运镜词才查 [references/lexicon/](references/lexicon/) 对应表，每个词挑 1 个推荐写进表头“升级”行，备选只在意图不清或用户要选方向时给（读法与升级写法见 lexicon/README「词库升级」） | 默认表头 + 完整提示词 + 检查行；用户要先看分镜、先选方向或有分镜审批环节时先交镜头表 |
 | 改现有提示词 | lessons 按分类 grep → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 完整受影响单元 + ≤3 行变更摘要 + 检查行；不为表头全文加载新稿格式或严格审文件 |
 | 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons 的 `操作命令/` 及题材分类 | 四段完整操作命令；旧稿修订按父稿外壳 |
 | 输入「自检」 | [qa-checklist.md](references/review/qa-checklist.md) + `scripts/check_prompt.py`；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 一句结论 + 六维综合表 + 必要问题；自检不自动改稿 |
