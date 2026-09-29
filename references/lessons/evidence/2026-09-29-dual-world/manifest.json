@@ -1,0 +1,32 @@
+[
+  {
+    "sample": 3,
+    "video_review": "每秒抽帧；未听审音轨；整体成功来自用户明确认可",
+    "model_version": "未知，当前会话按Seedance 2.5编写，未读取生成任务元数据",
+    "txt": {
+      "source": "/Users/gerry/同步空间/3.txt",
+      "sha256": "a54c94a69a6bd9339d26b8899547b5c6fe46a2852790c30b9b046c737a8c2a61",
+      "bytes": 4431
+    },
+    "mp4": {
+      "source": "/Users/gerry/同步空间/3.mp4",
+      "sha256": "7ef5404393f6e7951503124bd77e037bf70466648c45d3f5d4f3330c787c431c",
+      "bytes": 12165012
+    }
+  },
+  {
+    "sample": 4,
+    "video_review": "每秒抽帧；未听审音轨；整体成功来自用户明确认可",
+    "model_version": "未知，当前会话按Seedance 2.5编写，未读取生成任务元数据",
+    "txt": {
+      "source": "/Users/gerry/同步空间/4.txt",
+      "sha256": "2ff30afe5b29e04907db0d5b36ff11ea3edd5e690e00d79c6c6988cb95d93ee9",
+      "bytes": 2919
+    },
+    "mp4": {
+      "source": "/Users/gerry/同步空间/4.mp4",
+      "sha256": "bc85ea36f008c2a90a5350e75705121bc3ccc872eed4c9b57f59f38e4dc95105",
+      "bytes": 45059485
+    }
+  }
+]
