@@ -32,15 +32,17 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 
 | 任务 | 本次必读 | 交付 |
 |---|---|---|
-| 写新提示词 | lessons 按题材 grep 两三个分类 → 案例先查索引：类型与素材形态相同才读其“可复用点/关联经验”（官方案例读“原案例结构/什么时候选它”），确需抄句式才展开原文；没有适配案例就在内部记“未参考案例”，不硬凑两套 → [seedance-format.md](references/seedance-format.md) 必读 → [writing-rules.md](references/writing-rules.md) 的「成文主规则」（第 1–8 条与去处表）必读；第零组到第十组按本稿题材经去处表与分组标题定位，只读相关组（先用 `grep -n '^## 第' references/writing-rules.md` 看组名，再 sed 读对应组） → [directing-upgrade.md](references/craft/directing-upgrade.md) 与适用工艺卡 → 用户白话里有动作、效果、运镜词才查 [references/lexicon/](references/lexicon/) 对应表，每个词挑 1 个推荐写进表头“升级”行，备选只在意图不清或用户要选方向时给（读法与升级写法见 lexicon/README「词库升级」） | 默认表头 + 完整提示词 + 检查行；用户要先看分镜、先选方向或有分镜审批环节时先交镜头表 |
+| 写新提示词 | lessons 按题材 grep 两三个分类 → 案例先查索引：类型与素材形态相同才读其“可复用点/关联经验”（官方案例读“原案例结构/什么时候选它”），确需抄句式才展开原文；没有适配案例就在内部记“未参考案例”，不硬凑两套 → [seedance-format.md](references/seedance-format.md) 必读 → [writing-rules.md](references/writing-rules.md) 的「成文主规则」（第 1–8 条与去处表）必读；第零组到第十组按本稿题材经去处表与分组标题定位，只读相关组（先用文件搜索工具搜 `^## 第` 看组名和行号，再按行号只读对应组） → [directing-upgrade.md](references/craft/directing-upgrade.md) 与适用工艺卡 → 用户白话里有动作、效果、运镜词才查 [references/lexicon/](references/lexicon/) 对应表，每个词挑 1 个推荐写进表头“升级”行，备选只在意图不清或用户要选方向时给（读法与升级写法见 lexicon/README「词库升级」） | 默认表头 + 完整提示词 + 检查行；用户要先看分镜、先选方向或有分镜审批环节时先交镜头表 |
 | 改现有提示词 | lessons 按分类 grep → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 完整受影响单元 + ≤3 行变更摘要 + 检查行；不为表头全文加载新稿格式或严格审文件 |
 | 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons 的 `操作命令/` 及题材分类 | 四段完整操作命令；旧稿修订按父稿外壳 |
 | 输入「自检」 | [qa-checklist.md](references/review/qa-checklist.md) + `scripts/check_prompt.py`；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 一句结论 + 问题清单（镜号｜项及来源｜缺口｜影响｜建议）+ 人核提醒 + 脚本行；只出报告不改稿 |
-| 回传视频、截图或生成反馈 | [diagnose.md](references/review/diagnose.md)；需要时用 `scripts/extract_frames.sh` | 逐句兑现、归因、最小修法与一条待审观察；获授权才写经验库 |
+| 回传视频、截图或生成反馈 | [diagnose.md](references/review/diagnose.md)；需要时用 `scripts/extract_frames.py` 抽帧 | 逐句兑现、归因、最小修法与一条待审观察；获授权才写经验库 |
 | 只要打斗或特效设计 | [combat.md](references/craft/combat.md) 或 [vfx.md](references/craft/vfx.md) | 白话设计，不编译提示词 |
 | 问效果叫什么或怎么写 | [references/lexicon/](references/lexicon/) 对应表 | 术语 + 可见效果 + 一句可用中文 + 理解度 |
 | 说「拔高 / 更细 / 更小众 / 还有什么写法」 | [references/lexicon/](references/lexicon/) 对应表按小类 grep（读法见 lexicon/README） | 3–5 个候选：效果名 + 画面上看到什么一句 + 适合题材；用户选定后成文，不回答就用第一个 |
 | 输入「整理经验」 | 运行 `scripts/review_lessons.py`（只读） | 用人话列候选；用户选定后才升级或合并 |
+
+命令约定：参考文件里的脚本命令都写成一行 `python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/<脚本>.py …`，Windows 上把 `python3` 换成 `py -3`，其余照抄。
 
 题材工艺卡：对话/情绪读 `performance.md`、`lighting-color.md`；多人读 `staging.md`；打斗读 `combat.md`、`camera.md`；特效读 `vfx.md`；环境/空镜读 `scene-mood.md`、`lighting-color.md`；动作/追逐/天气读 `motion-physics.md`、`camera.md`；产品/UGC/预演/衔接/文字读 `genre-recipes.md`。采用前判断适用性；工艺卡只拥有专业设计，不拥有公开格式、改稿授权或检查流程。
 

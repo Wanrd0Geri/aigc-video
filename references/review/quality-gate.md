@@ -114,8 +114,7 @@ kind 只能是 subagent（Claude Code 的 Agent 子代理）、new_session（Cod
 同一上下文里换个名字不算独立；主审读完作者的全部过程和结论、再另存一份“独立结论”也不算。身份声明不是身份证明，应保留对应工具/上下文记录；作者不能自己换名补一个假独立结果。
 
 ```sh
-python3 scripts/verify_delivery.py --prompt prompt.txt --requirements requirements.json --review review.json \
-  --report ~/.aigc-video-gate/2026-09-20T210500.json --output delivered.txt --response response.md
+python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/verify_delivery.py --prompt prompt.txt --requirements requirements.json --review review.json --report $HOME/.aigc-video-gate/2026-09-20T210500.json --output delivered.txt --response response.md
 ```
 
 修订增加 `--baseline parent.txt`，局部镜头增加 `--partial`；全套路径增加 `--independent-review independent.json`。用户只要受影响镜头时再加 `--output-scope affected`：仍审查合成完整稿，只导出本次受影响的完整镜头；其 delivered_sha256 与完整 checked_sha256 分别保存。`--response` 只在 ready=true 且写出了 `--output` 时生成，内容是拼好的成品：一个 text 代码块装着正文，下面一行“交付校验通过（正文 xx｜需求 xx）”。提示词正文及生成回执原样取自 response 文件。允许在代码块外写必要表头、问题、例外和变更摘要；这些说明不得混入可复制提示词。用户只要提示词时省略外部说明，内部检查不变。

@@ -237,7 +237,7 @@ CASES = [
 ]
 fails = 0
 for name, f, args, want in CASES:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
     try:
         d = json.loads(p.stdout)
     except Exception:
@@ -465,7 +465,7 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               # 样例对话稿镜头3 的“说完嘴角向下一沉”是应报提醒（D2 baseline 预记，不算误报）
               ("../sample-dialogue-12s.txt", [], "镜3 可能的表演排队：「“…”说完嘴角向下一沉」")]
 for f, extra, key in WARN_CASES:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 触发“{key}”提醒 |", [w for w in d["warnings"] if key in w][:1])
 # 反面：干净的稿不许被这几条提醒误伤（镜头性格词、各绑一次、不写 @；改一句不算消失、没变长不报稀释）
@@ -665,15 +665,15 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("../sample-dialogue-12s.txt", [], "镜2 可能的表演排队"),
                  ("control_valid.txt", [], "表演排队")]
 for f, extra, key in NO_WARN_CASES:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 不触发“{key}”提醒 |", hit[:1] or "ok")
 
 # ---- 四段稿的否定提醒：镜内一条给一条提醒；--negative-exception 点名后不再提醒 ----
 for args, want_n, label in [([], 1, "镜内否定：提醒 1 条"),
                             (["--negative-exception", "不出现第二个白猿。"], 0, "点名后：提醒 0 条")]:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / "inline_negative.txt"), "--total", "12", *args],
-                       text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / "inline_negative.txt"), "--total", "12", *args],
+                       text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout)
     hits = [w for w in d["warnings"] if w.startswith("否定句：")]
     ok = p.returncode == 0 and len(hits) == want_n
@@ -692,7 +692,7 @@ SUMMARY_CASES = [("inline_negative.txt", ["--total", "12"], "否定句提醒 1 �
                  ("control_valid.txt", ["--total", "12"], "无素材引用"),
                  ("at_refs_in_new_draft.txt", ["--total", "12"], "素材集合未核对")]
 for f, args, needle in SUMMARY_CASES:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = needle in d["summary"] and "（" not in d["summary"][d["summary"].index("（") + 1:]
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} summary 含“{needle}” |", d["summary"])
@@ -713,7 +713,7 @@ ASK_DETAIL_CASES = [
      "父稿有 1 句在新稿里消失：「后景虚化成一片柔光」"),
 ]
 for name, f, args, field, needle in ASK_DETAIL_CASES:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "12", *args], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); hit = [x for x in d[field] if needle in x]; ok = bool(hit); fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} |", hit[:1] or d[field])
 
@@ -743,7 +743,7 @@ DETAIL_CASES = [
     ("压缩审校·没有复读时 checked 写明", "repeat_phrase_exempt_subject.txt", ["--total", "12"], "checked", "情节里没有 6 字以上的复读短语"),
 ]
 for name, f, args, field, needle in DETAIL_CASES:
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); v = d[field]
     hit = ([v] if needle in v else []) if isinstance(v, str) else [x for x in v if needle in x]
     ok = bool(hit); fails += 0 if ok else 1
@@ -815,7 +815,7 @@ with tempfile.TemporaryDirectory() as tmp:
         body = base.replace("人物从门口走到窗前，衣摆轻晃。", "人物从门口走到窗前，衣摆轻晃。" + pad * n, 1)
         pf = pathlib.Path(tmp) / f"long{n}.txt"
         pf.write_text(body, encoding="utf-8")
-        p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), "--total", "12"], text=True, capture_output=True)
+        p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(pf), "--total", "12"], text=True, encoding="utf-8", errors="replace", capture_output=True)
         d = json.loads(p.stdout)
         has = any("超过即梦提示词上限 15000 字符" in e for e in d["errors"])
         ok = has == want_err and (p.returncode == 1) == want_err and (len(body) > 15000) == want_err
@@ -831,7 +831,7 @@ with tempfile.TemporaryDirectory() as tmp:
              f"镜头1（0-12秒）：{shot}\n全片不添加BGM，不添加字幕。\n")
     pf = pathlib.Path(tmp) / "reps7.txt"
     pf.write_text(draft, encoding="utf-8")
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), "--total", "12"], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(pf), "--total", "12"], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout)
     got = [w for w in d["warnings"] if w.startswith("复读提醒")]
     ok = p.returncode == 0 and len(got) == 5 and all(f"「{r}」" in g for r, g in zip(reps7, got))
@@ -842,8 +842,8 @@ with tempfile.TemporaryDirectory() as tmp:
 with tempfile.TemporaryDirectory() as tmp:
     for args, want in [(["--asks", str(C / "asks_ok.txt")], 2), ([], None)]:
         rp = pathlib.Path(tmp) / f"asks{want}.json"
-        subprocess.run([sys.executable, str(S), "--prompt", str(C / "asks_draft.txt"), "--total", "12",
-                        "--report", str(rp), *args], text=True, capture_output=True)
+        subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / "asks_draft.txt"), "--total", "12",
+                        "--report", str(rp), *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
         rep = json.loads(rp.read_text(encoding="utf-8"))
         ok = "asks_checked" in rep and rep["asks_checked"] == want; fails += 0 if ok else 1
         print(("PASS" if ok else "FAIL"), f"| --report 的 asks_checked = {want} |", rep.get("asks_checked", "缺字段"))
@@ -864,8 +864,8 @@ REPORT_CASES = [
 with tempfile.TemporaryDirectory() as tmp:
     for i, (name, f, args, want_ready, want_code) in enumerate(REPORT_CASES):
         rp = pathlib.Path(tmp) / f"新建目录{i}" / "r.json"      # 目录不存在也要能写
-        p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), *args, "--report", str(rp)],
-                           text=True, capture_output=True)
+        p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), *args, "--report", str(rp)],
+                           text=True, encoding="utf-8", errors="replace", capture_output=True)
         body = (C / f).read_text(encoding="utf-8")
         why = []
         if p.returncode != want_code:
@@ -913,7 +913,7 @@ BASE_ENTRY = "L001 | 2026-09-21 | 通用/占位 | 现象 | 写法A → 效果 | 
 
 
 def run(cmd):
-    return subprocess.run([sys.executable, *map(str, cmd)], text=True, capture_output=True)
+    return subprocess.run([sys.executable, "-X", "utf8", *map(str, cmd)], text=True, encoding="utf-8", errors="replace", capture_output=True)
 
 
 with tempfile.TemporaryDirectory() as tmp:
@@ -1099,11 +1099,18 @@ with tempfile.TemporaryDirectory() as tmp:
 
 # ---- v25 五：install.sh 只从主线仓库的 main 分支安装；sync.sh 只在 main 分支上同步（临时 HOME 里跑，不碰真实的 skills 软链）----
 def _bash():
-    if sys.platform == "win32":
-        for c in (r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"):
-            if os.path.exists(c):
-                return c
-    return "bash"
+    """Windows 上只用 Git Bash（C:\\Windows\\System32\\bash.exe 是 WSL，HOME 与路径都对不上）；找不到返回 None，守门测试记 SKIP。"""
+    if sys.platform != "win32":
+        return "bash"
+    cands = [r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"]
+    g = shutil.which("git")
+    if g:   # …\Git\cmd\git.exe 或 …\Git\bin\git.exe 或 …\Git\mingw64\bin\git.exe → …\Git\bin\bash.exe
+        gp = pathlib.Path(g).resolve()
+        cands += [str(up / "bin" / "bash.exe") for up in list(gp.parents)[:3]]
+    for c in cands:
+        if os.path.isfile(c):
+            return c
+    return None
 
 
 def sh(script, home):
@@ -1112,37 +1119,41 @@ def sh(script, home):
 
 
 SCRIPT_GUARD_CASES = []
-with tempfile.TemporaryDirectory() as tmp:
-    home = pathlib.Path(tmp)
-    repo = home / "Documents" / "Codex" / "aigc-video"
-    (repo / "scripts").mkdir(parents=True)
-    shutil.copy(ROOT / "install.sh", repo / "install.sh")
-    shutil.copy(ROOT / "scripts" / "sync.sh", repo / "scripts" / "sync.sh")
-    def git(*args):
-        return subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false", *args],
-                              text=True, capture_output=True)
-    git("init", "-q", "-b", "dev"); git("commit", "-q", "--allow-empty", "-m", "init")
-    SCRIPT_GUARD_CASES = [
-        ("install.sh 不在主线路径（dev 工作区）：拒绝执行", ROOT / "install.sh", 1, "只从主线仓库"),
-        ("install.sh 在主线路径但分支是 dev：拒绝执行", repo / "install.sh", 1, "只在 main 分支上安装"),
-        ("sync.sh 分支是 dev：拒绝执行", repo / "scripts" / "sync.sh", 1, "只在 main 分支上同步"),
-    ]
-    for name, script, want, needle in SCRIPT_GUARD_CASES:
-        p = sh(script, home)
-        linked = (home / ".claude" / "skills" / "aigc-video").exists() or (home / ".codex" / "skills" / "aigc-video").exists()
-        commits = len(git("log", "--oneline").stdout.splitlines())
-        ok = p.returncode == want and needle in p.stderr and not linked and commits == 1
+GUARD_RUN = _bash() is not None
+if not GUARD_RUN:
+    print("SKIP | install.sh / sync.sh 守门（4 项）| Windows 上没找到 Git Bash（装 Git for Windows 后重跑）；不计入总数")
+else:
+    with tempfile.TemporaryDirectory() as tmp:
+        home = pathlib.Path(tmp)
+        repo = home / "Documents" / "Codex" / "aigc-video"
+        (repo / "scripts").mkdir(parents=True)
+        shutil.copy(ROOT / "install.sh", repo / "install.sh")
+        shutil.copy(ROOT / "scripts" / "sync.sh", repo / "scripts" / "sync.sh")
+        def git(*args):
+            return subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false", *args],
+                                  text=True, encoding="utf-8", errors="replace", capture_output=True)
+        git("init", "-q", "-b", "dev"); git("commit", "-q", "--allow-empty", "-m", "init")
+        SCRIPT_GUARD_CASES = [
+            ("install.sh 不在主线路径（dev 工作区）：拒绝执行", ROOT / "install.sh", 1, "只从主线仓库"),
+            ("install.sh 在主线路径但分支是 dev：拒绝执行", repo / "install.sh", 1, "只在 main 分支上安装"),
+            ("sync.sh 分支是 dev：拒绝执行", repo / "scripts" / "sync.sh", 1, "只在 main 分支上同步"),
+        ]
+        for name, script, want, needle in SCRIPT_GUARD_CASES:
+            p = sh(script, home)
+            linked = (home / ".claude" / "skills" / "aigc-video").exists() or (home / ".codex" / "skills" / "aigc-video").exists()
+            commits = len(git("log", "--oneline").stdout.splitlines())
+            ok = p.returncode == want and needle in p.stderr and not linked and commits == 1
+            fails += 0 if ok else 1
+            print(("PASS" if ok else "FAIL"), f"| {name} |", (p.stderr.strip().splitlines() or ["无输出"])[0][:80])
+        git("switch", "-q", "-c", "main")
+        p = sh(repo / "install.sh", home)
+        link = home / ".claude" / "skills" / "aigc-video"
+        if sys.platform == "win32":
+            ok = p.returncode == 0 and link.exists()
+        else:
+            ok = p.returncode == 0 and link.is_symlink() and link.resolve() == repo.resolve()
         fails += 0 if ok else 1
-        print(("PASS" if ok else "FAIL"), f"| {name} |", (p.stderr.strip().splitlines() or ["无输出"])[0][:80])
-    git("switch", "-q", "-c", "main")
-    p = sh(repo / "install.sh", home)
-    link = home / ".claude" / "skills" / "aigc-video"
-    if sys.platform == "win32":
-        ok = p.returncode == 0 and link.exists()
-    else:
-        ok = p.returncode == 0 and link.is_symlink() and link.resolve() == repo.resolve()
-    fails += 0 if ok else 1
-    print(("PASS" if ok else "FAIL"), "| install.sh 在主线仓库的 main 分支：两个宿主都挂上软链 |", p.stdout.strip().splitlines()[:1] or p.stderr[:120])
+        print(("PASS" if ok else "FAIL"), "| install.sh 在主线仓库的 main 分支：两个宿主都挂上软链 |", p.stdout.strip().splitlines()[:1] or p.stderr[:120])
 
 # lint_cases：当前案例库必须干净（每条可复用点有编号或标样板，编号真的存在，索引对得上）
 p = run([LINTC, "--file", CASES_MD, "--lessons", LESSONS])
@@ -1175,7 +1186,7 @@ with tempfile.TemporaryDirectory() as tmp:
             continue
         pf = pathlib.Path(tmp) / f"{cid}.txt"
         pf.write_text(m.group(1) + "\n", encoding="utf-8")
-        p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), *extra], text=True, capture_output=True)
+        p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(pf), *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
         try:
             ws = json.loads(p.stdout)["warnings"]
         except Exception:
@@ -1199,7 +1210,7 @@ with tempfile.TemporaryDirectory() as tmp:
         m = re.search(r"^### " + cid + r"\b.*?提示词原文[^\n]*\n\s*```text\n(.*?)\n```", cases_text, re.S | re.M)
         pf = pathlib.Path(tmp) / f"{cid}.txt"
         pf.write_text((m.group(1) if m else "") + "\n", encoding="utf-8")
-        p = subprocess.run([sys.executable, str(S), "--prompt", str(pf), *extra], text=True, capture_output=True)
+        p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(pf), *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
         hit = [w for w in json.loads(p.stdout)["warnings"] if key in w] if m else ["找不到提示词原文"]
         ok = not hit; fails += 0 if ok else 1
         print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 不报“{key}” |", hit[:1] or "ok")
@@ -1207,7 +1218,7 @@ with tempfile.TemporaryDirectory() as tmp:
 # ---- v23 审查修复：input_sha256 是整份输入的哈希（v16 起曾被分句循环变量覆盖，不同的稿算出同一个值） ----
 shas = {}
 for f in ("lantern_trial_s.txt", "lantern_trial_v22.txt"):
-    p = subprocess.run([sys.executable, str(S), "--prompt", str(C / f), "--total", "6"], text=True, capture_output=True)
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "6"], text=True, encoding="utf-8", errors="replace", capture_output=True)
     shas[f] = json.loads(p.stdout)["input_sha256"]
 want = hashlib.sha256((C / "lantern_trial_s.txt").read_text(encoding="utf-8").encode("utf-8")).hexdigest()
 ok = len(set(shas.values())) == 2 and shas["lantern_trial_s.txt"] == want
@@ -1219,7 +1230,7 @@ TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CAS
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
          + 4 + len(SUCCESS_EXTRA) + 1
          + len(DETAIL_CASES) + len(INFER_CASES) + len(QUEUE_SPAN_CASES) + 2
-         + len(REVIEW_CHECKS) + len(SCRIPT_GUARD_CASES) + 1
+         + len(REVIEW_CHECKS) + (len(SCRIPT_GUARD_CASES) + 1 if GUARD_RUN else 0)
          + len(ARCHIVE_CASES)  # v31 archive 出口
          + 1)  # 压缩审校：复读每份稿最多报 5 条
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")

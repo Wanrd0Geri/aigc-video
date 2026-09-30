@@ -15,11 +15,15 @@ log_lesson.py — 向经验库追加一条记录，自动编号。
 v31 起：编号从主库与同目录 archive.md 的合集里取最大值加一（归档只搬行、不腾编号）；写入后给三种非阻断提醒（stderr）：
   写法 A / B 超过 80 字（整句放案例库，这里只写关键短语）；来源只有一条成片、结论又没标"单次观察"；
   主库里 `<!-- 整理于 … L0xx -->` 标记之后新增满 10 条（该跑「整理经验」了）。
-并发写入靠同目录的 `.lock` 文件互斥，只保证本机；跨机器靠 git 合并与 `merge_lessons.py`。
+并发写入靠同目录的 `.lock` 文件互斥（macOS 用 fcntl，Windows 用 msvcrt），只保证本机；跨机器靠 git 合并与 `merge_lessons.py`。
 """
-import argparse, datetime, os, re, sys
-try: import fcntl
-except ImportError: fcntl = None
+import argparse, datetime, errno, os, re, sys, time
+from contextlib import contextmanager
+if os.name == "nt":
+    import msvcrt
+    fcntl = None
+else:
+    import fcntl
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lint_lessons import cats_hint, topic_error, archive_path_for  # 12 个分类的唯一代码副本在 lint_lessons.py（与 README 同步）
@@ -55,6 +59,35 @@ def reminders(a, text_after):
             out.append(f"整理标记 L{last:03d} 之后主库已新增 {added} 条（≥{TIDY_EVERY}）：该跑「整理经验」了"
                        "（python3 scripts/review_lessons.py，改完更新标记）")
     return out
+
+
+@contextmanager
+def exclusive_lock(lk):
+    """lk 以 a+b 打开。Windows 锁固定的第 0 字节（锁文件为空时先写一个字节）；其他平台用 flock。"""
+    if fcntl is None:
+        lk.seek(0, os.SEEK_END)
+        if lk.tell() == 0:
+            lk.write(b"\0")
+            lk.flush()
+        while True:
+            lk.seek(0)
+            try:
+                msvcrt.locking(lk.fileno(), msvcrt.LK_NBLCK, 1)
+                break
+            except OSError as exc:
+                if exc.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                    raise
+                time.sleep(0.05)
+    else:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+    try:
+        yield
+    finally:
+        if fcntl is None:
+            lk.seek(0)
+            msvcrt.locking(lk.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(lk, fcntl.LOCK_UN)
 
 
 def main():
@@ -93,11 +126,7 @@ def main():
     path = os.path.abspath(a.file)
     # 同目录 .lock 文件互斥：读主库、读 archive、取号、拼新文本、写入都在锁内完成
     lock_path = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".lock")
-    with open(lock_path, "a+") as lk:
-        if fcntl is not None:
-            fcntl.flock(lk, fcntl.LOCK_EX)
-        else:
-            print("提醒：本平台无 fcntl，未加锁", file=sys.stderr)
+    with open(lock_path, "a+b") as lk, exclusive_lock(lk):
         text = open(path, encoding="utf-8").read()
         if a.supplement:
             lines = text.splitlines(keepends=True)

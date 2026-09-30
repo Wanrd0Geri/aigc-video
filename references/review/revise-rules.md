@@ -82,7 +82,7 @@
 （代码块内只放完整受影响单元，干净可粘贴，不带任何修改标记；同一单元内未改的句子照抄）
 ```
 不写"已完成内部全量校验"这类没有依据的回执；做了什么检查就写什么。
-交付前跑 `python3 scripts/check_prompt.py --prompt 新稿.txt --task 生成|编辑|延长|衔接 --baseline 父稿.txt [--labels 图1,图2] [--lock "锁定台词"] [--unchanged 1,3] [--partial] [--asks asks.txt] [--total 秒] --report ~/.aigc-video-gate/<时间戳>.json`（有素材时带 `--labels`，按实际上传顺序），轻量路径交付 check_prompt 的 `summary`；只有全套路径才继续 verify_delivery，并使用它的 `summary`；`--partial` 表示只交了被改的镜头：段里只放镜头块（不带固定句和末尾收尾行），脚本校验镜号、时码与父稿一致后放回父稿合成完整稿检查，不要求它从镜头 1、0 秒重新开始。用户要求先看方案、或两个锁定要求冲突需要用户选时才先给受影响行的表；改机位、站位、终点本身不触发等待。
+交付前跑 `python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt 新稿.txt --task 生成|编辑|延长|衔接 --baseline 父稿.txt [--labels 图1,图2] [--lock "锁定台词"] [--unchanged 1,3] [--partial] [--asks asks.txt] [--total 秒] --report $HOME/.aigc-video-gate/<时间戳>.json`（有素材时带 `--labels`，按实际上传顺序），轻量路径交付 check_prompt 的 `summary`；只有全套路径才继续 verify_delivery，并使用它的 `summary`；`--partial` 表示只交了被改的镜头：段里只放镜头块（不带固定句和末尾收尾行），脚本校验镜号、时码与父稿一致后放回父稿合成完整稿检查，不要求它从镜头 1、0 秒重新开始。用户要求先看方案、或两个锁定要求冲突需要用户选时才先给受影响行的表；改机位、站位、终点本身不触发等待。
 
 修改默认走轻量路径：check_prompt 无错误、警告逐条裁定、作者核对完成即可交付，不建需求文件、不跑 verify_delivery。多轮任务从第二版起带 `--asks asks.txt`（见第 12 节）。只有走全套路径时（用户要求严格审、或事先约定了技术验收这两条，见 SKILL.md「流程分级」；稿子复杂或是第一版都不触发）才执行 `quality-gate.md`：保留原始请求与父稿版本，对覆盖镜头之外的依赖照样复核；所有警告有裁定，最终用 verify_delivery.py 放行。轻量路径只交受影响镜头时给 check_prompt 加 `--partial`；全套路径给 verify_delivery 加 `--partial --output-scope affected`。两者都用完整父稿合成检查依赖。机械通过不能单独作为交付结论。
 

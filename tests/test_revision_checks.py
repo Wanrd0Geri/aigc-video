@@ -20,10 +20,10 @@ class RevisionChecks(unittest.TestCase):
             p, b, report, combined = (Path(tmp) / name for name in ("prompt.txt", "base.txt", "report.json", "combined.txt"))
             p.write_text(prompt, encoding="utf-8")
             b.write_text(baseline, encoding="utf-8")
-            run = subprocess.run([sys.executable, str(CHECKER), "--prompt", str(p),
+            run = subprocess.run([sys.executable, "-X", "utf8", str(CHECKER), "--prompt", str(p),
                                   "--baseline", str(b), "--report", str(report),
                                   "--save-checked", str(combined), "--total", "12", *extra],
-                                 capture_output=True, text=True)
+                                 capture_output=True, text=True, encoding="utf-8", errors="replace")
             out = json.loads(run.stdout)
             self.assertEqual(run.returncode, 0 if out["ok"] else 1, run.stderr)
             self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["ready"], out["ok"])

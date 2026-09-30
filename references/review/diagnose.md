@@ -13,8 +13,9 @@
 ## 2 抽帧
 
 ```bash
-bash scripts/extract_frames.sh <视频> [输出目录] [每秒帧数]
+python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/extract_frames.py <视频> [输出目录] [每秒帧数]
 ```
+（Windows 上 `python3` 换成 `py -3`；需要 ffmpeg，不在 PATH 时设环境变量 `FFMPEG_DIR` 指向它的 bin 目录。）
 得到首帧、真正的最后一帧（时间在 last.txt）、每秒一帧、切镜检测帧（切点时间在 cuts.txt）和拼图；用 Read 打开拼图看。脚本退出码 3 表示切镜检测失败但首尾帧与抽样帧可用，cuts.txt 里有原因，不要把失败当成"没有切点"；重复运行会先清掉上一次自己生成的图。切镜检测会把闪光误判成切点，核对相关帧。消失、显形、接触、切点、蓄力与释放这类快事件，在相关区间加密到连续帧再判断。抽帧只能定位切点和状态；正常速度的节奏、慢放体验、声音关系需要连续播放和听审，抽帧证明不了。
 
 **帧间差分指标只在主体占满画面时可信（2026-09-22 踩过）**：用 `tblend=all_mode=difference` + `signalstats` 算相邻帧平均像素变化，量的是「整幅画面有多少像素变了」，不是「有多少运动」。后拉之后的大景别里，静止的天空、建筑、远山占掉绝大多数像素，一个又小又快的主体（半空中翻滚的人头）只让 3% 到 10% 的像素变化，读数低到 1.1，和「完全静止」分不开。本会话据此误判过一次「3.5 到 5.0 秒是死的」，实际逐帧看身体在拧、手臂在抡、人头在翻滚，动作齐全。做法：全幅帧差只用于主体占满画面的镜头；大景别改成①直接抽帧看拼图下结论，或②先 `crop` 到主体所在区域再算，并报「超过阈值的像素占比」而不是只报均值。读数低先问一句「是没动，还是动的东西小」，看过帧再下结论。
@@ -110,9 +111,9 @@ bash scripts/extract_frames.sh <视频> [输出目录] [每秒帧数]
 
 每次诊断结束给出一条结论，四选一：新观察、补充已有条目（同版本或同现象，用 --supplement）、反向证据（写进已有条目的效果列或作为新观察并注明矛盾的编号）、或"本次没有新增可复用结论"。用户授权或会话约定允许写入时才运行（来源要能定位：模型版本、实际提交稿、成片文件名；合成测试视频和测试题情境不写入真实项目经验）：
 ```bash
-python3 scripts/log_lesson.py --topic "景别与画外/画外人物" --phenomenon "写了曲伯仍在原位，曲伯进了特写" --a "写画外人物状态→被拉进画面" --b "删掉该句→未出现" --conclusion "画外人物不写" --confidence 已试 --source "0916 jimeng-…-3612.mp4"
+python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/log_lesson.py --topic "景别与画外/画外人物" --phenomenon "写了曲伯仍在原位，曲伯进了特写" --a "写画外人物状态→被拉进画面" --b "删掉该句→未出现" --conclusion "画外人物不写" --confidence 已试 --source "0916 jimeng-…-3612.mp4"
 ```
-补充示例：`python3 scripts/log_lesson.py --supplement L0xx --source "同版本新反馈，日期与成片定位" --conclusion-append "补充的可见结果"`（L0xx 换成主库实际编号）。
+补充示例：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/log_lesson.py --supplement L0xx --source "同版本新反馈，日期与成片定位" --conclusion-append "补充的可见结果"`（L0xx 换成主库实际编号）。
 
 新增记录的 `--topic` 必须带分类前缀（12 个分类见 `../lessons/README.md`，log_lesson.py 强制校验，前缀不合规不写入）。置信度按 `../lessons/README.md` 的唯一定义，只有已试 / 未试两档：写成已试必须有能定位的成片或截图，次数只是样本信息。观察和修法分开：修法没提交过写"→ 没试过"。词库理解度调整按 `../lexicon/README.md`，同样要有能对上的成片或截图。成功的写法同样记录。修改历史不进提示词：修法写成当前的可见状态（"枝干有树皮纹理，末端逐渐收细"），不写"之前生成成了石头"。
 

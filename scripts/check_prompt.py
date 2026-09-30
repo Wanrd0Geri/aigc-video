@@ -2179,7 +2179,7 @@ def main():
         "limits": "只检查文本不变量；不验证画面语义、素材内容或成片效果；检查后改过的稿必须重跑",
     }
     if a.report:
-        rp = Path(a.report)
+        rp = Path(a.report).expanduser()   # PowerShell 5.1 不展开 ~，这里补上
         if rp.parent and str(rp.parent) not in ("", "."):
             rp.parent.mkdir(parents=True, exist_ok=True)
         report = {

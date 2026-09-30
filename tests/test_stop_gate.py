@@ -80,7 +80,7 @@ class StopGateTests(unittest.TestCase):
             payload["transcript_path"] = str(t)
         else:
             payload["transcript_path"] = str(self.d / "missing.jsonl")
-        p = subprocess.run([sys.executable, "-B", str(HOOK)], input=json.dumps(payload, ensure_ascii=False), text=True,
+        p = subprocess.run([sys.executable, "-X", "utf8", "-B", str(HOOK)], input=json.dumps(payload, ensure_ascii=False), text=True, encoding="utf-8", errors="replace",
                            capture_output=True, env={**os.environ, "AIGC_GATE_DIR": str(self.gate)})
         return p.returncode, p.stdout, p.stderr
 

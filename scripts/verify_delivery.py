@@ -137,7 +137,7 @@ def evaluate(args):
         if not r.get('source', '').strip() or r['source'] not in source or not r.get('text', '').strip():
             errors.append(f"需求 {r['id']} 缺少可定位的原文依据")
 
-    cmd = [sys.executable, str(Path(__file__).with_name('check_prompt.py')), '--prompt', args.prompt, '--task', req['task']]
+    cmd = [sys.executable, "-X", "utf8", str(Path(__file__).with_name('check_prompt.py')), '--prompt', args.prompt, '--task', req['task']]
     if labels:
         cmd += ['--labels', ','.join(labels)]
     if req.get('total') is not None:
@@ -178,7 +178,7 @@ def evaluate(args):
         errors.extend(synth_errors)
     else:
         full = '\n'.join(raw.splitlines())
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     try:
         mechanical = json.loads(p.stdout)
     except json.JSONDecodeError:
@@ -344,7 +344,9 @@ def main():
     result.update(report_metadata())
     data = json.dumps(result, ensure_ascii=False, indent=2)
     if args.report:
-        Path(args.report).write_text(data + '\n', encoding='utf-8')
+        rp = Path(args.report).expanduser()   # PowerShell 5.1 不展开 ~，这里补上
+        rp.parent.mkdir(parents=True, exist_ok=True)
+        rp.write_text(data + '\n', encoding='utf-8')
     print(data)
     sys.exit(code)
 

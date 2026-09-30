@@ -30,7 +30,7 @@ class DeliveryTests(unittest.TestCase):
 
     def checker(self, text=BASE, args=()):
         self.prompt.write_text(text)
-        p = subprocess.run([sys.executable, str(ROOT/'scripts/check_prompt.py'), '--prompt', str(self.prompt), *args], capture_output=True, text=True)
+        p = subprocess.run([sys.executable, "-X", "utf8", str(ROOT/'scripts/check_prompt.py'), '--prompt', str(self.prompt), *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
         return p.returncode, json.loads(p.stdout)
 
     def setup_gate(self, text=BASE, check_args=()):
@@ -62,11 +62,11 @@ class DeliveryTests(unittest.TestCase):
         if independent is AUTO:
             independent = self.auto_independent()
         path = self.d/'review.json'; path.write_text(json.dumps(self.review,ensure_ascii=False))
-        cmd=[sys.executable,str(ROOT/'scripts/verify_delivery.py'),'--prompt',str(self.prompt),'--requirements',str(self.req_path),'--review',str(path),'--output',str(self.d/'delivered.txt')]
+        cmd=[sys.executable, "-X", "utf8", str(ROOT/'scripts/verify_delivery.py'),'--prompt',str(self.prompt),'--requirements',str(self.req_path),'--review',str(path),'--output',str(self.d/'delivered.txt')]
         if independent is not None:
             f=self.d/'independent.json';f.write_text(json.dumps(independent,ensure_ascii=False));cmd+=['--independent-review',str(f)]
         cmd += list(extra)
-        p=subprocess.run(cmd,capture_output=True,text=True)
+        p=subprocess.run(cmd,capture_output=True,text=True, encoding="utf-8", errors="replace")
         return p.returncode,json.loads(p.stdout)
 
     def test_multiple_partial_middle_tail_rejected(self):

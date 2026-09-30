@@ -117,7 +117,7 @@ def run_checker(body):
         task = infer_task(body)
         if task:
             cmd += ["--task", task]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=CHECK_TIMEOUT)
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=CHECK_TIMEOUT)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         return "unavailable", [f"代跑 check_prompt.py 失败：{exc}"], []
     finally:

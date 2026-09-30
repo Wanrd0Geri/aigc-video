@@ -459,10 +459,7 @@
 新增知识类可复用点时先 grep 经验库找对得上的编号；确实没有就写一条新经验再引用它：
 
 ```bash
-python3 scripts/log_lesson.py --file references/lessons/seedance-2.5.md \
-  --topic "<12 个分类之一>/<主题>" --phenomenon "成片里看到了什么" \
-  --a "这条案例用的写法 → 效果" --b "—" --conclusion "在什么条件下成立" \
-  --confidence 已试 --source "案例 M00x + <成片文件名>"
+python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/log_lesson.py --topic "<12 个分类之一>/<主题>" --phenomenon "成片里看到了什么" --a "这条案例用的写法 → 效果" --b "—" --conclusion "在什么条件下成立" --confidence 已试 --source "案例 M00x + <成片文件名>"
 ```
 
 ## 待补
