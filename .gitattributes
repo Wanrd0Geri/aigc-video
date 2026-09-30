@@ -1,0 +1,3 @@
+* text=auto eol=lf
+# 经验库证据原文按原样保存，不转换换行
+references/lessons/evidence/** -text
