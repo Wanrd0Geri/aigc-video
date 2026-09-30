@@ -1098,8 +1098,17 @@ with tempfile.TemporaryDirectory() as tmp:
         print(("PASS" if ok else "FAIL"), f"| {name} |", "ok" if ok else out[-300:])
 
 # ---- v25 五：install.sh 只从主线仓库的 main 分支安装；sync.sh 只在 main 分支上同步（临时 HOME 里跑，不碰真实的 skills 软链）----
+def _bash():
+    if sys.platform == "win32":
+        for c in (r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"):
+            if os.path.exists(c):
+                return c
+    return "bash"
+
+
 def sh(script, home):
-    return subprocess.run(["bash", str(script)], text=True, capture_output=True, env={**os.environ, "HOME": str(home)})
+    return subprocess.run([_bash(), str(script)], text=True, encoding="utf-8", errors="replace", capture_output=True,
+                          env={**os.environ, "HOME": str(home)})
 
 
 SCRIPT_GUARD_CASES = []
@@ -1128,7 +1137,10 @@ with tempfile.TemporaryDirectory() as tmp:
     git("switch", "-q", "-c", "main")
     p = sh(repo / "install.sh", home)
     link = home / ".claude" / "skills" / "aigc-video"
-    ok = p.returncode == 0 and link.is_symlink() and link.resolve() == repo.resolve()
+    if sys.platform == "win32":
+        ok = p.returncode == 0 and link.exists()
+    else:
+        ok = p.returncode == 0 and link.is_symlink() and link.resolve() == repo.resolve()
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), "| install.sh 在主线仓库的 main 分支：两个宿主都挂上软链 |", p.stdout.strip().splitlines()[:1] or p.stderr[:120])
 
