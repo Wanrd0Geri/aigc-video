@@ -1,0 +1,10 @@
+{
+  "report_version": 1,
+  "skill_version": "v38",
+  "ready": true,
+  "checked_sha256": "dddd444400000000000000000000000000000000000000000000000000000000",
+  "delivered_sha256": "dddd444400000000000000000000000000000000000000000000000000000000",
+  "summary": "交付校验通过",
+  "created_at": 1790762400.0,
+  "session_id": null
+}

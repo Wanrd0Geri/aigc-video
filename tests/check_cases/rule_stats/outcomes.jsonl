@@ -1,0 +1,2 @@
+{"time": "2026-09-28 20:00:00", "sha": "aaaa1111", "report": "20260928-120000.json", "video": "视频节点 5 - 副本 (8).mp4", "verdict": "采用", "note": "用户：好了很多", "lesson": null, "antipatterns": ["AP01", "AP06"], "adjudicated_ids": ["AP01"], "mode": "默认", "skill_version": "v38"}
+{"time": "2026-08-02 10:00:00", "sha": "cccc3333", "report": "20260801-120000.json", "video": "视频节点 5 - 副本 (7).mp4", "verdict": "否", "note": "主体被钉在画面中间", "lesson": "L144", "antipatterns": ["AP01"], "adjudicated_ids": [], "mode": null, "skill_version": "v37"}

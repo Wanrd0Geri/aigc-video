@@ -7,6 +7,7 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
   python3 check_prompt.py --prompt 稿.txt [--task 生成|编辑|延长|衔接] [--total 秒] [--untimed] [--labels 图1,图2,视频1]
                           [--baseline 父稿.txt] [--format 四段|五段|六段|继承] [--partial] [--lock "台词"]... [--unchanged 1,3]
                           [--asks asks.txt] [--save-checked 合成稿.txt] [--report 报告.json]
+                          [--mode 白模|默认] [--rewrite-authorized] [--adjudicated adjudicated.txt]
 
 两个维度分开表示：
   --task      最终命令的性质：生成 / 编辑 / 延长 / 衔接。决定时码规则和必填词。不给时按（合成后）全稿情节段开头的命令区推断
@@ -27,7 +28,7 @@ check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改�
 
 四段稿的收尾（v13.1）：末尾只有固定句一行，它上面不再另设收尾区域。倒数第二行以完整否定词开头（不出现、不要、禁止、避免、
   不得、不允许、严禁、请勿、不添加、不能、没有任何……，词表 NEG_LEAD）或以“保持 / 全片不 / 要求延长自然”开头就报错——必要的否定句
-  按 writing-rules 第 62 条的位置写（只管一镜的写那一镜，全片级的写主体段或场景段末尾，操作类写命令区），操作命令的必填句写进
+  按 writing-rules 附录第 62 条的位置写（只管一镜的写那一镜，全片级的写主体段或场景段末尾，操作类写命令区），操作命令的必填句写进
   情节段开头的命令区（`情节：` 之后、第一个镜头标题之前）。“不远处的灯笼……”“无数冤魂……”
   这类普通正文不算。五段 / 六段旧稿仍按 `结尾：` 段，继承模式按父稿。
 
@@ -63,8 +64,8 @@ v18 的五类提醒（词表都在脚本头部常量里，旁注「可调」）�
   下摆整圈张开）；--lock 锁定文字与 --asks 有效要求的关键词不报，其余用户点名的部位细节或原话由作者裁定保留；
   尺度名词（织纹、纤维、毛孔、抽丝……）按句判断：取它前面最近的景别词或画框切线（同镜内往前找，前面没有就看同一句后面），
   是特写 / 大特写 / 微距才不报；“近景（不是特写）”这种被否定的景别词不算，近景、中近景和画框切线都装不下，没有任何取景线索也报
-  （只扫镜头正文：主体、场景、风格段描述表面属性的材质词不受 writing-rules 第 5 条尺度规则约束，不扫）；
-  绝对化的空或黑（压死的黑、什么都没有、再没有第三样……）会给出一块死区，写暗处还留着什么；有意的纯黑（writing-rules 第 12 条豁免）
+  （只扫镜头正文：主体、场景、风格段描述表面属性的材质词不受 writing-rules 第 5 道门尺度规则约束，不扫）；
+  绝对化的空或黑（压死的黑、什么都没有、再没有第三样……）会给出一块死区，写暗处还留着什么；有意的纯黑（writing-rules 附录第 12 条豁免）
   在同一句写明持续多久或占多大范围（开始的一秒画面是纯黑、画面九成落在纯黑里）不报，只写按哪处光曝光不算，镜头标题的时码与
   “第N秒”不算时长，“不采用图中的纯黑背景”这类排除分句不扫；
   解释词（仿佛、似乎、像是在、营造、氛围、有一种、为了表现、为了突出、以表现、以突出）并入空词清单，台词与 --asks 有效要求的关键词不报；
@@ -78,8 +79,8 @@ v21 两类提醒：关键动作（松手、脱手、离开它的手、扔了出�
 v22 两类提醒（讲戏口吻，只提醒不拦截，词表 SHOT_LABEL_WORDS / QUALITY_RE 在头部常量里、可调）：镜头正文里的标签（“摄影：”“动作：”“动作/表情：”“情感解析：”
   “镜头运动：”“【构图】”“第一拍，”“第4秒：”。标签词在句首并紧跟冒号才算，几个标签词用 / 、 连写也算；【标签】不需要冒号；“第N拍”在句首
   并紧跟冒号、逗号或句末才算；台词与锁定文字不扫，改稿时父稿原样存在的句子不报）；画质词（8K、高清、精美、电影感、电影级、高级感……）
-  写在镜头正文、主体段、场景段就提醒，风格段只在它不在最后一句时提醒（writing-rules 第 77 条：只作风格段末尾的一小段尾巴）。
-v25 补充提醒：取景写成“能装下什么”（装得下、刚够装下、能装下、能看见全身、拉到能看见；writing-rules 第 10 条、L101）；镜头标题的秒数
+  写在镜头正文、主体段、场景段就提醒，风格段只在它不在最后一句时提醒（writing-rules 附录第 77 条：只作风格段末尾的一小段尾巴）。
+v25 补充提醒：取景写成“能装下什么”（装得下、刚够装下、能装下、能看见全身、拉到能看见；writing-rules 决策 D07、L101；v37 起正则在反模式表 AP02）；镜头标题的秒数
   不是整数（2.5 只响应整数秒）；四段新稿写“图片N / 视频片段N”（统一写 图N / 视频N）；同一段里同一素材绑定两次；
   没给 --labels 只在正文里真有 图N / 视频N / 音频N 引用时提醒。
 v23 三类提醒（只提醒不拦截，词表 SUBJECT_*_RE / BG_ACT / SCENE_*_RE / GUARANTEE_*_RE / FRAME_*_RE 在头部常量里、可调）：
@@ -111,7 +112,7 @@ v23 三类提醒（只提醒不拦截，词表 SUBJECT_*_RE / BG_ACT / SCENE_*_R
   同一条切线、同一个坐标上，两镜各写一次“镜头缓缓推近”是两次运镜，都不是复述）；--asks 有效要求的关键词不报；
   改稿时只报本轮新增的重复（父稿里同一短语已有的次数不算）。
   虚词：每镜数 逐渐 / 渐渐 / 缓缓 / 一路 / 此时 / 这时 / 继续 / 不断地 / 随之（FILLER_WORDS），超过 3 个提醒；
-  “慢慢”“急速”是速度，“先 / 接着 / 随后 / 最后 / 同时”是时序词（第 71 条），“开始的一秒 / 开始时 / 一开始”是时间点，都不计；
+  “慢慢”“急速”是速度，“先 / 接着 / 随后 / 最后 / 同时”是时序词（附录第 71 条），“开始的一秒 / 开始时 / 一开始”是时间点，都不计；
   锁定文字与点名的否定句不数。
   密度：有时码的镜头，正文字数（去标题、去台词、去空白）÷ 时长超过 DENSITY_CHARS_PER_SEC（默认 200 字 / 秒，--density-line 可调，暂定，待 A/B 实测，
   L104）时提醒，checked 里逐镜列出字数与每秒字数。改稿时和父稿逐字相同的镜头不报虚词与密度（压缩只用于本轮获准改写的部分）。
@@ -124,11 +125,32 @@ v35 表演排队提醒（writing-rules 成文主规则第 8 条，用户 2026-09
   只容许空格）只豁免完整落在模板里的命中；“推门之后才抬头”“拉住手之后才回应”“摇头之后才开口”照报，同一小句另有摄影关系也只豁免
   摄影那一段。摘录按小句取，豁免掉的部分不进摘录；“才…”起头的连上逗号紧接的前一小句。物理依赖（放下杯子之后才去开门）也会报，
   按第 8 条裁定保留。
+2026-10-01 五条提醒（蛟龙雷暴、曲伯牌坊复盘；只提醒不拦截，只扫镜头正文，去标题、挖台词、锁定文字不扫，每镜每条最多一次；词表在头部常量里、可调）：
+  ① 角度词前的削弱词：微微 / 轻微 / 略 / 稍 / 稍微 / 轻轻……后 0–4 字内紧跟仰拍、俯拍、仰起、俯下、仰角、俯角、上仰、下俯（成文主规则第 6 条、L050）；
+  “略高于”“稍作停顿”“稍后”不报，“头微微仰起”“微微俯下身”这类表演不报（仰起 / 俯下 / 上仰 / 下俯 看部位，仰拍 / 俯拍 / 仰角 / 俯角不看）；
+  弱词表另起 ANGLE_WEAK_WORDS，WEAK_WORDS 与弱运镜提醒不变。② 朝向只写方位词：同一句里有“看向 / 望向 / 望着 / 看着 / 盯着 / 脸朝 / 朝向 / 面朝 / 面向 / 转向 /
+  侧向 +（画面 / 自己的）左 / 右”又没有部位判据（耳、后脑、鼻尖、鼻梁、下巴、颧、脸颊、眼、眉、嘴、额，且前后 6 字内有露出 / 挡 / 藏 / 留在 / 占 / 指向 / 对着 / 看得到 / 可见 / 贴着画面这类可见写法；只出现部位字不算）（决策 D09、L059；镜头转向与目光 / 视线的方位不算）。③ 跟拍没有位移证据：
+  有跟拍 / 跟住 / 跟随 / 贴在……身后 / 一起往……冲，整镜找不到视差、掠过、刷过、移进移出、从画面某缘……（决策 D01、D04，L044、L143；编辑命令不报）。
+  ④ 高速镜里写“位置和大小稳住 / 不变”：同镜有高速、急冲、飞快、往上窜……才报（决策 D04、L047、L144）；总括保证句的跟拍取景豁免不动。
+  ⑤ 尺度比喻用具体实物：有……那么大、像……一样高、……大小的，比的对象是主体部位（头、身、爪、尾……）不报（附录第 67 条、L149）；
+  “露出 / 看到 + 全身、长身体、整条身体”并进“能装下什么”那条，句末加注 L145。
+  （v37：④⑤ 并进反模式表的 AP01、AP03，按表里的正则和场合报，代码里那两套词表删掉；“能装下什么”的两条正则也搬进表里 AP02。）
+v37 反模式表（references/antipatterns.md，2026-10-01）：已知失效写法的唯一清单，本脚本直接读表出提醒——新增失效写法在表里加一行，
+  不在这里加词表。只读编号是 AP+数字、触发列是反引号正则的行；触发列写「实现：代码」的是索引行（逻辑在本脚本里），跳过。
+  场合决定扫哪段：任何 = 全文（剥台词、去锁定文字），镜内 = 每镜正文（去镜头标题、剥台词、去锁定文字），速度镜 / 贴身近景 = 镜内且该镜正文
+  有表里写的判定词，白模 = --mode 白模 时扫全文，主体段 / 场景段 = 只扫那一段。同一行在同一镜（或同一稿）只报一条、列前 3 个命中；
+  --asks 有效要求的关键词按 _asked 豁免。文案：「镜1 反模式 AP01（两条以上 L047、L144）：「…」；为什么；改成：…」，证据是单次 / 未试的
+  在编号后标「候选」。每镜的反模式提醒放在这一镜其它提醒之后，全稿级的放在否定句提醒之前。AP02 例外：正则从表里读，文案沿用
+  “取景写成了‘能装下什么’”那条，末尾标编号与证据。表缺失或一行都读不出来时 checked 记「反模式表未加载」，不报错、不中断。
+  三个降噪开关：--mode 白模（白模或运镜参考视频驱动的稿：命令区总览句不报，场合是白模的行才扫；朝向只写方位词、
+  跟拍没有位移证据、未识别到摄影运动三条也不报，朝向和运镜由视频1给，不再靠命令区出现“白模”二字）；--rewrite-authorized（用户授权
+  整镜重写：不报“父稿有 N 句在新稿里消失”和“新稿比父稿长”，--asks 照旧核对）；--adjudicated 文件（一行一条、# 后是注释：提醒去掉
+  镜号前缀后以某一行开头的就删掉，行首写了镜号的只删那一镜；summary 在“待裁定提醒 N 条”后面加“｜已裁定 M 条”，JSON 加 adjudicated 列出删掉的原文）。
 否定句：四段稿默认预算 0 条自写否定（固定句不计）。全文（固定句与引号内台词除外，先去掉段落标题与镜头标题，紧跟标题的第一句也算）里
   句首是 `不出现|不添加|不得|不要|不能|不许|不可|不允许|禁止|避免|严禁|请勿|别` 的句子逐句给**提醒**（不是错误）；用 --negative-exception
-  逐句点名的不再提醒（“主体：不要任何声音。”点名“不要任何声音。”）。位置按 writing-rules 第 62 条：只管一镜的写那一镜；全片级的写一次——
+  逐句点名的不再提醒（“主体：不要任何声音。”点名“不要任何声音。”）。位置按 writing-rules 附录第 62 条：只管一镜的写那一镜；全片级的写一次——
   身份数量类（含静音）写主体段末尾，环境、光、文字水印类写场景段末尾；操作类写命令区；素材职责句里的“不采用……”不算否定句。
-  第 62 条列的已试例外多是句中否定（开始的一秒画面是纯黑，
+  附录第 62 条列的已试例外多是句中否定（开始的一秒画面是纯黑，
   看不到任何轮廓、光点或亮边），脚本不逐句提醒；点名时稿里有这一整句（单独成句）就不报错。“没有”“无”不当否定句抓。继承的四段稿也逐句提醒。
   五段 / 六段旧壳按结尾段口径：显式 --format 五段 / 六段、没有父稿时，结尾段预算 4 条（含旧固定句，用户逐字锁与操作类官方约束句不计），
   超过报错，除非 --negative-exception 逐句点名超出的必要否定（每句与结尾段里一条独立否定条款整句一致，重复声明和片段不计数）；
@@ -157,6 +179,14 @@ v35 表演排队提醒（writing-rules 成文主规则第 8 条，用户 2026-09
   与钩子对同一段正文算出的哈希一致。有错误时照样写报告（ready=false），退出码不变。
   created_at 是本次运行时间、session_id 取环境变量 AIGC_SESSION_ID（没设为 null），钩子用它们做本轮绑定。
   典型用法：--report ~/.aigc-video-gate/<时间戳>.json，每次检查用一个新路径。
+  v38 回放补：--mode 白模 时命令区没有「严格保持 / 切点前后状态一致 / 角色一致性」任一句，报反模式 AP09（候选；代码索引行，为什么、证据、改成从表里读；
+  seedance-operations 第 0.5 节），默认模式不报。
+  v38 度量回路：报告与 stdout 的 JSON 多存六样，summary 一行不变（hooks/stop_gate.py 只读 sha 与 kind，不受影响）——
+  antipatterns：每条反模式提醒一项 {id, shot（镜号，全稿级的是 null）, hits（全部命中词）, evidence（证据列原文）, candidate, adjudicated}，
+  被 --adjudicated 删掉的也在，adjudicated=true；adjudicated_ids：删掉的那几条的编号，一条一项；mode（白模 / 默认）；rewrite_authorized；
+  asks_file（--asks 的绝对路径，没给是 null）；hint_types：这次出的全部提醒（待裁定加已裁定）按 总览句 / 父稿句消失 / 复读 / 密度（只算字数密度）/
+  否定句 / 反模式 / 其它 计数（分类函数 hint_type）。用户评价成片后用 scripts/log_outcome.py 按 sha 记进同目录的 outcomes.jsonl，
+  「整理经验」前用 scripts/rule_stats.py 汇总全部报告与成片结果。
 
 退出码 0 = 无错误，1 = 有错误，2 = 参数错误。summary 一行可直接贴到交付里；它带 delivered_sha256 前 8 位
 （非 --partial 时即 checked_sha256 前 8 位），必须来自真实运行结果，可与报告、工具日志和正文核对；哈希不是执行签名或质量证明。
@@ -189,7 +219,7 @@ ASSET_KIND = {"图片": "图", "图": "图", "视频": "视频", "音频": "音�
 BIND_VERBS = ["用于", "定义", "采用", "参考", "只负责", "负责", "提供", "作为"]
 # 风格段只写画面质感与镜头性格（画风与渲染、材质与表面、光的质感与层次、焦段景深手持还是稳定）。
 # 下面几组词出现在风格段就提醒：时序属于镜内，具体运镜路径与动作也属于镜内；衣物、头发、持物的随动（与主体段共用 SUBJECT_FOLLOW_RE）、
-# 表演（表演、克制、眼神、表情、微动、随呼吸）和“放慢后恢复”这类时序也写进镜内（writing-rules 成文主规则第 3 条、第 56 条）。词表可调。
+# 表演（表演、克制、眼神、表情、微动、随呼吸）和“放慢后恢复”这类时序也写进镜内（writing-rules 成文主规则第 3 条、附录第 56 条）。词表可调。
 STYLE_SEQUENCE_WORDS = ["先", "随即", "接着", "然后", "紧接着", "最后", "开场", "收尾时", "第一秒", "之后"]
 STYLE_MOVE_WORDS = ["推近", "推进", "后拉", "拉远", "横移", "环绕", "升降", "跟随", "俯冲", "甩",
                     "横扫", "扑向", "蹬", "抓", "砸", "扑下", "后退下降"]
@@ -209,7 +239,7 @@ LEAK_RES = [
     (re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I), "UUID 泄露"),
     (re.compile(r"@(?!图片|视频|音频|图)\S+"), "非法 @ 引用（新稿不写 @，写 图N/视频N/音频N；旧稿的 @图片N/@视频N/@音频N 仍合法）"),
 ]
-# 引用性措辞（writing-rules 第 60 条，SKILL.md 必须守住第 7 条）：(显示名, 正则)，命中报错误；台词与锁定文字不扫。
+# 引用性措辞（writing-rules 附录第 60 条，SKILL.md 必须守住第 7 条）：(显示名, 正则)，命中报错误；台词与锁定文字不扫。
 # 按词加字边界或上下文，免得普通说法被当成引用：“宛如上好的宣纸”不是“如上”（只认句首或标点后）；“夜空挂上一轮满月”“天上一轮明月”
 # 不是“上一轮”（前面是挂 / 披 / 升……或后面跟着月、日）；“不要像木偶一样僵”不是引用（“不要像”后面跟上次 / 之前 / 刚才 / 上一版才算）；
 # “承接@视频1的尾帧”是延长命令的写法，“承接着”后面紧跟素材标签不算。词表可调
@@ -229,7 +259,7 @@ REF_ERR_RES = [(name, re.compile(rx)) for name, rx in [
 REF_WARN = ["刚才"]
 REF_AGAIN = "再次"
 INTERNAL = ["可见清单", "锁定项", "执行回执", "FightBeat", "接触台账", "L1 ", "L2 ", "L3 ", "理解度", "导演提案", "【本轮修改】", "【联动修改】", "已完成内部全量校验"]
-# 空词 + 解释词（只解释画面的意思、不产生画面；writing-rules 第 59、69 条）。台词、--lock 锁定文字与 --asks 有效要求的关键词不扫。词表可调。
+# 空词 + 解释词（只解释画面的意思、不产生画面；writing-rules 附录第 59、69 条）。台词、--lock 锁定文字与 --asks 有效要求的关键词不扫。词表可调。
 EMPTY_WORDS = ["高级感", "史诗感", "震撼", "美丽", "灵动",
                "仿佛", "似乎", "像是在", "营造", "氛围", "有一种", "为了表现", "为了突出", "以表现", "以突出"]
 # 机制词只说原因、不产生画面；提醒改写看得见的结果。与发力过程写法同句时并入那一条。(显示名, 正则)，词表可调。
@@ -240,8 +270,8 @@ MECHANISM_RES = [(name, re.compile(rx)) for name, rx in [
     ("惯性", r"惯性"), ("过冲", r"过冲"), ("受力链", r"受力链"), ("蓄力", r"蓄力"), ("势能", r"势能"),
     ("扭矩", r"扭矩"), ("发力链", r"发力链"),
 ]]
-# 尺度名词：只有特写 / 大特写 / 微距装得下（近景、中近景装不下，L088）；词表与 writing-rules 第 5 条一致。
-# 出现在别的景别里等于要求模型换景别去拍。只扫镜头正文；主体、场景、风格段描述表面属性的材质词不受第 5 条约束，不扫。
+# 尺度名词：只有特写 / 大特写 / 微距装得下（近景、中近景装不下，L088）；词表与 writing-rules 第 5 道门一致。
+# 出现在别的景别里等于要求模型换景别去拍。只扫镜头正文；主体、场景、风格段描述表面属性的材质词不受第 5 道门约束，不扫。
 # 按句判断：取尺度名词前面最近的一个景别词或画框切线（同镜内往前找；前面一个都没有就看同一句后面），它是 CLOSEUP_WORDS 才不报；
 # 前面两三个字里有“不是 / 并非 / 而非 / 不 / 非”的景别词是在排除，不算（“近景（不是特写）”仍按近景）。几张词表可调。
 MICRO_SCALE_WORDS = ["织纹", "纤维", "毛孔", "抽丝", "绒毛", "指纹"]
@@ -250,12 +280,12 @@ CLOSEUP_WORDS = ["特写", "大特写", "微距"]
 SCALE_MARK_RE = re.compile(r"大特写|特写|微距|中近景|近景|中全景|中景|大全景|全景|大远景|远景"
                            r"|(?:画框|画面)[上下左右]?缘(?:切|升|降|压|卡|停|落|退)(?:在|到|过)|切在|切过|切到")
 SCALE_NEGATION_RE = re.compile(r"(?:不是|并非|而非|并不是|不|非)\s*$")
-# 取景写成“能装下什么”（writing-rules 第 10 条、L101：可能让模型自己挑一个装得下的大景别，半秒内拉成远景）。只扫镜头正文。词表可调
-FRAMING_FIT_RE = re.compile(r"刚够装下|刚好装下|能装下|装得下|能看见全身|能看到全身|拉到能看见|拉到能看到|退到能装下")
+# 取景写成“能装下什么”（writing-rules 决策 D07、L101）与“露出 / 看到 + 全身、长身体”（L145）：v37 起两条正则都在反模式表 AP02
+# （references/antipatterns.md），这里不再放词表；文案仍是“取景写成了‘能装下什么’”那条，见 main 里的逐镜扫描。
 # 绝对化的空或黑：模型会给一块死区，要写暗处还留着什么。词表可调。
 ABSOLUTE_VOID_WORDS = ["压死的黑", "死黑", "纯黑", "漆黑一片", "什么都没有",
                        "再没有第三样", "空无一物", "一片虚无"]
-# 有意的纯黑（writing-rules 第 12 条豁免，L073、L074 已试）：VOID_INTENT_WORDS 里的词所在的句子写明了持续多久或占多大范围
+# 有意的纯黑（writing-rules 附录第 12 条豁免，L073、L074 已试）：VOID_INTENT_WORDS 里的词所在的句子写明了持续多久或占多大范围
 # 就不报（开始的一秒画面是纯黑、画面九成落在纯黑里）；按哪处光曝光可带可不带，只写曝光不算；镜头标题的时码与“第N秒”是时间点，
 # 不算时长；“一成不变”“大半圈”这类不是画面范围。压死的黑、什么都没有、再没有第三样这类不在豁免词里，照报。两张词表可调
 VOID_INTENT_WORDS = ["纯黑"]
@@ -263,11 +293,12 @@ VOID_INTENT_RE = re.compile(
     r"(?<![第\d.一二两三四五六七八九十])(?:[一二两三四五六七八九十\d]+(?:\.\d+)?|半)\s*秒"     # 持续多久
     r"|[一二两三四五六七八九十\d]\s*成(?![不是了为功])|[一二三四五六七八九十\d]+\s*分之|百分之|\d+\s*%"
     r"|大半(?![圈周天夜辈生年个])|一半(?![圈周])|半(?:幅|边)|[左右上下]半(?!身)")         # 占多大范围
-# 距离链：同一镜正文里远处位置词在前、贴镜动作词在后，两者之间又没有逼近或后拉的过渡时提醒（writing-rules 第 38 条）。
+# 距离链：同一镜正文里远处位置词在前、贴镜动作词在后，两者之间又没有逼近或后拉的过渡时提醒（writing-rules 附录第 38 条）。
 # 只看“从远到近”这个方向；贴镜在前、远处在后（人头掠出画后落幅停在远处的灯笼怪）不在这条里。三张词表可调。
 FAR_WORDS = ["远处", "尽头", "深处", "远端", "画面深处"]
-NEAR_CONTACT_WORDS = ["贴着镜头", "擦过镜头", "掠过镜头", "撑满画面", "占满画面", "贴到镜头"]
+NEAR_CONTACT_WORDS = ["贴着镜头", "擦过镜头", "擦着镜头", "掠过镜头", "撑满画面", "占满画面", "贴到镜头"]
 FAR_NEAR_BRIDGE_RE = re.compile(r"拉远|后拉|逼近|推近|走到镜头前|大步走近|走近镜头")
+FAR_BG_LAYER_RE = re.compile(r"背景(?:是|里)|远景(?:是|里)")   # v38：“背景是远处……”这类背景层句里的远处词说的是层次，不是主体位置（M010）
 # v21 关键事件在明处：关键动作与整幅遮挡写在同一句或相邻句时提醒（只提醒）。词表可调；按优先级排，先报前面的词
 KEY_ACTION_RES = [re.compile(rx) for rx in (
     r"松手", r"脱手", r"离手", r"松开", r"扔出", r"甩出", r"撒手", r"抛出", r"掷出",
@@ -287,7 +318,7 @@ FORCE_PROCESS_RES = [
     re.compile(r"(?:肩膀|肩|胯|腰|髋)(?:部)?(?:慢半拍|滞后)|(?:胯|腰|髋)(?:部)?(?:随后)?(?:才)?跟上"),
     re.compile(r"(?:引|拖)到最后"),
 ]
-# 重心类单独出现不报（“重心移到左脚”，writing-rules 第 20 条；保证 M001–M004 零误报，见 Q4）；同句已有上面的发力过程词，
+# 重心类单独出现不报（“重心移到左脚”，writing-rules 附录第 20 条；保证 M001–M004 零误报，见 Q4）；同句已有上面的发力过程词，
 # 或同句写了转肩 / 转胯 / 力……传到（FORCE_CHAIN_TRIGGER_RE）时才一起列出
 FORCE_CHAIN_ONLY_RE = re.compile(r"重心(?:压在|压到|移到|移向|转到|落在|落到|沉到|放在|前移|后移|下沉)")
 FORCE_CHAIN_TRIGGER_RE = re.compile(r"转肩|转胯|拧胯|拧腰|送肩|送胯|" + TRANSMIT_RX)
@@ -312,7 +343,7 @@ CAMERA_SERIAL_SECONDS = 0.5
 # v35 表演排队提醒（writing-rules 成文主规则第 8 条；只提醒不拦截，一镜合并一条，逐命中裁定）。只扫情节段各镜头正文，
 # 先用 DIALOGUE_RE 剥掉台词，报告模式和豁免模板都在这同一份字符串上 finditer，按 span 包含判定，不做主谓宾解析。
 # 小句按 clauses_of 那套标点切；“等…结束词”与豁免“(没|不|未)等…结束词”都只在本小句内、到最近第一次结束词即止。
-# “然后 / 随后 / 接着”单独出现不报（第 71 条认可的时序词）；“话音未落”“说到一半”本身不触发。词表可调
+# “然后 / 随后 / 接着”单独出现不报（附录第 71 条认可的时序词）；“话音未落”“说到一半”本身不触发。词表可调
 QUEUE_CLAUSE_CH = r"[^，,。.；;：:！!？?、\n]"
 QUEUE_END_WORDS = r"说完|做完|停下|结束"
 QUEUE_WAIT_TAIL = r"(?:(?!" + QUEUE_END_WORDS + r")" + QUEUE_CLAUSE_CH + r"){0,8}(?:" + QUEUE_END_WORDS + r")"
@@ -347,7 +378,7 @@ SHOT_LABEL_RE = re.compile(
     r"|(?:^|(?<=[。；;！!？?，,\n]))\s*第\s*[一二三四五六七八九十\d]+\s*拍\s*(?=[：:，,。；;！!？?\n]|$)"
     r"|(?:^|(?<=[。；;！!？?\n]))\s*第\s*\d+(?:\.\d+)?\s*秒\s*[：:]"
     r"|(?i:\b(?:camera|action|beat)\s*\d*\s*[:：])")
-# 画质词（writing-rules 第 77 条）：只能做风格段末尾的一小段尾巴。写进镜头正文、主体段、场景段就提醒；风格段只在它不在
+# 画质词（writing-rules 附录第 77 条）：只能做风格段末尾的一小段尾巴。写进镜头正文、主体段、场景段就提醒；风格段只在它不在
 # 最后一句时提醒（前面必须已有具体材质与光的句子）。词表可调
 QUALITY_RE = re.compile(r"(?i:8K|4K)|高清|超清|精美|电影感|电影级|大片感|高级感")
 # v23 主体段只写三件事：是谁、长什么样、有几个（writing-rules 成文主规则第 3 条）。下面几组写在主体段就提醒（只提醒不拦截）：这句写进情节里
@@ -383,7 +414,7 @@ SUBJECT_ACTION_RE = re.compile(r"不停地?|不断地?|一刻不停|来回|反�
                                r"|眨眼|转身|转头|回头|抬头|低头|点头|摇头|发抖|颤抖|挥(?:舞|动|手)|" + BG_ACT
                                + r"|(?<![挺海提选])拔(?!地|尖)|劈(?!柴)|砍|(?<!心)跳|踢|(?<![缓要])冲(?!刷|天|冠|淡|洗|积)"
                                r"|扑(?!克|粉|鼻|朔)|(?<![发指])挥|抡|扔|砸")
-# 情绪不写主体段，在镜内落成可见表演（seedance-format 第 3 节主体段、writing-rules 第 47 条）。可调
+# 情绪不写主体段，在镜内落成可见表演（seedance-format 第 3 节主体段、writing-rules 决策 D13）。可调
 SUBJECT_EMOTION_RE = re.compile(r"愤怒|恼怒|暴怒|恐惧|害怕|惊恐|惊慌|慌张|冷笑|狞笑|悲伤|哀伤|伤心|紧张|焦虑|不安|得意|兴奋|狂喜|绝望")
 SUBJECT_CAMERA_RE = re.compile(r"镜头|画框|机位|入画|出画|前景|跟拍|推近|拉远|特写|近景|全景|中景|远景")  # 镜头与调度
 SUBJECT_SKIP_RE = re.compile(r"(?:也)?不(?:采用|需要|要|用|取)[^，。；：]*")
@@ -457,7 +488,7 @@ CAMERA_MOVE_RE = re.compile(
     r"|[左右上下]摇|摇向|摇到|摇回|摇起|摇过|摇镜"
     r"|推(?![开门倒搡辞给])|拉(?![开紧住扯链手伸长])|摇(?![头晃动摆曳铃手篮扇尾])|移(?![开交植])|跟(?![前班头斗])|升|降"
     r"|(?<!一)甩(?![出开平起动袖头手掉干])|(?<!缠)绕")
-# 弱运镜（writing-rules 第 25 条、cases H5）：弱词后面 0–4 个字内跟着镜头动词（推近、后拉、拉远、慢推、横移、平移、摇、升、降、环绕、
+# 弱运镜（writing-rules 决策 D03、cases H5）：弱词后面 0–4 个字内跟着镜头动词（推近、后拉、拉远、慢推、横移、平移、摇、升、降、环绕、
 # 跟拍、推、拉；讲戏口吻常省掉“镜头”，不要求前面有“镜头 / 摄影机”），而且同一分句里弱词前面 6 字内没有身体部位（嘴角、眉、眼睑、
 # 下巴、肩、手、头、身、腰、膝）——“嘴角轻微下拉”“眉头轻微下压”“肩膀微微下降”是表演，不是镜头；“下拉 / 上拉 / 拉长 / 拉开”也不算运镜。
 # 手持抖动类的弱词（轻微晃动 / 抖动 / 浮动、微抖）仍要前面 20 字内有“摄影机 / 镜头 / 机位”，免得“衣摆轻微晃动”误报。词表可调
@@ -468,6 +499,77 @@ WEAK_MOVE_RE = re.compile(
     r"|摇(?![头晃动摆曳铃手篮扇尾])|升|降)")
 WEAK_BODY_RE = re.compile(r"嘴角|嘴唇|眉|眼睑|眼皮|下巴|下颌|肩|(?<!持)手(?!持)|(?<![镜龙码])头|(?<![机车])身|腰|膝")
 WEAK_SHAKE_RE = re.compile(r"(?:摄影机|镜头|机位)[^。；\n]{0,20}(?:几乎不可察觉|几乎察觉不到|微微晃|轻微(?:晃动|抖动|浮动)|微抖)")
+# ---- 2026-10-01 五条提醒（蛟龙雷暴、曲伯牌坊复盘；都只提醒不拦截；只扫镜头正文：去掉镜头标题、挖掉引号内台词，锁定文字不扫；每镜每条最多一次）----
+# 第 5 条的后一半（露出 / 看到 + 全身）并进“能装下什么”那条；v37 起这条和下面的 ④⑤ 都改由反模式表驱动（见本段末尾）。
+# ① 角度词前的削弱词（writing-rules 成文主规则第 6 条、L050：写“微微仰拍，看得到下颌底面”两版都接近平视，去掉“微微”仰角才出来）：
+# 弱词后 0–4 字内紧跟角度词才报，“略高于”“稍作停顿”单独出现不报。弱词在 WEAK_WORDS 之外补上 略 / 稍 / 稍微 / 略微 / 轻轻，
+# 另起一张表、不并进 WEAK_WORDS——那张表还管弱运镜提醒，并进去会改它的行为；“稍后 / 稍候 / 稍等 / 略过 / 略去”不是削弱词。
+# 仰起 / 俯下 / 上仰 / 下俯 人也做得出来：同一分句里弱词前 6 字内有身体部位（与弱运镜共用 WEAK_BODY_RE），或角度词后面紧跟
+# 头 / 脸 / 身 / 下巴……（“头微微仰起”“微微俯下身”）是表演，不报；仰拍 / 俯拍 / 仰角 / 俯角只有镜头做得出来，不看部位。词表可调
+ANGLE_WEAK_WORDS = WEAK_WORDS + r"|稍微|稍稍|略微|略略|略(?![过去])|稍(?![后候等])|轻轻"
+ANGLE_WORDS = r"仰拍|俯拍|仰角|俯角|仰起|俯下|上仰|下俯"
+WEAK_ANGLE_RE = re.compile(r"(?:" + ANGLE_WEAK_WORDS + r")地?[^，,。；;！!？?\n]{0,4}?(?P<ang>" + ANGLE_WORDS + r")")
+ANGLE_BODY_WORDS = {"仰起", "俯下", "上仰", "下俯"}
+ANGLE_BODY_AFTER_RE = re.compile(r"^\s*(?:头|脸|身|腰|脖|颈|下巴|下颌|胸)")
+# ② 朝向只写方位词、没有部位判据（writing-rules 决策 D09、L059：写“看向右前方”成片转向画面左，只写从这个机位露出哪些部位才管住）：
+# 同一句（到句号 / 分号为止）里有“看向 / 望向 / 望着 / 看着 / 盯着 / 脸朝 / 朝向 / 面朝 / 面向 / 转向 / 侧向 +（画面 / 自己的）左 / 右……”这类方位断言
+# （“望着自己的右前方”这种人物自身方位也算，曲伯原句；“画面向右移动”“画面向右倾斜”里的“面向”不算，面朝 / 面向前面不能是“画”），
+# 又没有部位判据时报：部位词（耳、后脑、鼻尖、鼻梁、下巴、颧、脸颊、眼、眉、嘴、额）前后 6 字内要有露出 / 留在 / 指向……这类可见写法（v38 回放收窄，ORIENT_VIS_RE）。“望向远处的山”没有左右，不报；“盯着右手”的
+# 右手是部位不是方位，不算；同一分句里动词前 6 字内有镜头 / 摄影机 / 机位 / 焦点（“镜头转向画面左侧”）的是运镜，不算；
+# 有目光 / 视线 / 眼神 / 眼睛 / 抬眼 / 垂眼 / 抬头看 / 低头看（“目光看向画面右下方”“抬眼看向画面右上方”）的是视线方位，决策 D09 本身允许，也不算；
+# 方位词后 8 字内跟着视线 / 目光 / 眼神（“看向画面左下方的视线”）也是视线；方位词后紧跟“的那半边 / 那一侧”是受光面描述，不算——
+# 只有头和身体的朝向才要部位判据。部位词含侧脸 / 半边脸 / 正脸，可见写法含照亮 / 亮边 / 暗部这类光的写法（L059、决策 D11）。词表可调
+ORIENT_DIR_RE = re.compile(r"(?:看向|望向|望着|看着|盯着|脸朝|朝向|(?<!画)面朝|(?<!画)面向|转向|侧向)(?:画面|自己的?)?[左右](?:前|后|上|下)?(?:方|侧|边)?"
+                           r"(?![手脚肩臂腿眼耳脸膝腕掌胸腰爪翼腹])")
+ORIENT_PART_RE = re.compile(r"侧脸|半边脸|正脸|耳|后脑|鼻尖|鼻梁|下巴|颧|脸颊|眼|眉|嘴|额")
+# v38 回放：部位词前后 6 字内有这些可见写法才算部位判据（附录第 33 条、L059 的原句：鼻尖和下巴指向、后脑留在、右耳露出后半只）；
+# 只出现部位字（“一只眼睛盯着上方”“眼里闪着电光”“转眼间”）不算，不豁免。词表和字数可调
+ORIENT_VIS_RE = re.compile(r"露出|露|挡住|挡|藏在|藏|留在|占住|占|指向|对着|看得到|看不到|可见|贴着画面"
+                           r"|照亮|被照|亮边|勾出|沉进暗部|暗部")   # 后一行是光的写法：受光面印证朝向（L059、决策 D11）
+ORIENT_VIS_GAP = 6
+ORIENT_CAMERA_RE = re.compile(r"镜头|摄影机|机位|相机|机器|焦点")
+ORIENT_GAZE_RE = re.compile(r"目光|视线|眼神|眼睛|抬眼|垂眼|抬头看|低头看")   # 动词前 6 字内（带上动词第一个字，“抬头看向”才认得出）
+ORIENT_GAZE_AFTER_RE = re.compile(r"视线|目光|眼神")   # 动词后到方位词后 8 字内有这些（“看向画面左下方的视线”）也是视线
+ORIENT_GAZE_AFTER = 8
+ORIENT_LIT_SIDE_RE = re.compile(r"的那半边|的那一侧|那半边脸|那一侧")   # 方位词后紧跟这些，说的是受光的那半边脸（M002），不是朝向断言
+# ③ 跟拍没有位移证据（writing-rules 决策 D01、D04，L044、L143：只写“贴在身侧半个身位、和它一起往天上急冲”，模型当成起始站位，
+# 开场后镜头停住不跟）：一镜正文里有跟随写法，整镜又找不到任何位移证据（视差、边缘移入移出、一根根掠过……）时报一次。
+# “跟随感 / 跟拍感”是镜头性格，“目光跟住他”是视线，前面紧挨着“不 / 没 / 未 / 别 / 不再”的是否定，都不算。两张词表可调
+FOLLOW_RE = re.compile(r"贴身跟随|跟拍(?!感)|跟住|跟随(?!感)|贴在[^，,。；;！!？?\n]{0,6}?(?:后面|身后|身侧|背后)"
+                       r"|一起(?:往|向)[^，,。；;！!？?\n]{0,4}?(?:冲|飞|跑|升|盘)")
+FOLLOW_SKIP_BEFORE_RE = re.compile(r"(?:目光|视线|眼神|眼睛|不再|没有|[不没未别])\s*$")
+FOLLOW_EVIDENCE_RE = re.compile(r"视差|掠过|刷过|移进|移出|退出去|退出画|冲进来|飞出去|从画面[上下左右]缘|从画框(?:两侧|[上下左右]缘)"
+                                r"|一根根|一个个|一棵棵")
+# ④ 高速镜里的“位置和大小稳住 / 不变”、⑤ 尺度比喻用具体实物：v37 并进反模式表 AP01（场合 速度镜）、AP03（场合 任何），
+# 正则和判定词都在 references/antipatterns.md，这里不再放词表。AP01 照旧认单写的“大小不变”，防“机位的位置固定”的镜头主语排除
+# 写成了正则前面的后顾；AP03 把喻体是主体部位、它他她、画面比例的排除写进了正则。速度镜的判定词改用表里「场合」那张小表。
+# ---- v37 反模式表（references/antipatterns.md）----
+# 已知失效写法的唯一清单，本脚本直接读表出提醒；新增失效写法在表里加一行，不在这里加词表。表的格式、场合与判定词见那份文件。
+# 表在 main 里读（load_antipatterns），import 本模块时不碰文件（hooks/stop_gate.py 与测试会 import 它）。
+ANTIPATTERN_PATH = Path(__file__).resolve().parent.parent / "references" / "antipatterns.md"
+AP_SCENES = ("任何", "镜内", "速度镜", "贴身近景", "白模", "主体段", "场景段")
+AP_SHOT_SCENES = ("镜内", "速度镜", "贴身近景")   # 逐镜扫、逐镜报
+AP_GATED = ("速度镜", "贴身近景")                # 该镜正文有表里写的判定词才扫
+AP_LEVELS = ("两条以上", "单次", "未试")          # 单次、未试的行提醒时在编号后标「候选」
+AP_CODE_TEXT = {"AP02"}   # 正则从表里读、文案在代码里的行：AP02 = “取景写成了‘能装下什么’”那条老提醒，通用扫描跳过它
+AP_CODE_TAGGED = {"AP09"}  # 触发在代码里、提醒带编号的索引行（AP09 = 白模命令区缺一致性句）；AP10–AP16 的提醒不带编号
+AP_INDEX_RE = re.compile(r"实现\s*[：:]\s*代码")  # 触发列写「实现：代码」的是索引行，脚本不读
+AP_SPAN_RE = re.compile(r"\x60([^\x60]+)\x60")    # 反引号里的正则
+ESC_PIPE = "\\" + "|"                  # Markdown 表格里转义过的竖线（反斜杠加竖线），读正则时还原
+SHOT_PREFIX_RE = re.compile(r"^镜\d+\s+")        # 提醒开头的镜号（镜1 ）；裁定清单比对时去掉
+# v38 回放：--mode 白模 时命令区要有一句一致性约定（seedance-operations 第 0.5 节、白模模式卡），这三样一样都没有就给一条候选提醒；默认模式不报
+WB_CONSISTENCY_RE = re.compile(r"严格保持|切点前后状态一致|角色一致性")
+# ---- v38 度量回路：报告里的提醒类别与反模式编号（scripts/rule_stats.py、scripts/log_outcome.py 也 import 这几样）----
+HINT_TYPES = ("总览句", "父稿句消失", "复读", "密度", "否定句", "反模式", "其它")   # 报告 hint_types 的键，固定这个顺序
+AP_TAG_RE = re.compile(r"反模式 (AP\d+)（")       # 提醒里的反模式编号（AP02 那条的编号在句末）
+SHOT_NO_RE = re.compile(r"^镜(\d+)\s")            # 提醒开头的镜号
+HINT_TYPE_RES = (   # 按先后认，认到哪类算哪类；带反模式编号的先归「反模式」，都不是的归「其它」
+    ("总览句", re.compile(r"^情节段开头有总览句")),
+    ("父稿句消失", re.compile(r"^父稿有 \d+ 句在新稿里消失")),
+    ("复读", re.compile(r"^复读提醒")),
+    ("密度", re.compile(r"^镜\d+ 每秒 [\d.]+ 字，超过参考线")),        # 只算字数密度；动作节拍、串行运镜归「其它」
+    ("否定句", re.compile(r"^否定句：|^(?:结尾段|末尾)否定句")),
+)
 QUALITY_ONLY = re.compile(r"(8K|4K|高清|精美|电影感|高级感|电影级|超清)")
 # 固定句：四段新稿用新句，五段 / 六段旧稿用旧句，继承模式按父稿用的那一句。匹配容忍 BGM 前后的空格与末尾句号。
 CLOSING_NEW = "全片不添加BGM，不添加字幕"
@@ -508,7 +610,7 @@ PROMPT_CHAR_LIMIT = 15000
 # 字数密度参考线（字 / 秒）：可调、待实测。灯笼怪同一设计两版（L104）：不用 skill 版镜内约 78 字 / 秒，用户评价自然；
 # skill v23 版约 136 字 / 秒；官方案例多在 20–40 字 / 秒。只作提醒线，不是上限，两版管线不同，不能单独归因于字数
 DENSITY_CHARS_PER_SEC = 200   # 三个多镜成功案例最高 200 字/秒（M003），线放在它之上只抓极端过载；命令行 --density-line 可调，待 A/B
-# 虚词：顺序和时间已经清楚时可删。“慢慢”“急速”是速度，“先 / 接着 / 随后 / 最后 / 同时”是时序词（第 71 条），都不在表里；
+# 虚词：顺序和时间已经清楚时可删。“慢慢”“急速”是速度，“先 / 接着 / 随后 / 最后 / 同时”是时序词（附录第 71 条），都不在表里；
 # 只认“不断地”（“右缘不断扫进新的雨丝”不算）；“开始的一秒”“开始时”“一开始”是时间点（L073 的已试写法），不算
 FILLER_WORDS = ["逐渐", "渐渐", "缓缓", "一路", "此时", "这时", "继续", "不断地", "随之"]   # “开始”标记镜内起点，不算虚词
 FILLER_RE = re.compile("|".join(FILLER_WORDS))
@@ -963,10 +1065,243 @@ def weak_camera_hit(body):
     return bool(WEAK_SHAKE_RE.search(body))
 
 
+def weak_angle_hits(body):
+    """① 角度词前的削弱词：弱词后 0–4 字内紧跟角度词。仰起 / 俯下 / 上仰 / 下俯 人也做得出来，同一分句里弱词前 6 字内有身体部位、
+    或角度词后面紧跟头 / 脸 / 身……的是表演（“头微微仰起”“微微俯下身”），不报；仰拍 / 俯拍 / 仰角 / 俯角不看部位。"""
+    out = []
+    for m in WEAK_ANGLE_RE.finditer(body):
+        if m.group("ang") in ANGLE_BODY_WORDS:
+            a = max(body.rfind(c, 0, m.start()) for c in "，,。；;：:！!？?、\n") + 1
+            if (WEAK_BODY_RE.search(body[max(a, m.start() - 6):m.start()])
+                    or ANGLE_BODY_AFTER_RE.search(body[m.end():m.end() + 3])):
+                continue
+        out.append(m.group(0))
+    return list(dict.fromkeys(out))
+
+
+def orient_dir_hits(body):
+    """② 朝向只写方位词：按句（句号 / 分号 / 问号 / 感叹号 / 换行）找“看向 / 脸朝 / 转向……+ 左 / 右”，这一句里没有部位判据（部位词前后 6 字内带露出 / 留在 / 指向……这类可见写法，见 orient_part_criterion）才报；
+    同一分句里动词前 6 字内有镜头 / 摄影机 / 机位 / 焦点的是运镜，有目光 / 视线 / 眼神 / 眼睛 / 抬眼 / 垂眼 / 抬头看 / 低头看的是视线方位
+    （决策 D09 允许），方位词后 8 字内跟着视线 / 目光 / 眼神的（“看向画面左下方的视线”）也是视线，方位词后紧跟“的那半边 / 那一侧”的
+    是在说受光的那半边脸（“朝向画面左侧的那半边脸被照亮”），都不算。"""
+    out = []
+    for sent in re.split(r"[。；;！!？?\n]", body):
+        hits = []
+        for m in ORIENT_DIR_RE.finditer(sent):
+            a = max(sent.rfind(c, 0, m.start()) for c in "，,：:、") + 1
+            before = sent[max(a, m.start() - 6):m.start()]
+            if ORIENT_CAMERA_RE.search(before) or ORIENT_GAZE_RE.search(sent[max(a, m.start() - 6):m.start() + 1]):
+                continue
+            if ORIENT_GAZE_AFTER_RE.search(sent[m.start() + 2:m.end() + ORIENT_GAZE_AFTER]) or ORIENT_LIT_SIDE_RE.match(sent[m.end():]):
+                continue
+            hits.append(m.group(0))
+        if hits and not orient_part_criterion(sent):
+            out += hits
+    return list(dict.fromkeys(out))
+
+
+def orient_part_criterion(sent):
+    """这一句里有没有部位判据：部位词（ORIENT_PART_RE）前后 ORIENT_VIS_GAP 字内有可见写法（ORIENT_VIS_RE）——
+    可见写法在部位词后面的从部位词结尾往后数，在前面的从部位词开头往前数，间隔不到 6 个字。只出现部位字不算。"""
+    vis = [v.span() for v in ORIENT_VIS_RE.finditer(sent)]
+    for m in ORIENT_PART_RE.finditer(sent):
+        for s, e in vis:
+            if (s >= m.end() and s - m.end() < ORIENT_VIS_GAP) or (e <= m.start() and m.start() - e < ORIENT_VIS_GAP):
+                return True
+    return False
+
+
+def follow_without_evidence(body):
+    """③ 跟拍没有位移证据：一镜正文里有跟随写法（前面紧挨着目光 / 视线 / 否定字的不算），整镜又没有任何位移证据词时，返回跟随写法。"""
+    hits = [m.group(0) for m in FOLLOW_RE.finditer(body)
+            if not FOLLOW_SKIP_BEFORE_RE.search(body[max(0, m.start() - 3):m.start()])]
+    if hits and not FOLLOW_EVIDENCE_RE.search(body):
+        return list(dict.fromkeys(hits))
+    return []
+
+
+def _unpipe(s):
+    """表格单元格里转义过的竖线（反斜杠加竖线）还原成竖线，去掉首尾空白。"""
+    return s.replace(ESC_PIPE, "|").strip()
+
+
+def _md_cells(line):
+    """切一行 Markdown 表格：只在反引号外、没被反斜杠转义的竖线处切；转义过的竖线原样留在单元格里，取用时再还原。"""
+    s = line.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    cells, buf, code, i = [], [], False, 0
+    while i < len(s):
+        ch = s[i]
+        if ch == "\\" and s[i + 1:i + 2] == "|":
+            buf.append(ESC_PIPE)
+            i += 2
+            continue
+        if ch == "\x60":                           # 反引号：进出代码段，代码段里的竖线不切
+            code = not code
+        if ch == "|" and not code:
+            cells.append("".join(buf).strip())
+            buf = []
+        else:
+            buf.append(ch)
+        i += 1
+    tail = "".join(buf).strip()
+    if tail:
+        cells.append(tail)
+    return cells
+
+
+def load_antipatterns(path=None):
+    """读反模式表（默认 references/antipatterns.md）。返回 (表或 None, 说明列表)。
+    表 = {"rows": [{id, scene, rxs, why, evidence, fix, candidate}], "gates": {场合: 判定词正则}, "index": 代码索引行数,
+         "code_rows": {编号: {id, scene, why, evidence, fix, candidate}}（代码索引行，AP09 这类带编号的代码行用它拼提醒）}。
+    只取编号是 AP+数字、触发列有反引号正则的行；触发列写「实现：代码」的索引行只计数。某一行写错就跳过这一行，原因写进说明；
+    文件读不到或一行都读不出来时返回 None，说明里带「反模式表未加载」——main 把说明写进 checked，不报错、不中断。"""
+    path = Path(path) if path else ANTIPATTERN_PATH
+    try:
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, [f"反模式表未加载：读不到 {path.name}（{type(exc).__name__}），表驱动的提醒这次都没跑"]
+    notes, rows, gates, seen, n_index, code_rows = [], [], {}, set(), 0, {}
+    for ln in lines:
+        if not ln.lstrip().startswith("|"):
+            continue
+        cells = _md_cells(ln)
+        key = cells[0] if cells else ""
+        if key in AP_GATED:                       # 「场合」小表里速度镜、贴身近景的判定词
+            spans = AP_SPAN_RE.findall(cells[2]) if len(cells) >= 3 else []
+            if spans:
+                try:
+                    gates[key] = re.compile("|".join("(?:" + _unpipe(s) + ")" for s in spans))
+                except re.error as exc:
+                    notes.append(f"反模式表：场合「{key}」的判定词编译不过（{exc}），这个场合的行这次不扫")
+            continue
+        if not re.fullmatch(r"AP\d+", key):
+            continue
+        if len(cells) < 6:
+            notes.append(f"反模式表 {key} 列数不对（要 6 列：编号 | 场合 | 触发 | 为什么 | 证据 | 改成），这一行跳过")
+            continue
+        scene, trig, why, evid, fix = cells[1:6]
+        if AP_INDEX_RE.search(trig):
+            n_index += 1
+            ev = _unpipe(evid)
+            code_rows[key] = {"id": key, "scene": scene, "why": _unpipe(why), "evidence": ev, "fix": _unpipe(fix),
+                              "candidate": next((lv for lv in AP_LEVELS if ev.startswith(lv)), None) != "两条以上"}
+            continue
+        if key in seen:
+            notes.append(f"反模式表 {key} 编号重复，后一行跳过")
+            continue
+        spans = AP_SPAN_RE.findall(trig)
+        if not spans:
+            notes.append(f"反模式表 {key} 的触发列没有反引号正则、也没写「实现：代码」，这一行跳过")
+            continue
+        if scene not in AP_SCENES:
+            notes.append(f"反模式表 {key} 的场合「{scene}」不在 {' / '.join(AP_SCENES)} 里，这一行跳过")
+            continue
+        try:
+            rxs = [re.compile(_unpipe(s)) for s in spans]
+        except re.error as exc:
+            notes.append(f"反模式表 {key} 的触发正则编译不过（{exc}），这一行跳过")
+            continue
+        evid = _unpipe(evid)
+        level = next((lv for lv in AP_LEVELS if evid.startswith(lv)), None)
+        if level is None:
+            notes.append(f"反模式表 {key} 的证据列不是以 两条以上 / 单次 / 未试 开头，按候选提醒")
+        seen.add(key)
+        rows.append({"id": key, "scene": scene, "rxs": rxs, "why": _unpipe(why), "evidence": evid, "fix": _unpipe(fix),
+                     "candidate": level != "两条以上"})
+    if not rows:
+        return None, notes + [f"反模式表未加载：{path.name} 里没有读得出的行，表驱动的提醒这次都没跑"]
+    for sc in AP_GATED:
+        if sc not in gates and any(r["scene"] == sc for r in rows):
+            notes.append(f"反模式表：场合「{sc}」没有判定词，这个场合的行这次不扫")
+    return {"rows": rows, "gates": gates, "index": n_index, "code_rows": code_rows}, notes
+
+
+def ap_scan(row, text, asked=lambda w: False):
+    """一行反模式在一段文本里的命中：正则按表里的先后扫，后面的命中和前面已有的重叠就不列；去重保序；--asks 关键词豁免。"""
+    spans, out = [], []
+    for rx in row["rxs"]:
+        for m in rx.finditer(text):
+            w = m.group(0)
+            if not w or any(s < m.end() and m.start() < e for s, e in spans):
+                continue
+            spans.append(m.span())
+            if not asked(w):
+                out.append(w)
+    return list(dict.fromkeys(out))
+
+
+def ap_label(row):
+    """提醒里编号后面括号里的字：证据列原文；单次、未试的前面加「候选，」。"""
+    return ("候选，" if row["candidate"] else "") + row["evidence"]
+
+
+def ap_warning(row, hits, tag=None):
+    """反模式提醒：「镜1 反模式 AP01（两条以上 L047、L144）：「…」；为什么；改成：…」；全稿级的不带镜号；最多列 3 个命中。"""
+    shown = "".join(f"「{w}」" for w in hits[:3])
+    return (f"{tag} " if tag else "") + f"反模式 {row['id']}（{ap_label(row)}）：{shown}；{row['why']}；改成：{row['fix']}"
+
+
+def hint_type(w):
+    """一条提醒归哪一类（HINT_TYPES 之一）：带「反模式 APxx（」的一律归反模式（含 AP02 那条取景提醒），其余按 HINT_TYPE_RES 先后认。"""
+    if AP_TAG_RE.search(w):
+        return "反模式"
+    for name, rx in HINT_TYPE_RES:
+        if rx.search(w):
+            return name
+    return "其它"
+
+
+def hint_counts(texts):
+    """按 HINT_TYPES 的顺序数各类提醒的条数，没有的类也给 0。"""
+    out = dict.fromkeys(HINT_TYPES, 0)
+    for w in texts:
+        out[hint_type(w)] += 1
+    return out
+
+
+def ap_refs(texts):
+    """从提醒原文里取反模式编号与镜号：[(编号, 镜号或 None)]。v38 之前的报告没有 antipatterns 字段，rule_stats 与 log_outcome 用它补。"""
+    out = []
+    for w in texts:
+        m = AP_TAG_RE.search(w)
+        if m:
+            s = SHOT_NO_RE.match(w)
+            out.append((m.group(1), int(s.group(1)) if s else None))
+    return out
+
+
+def parse_adjudicated(path):
+    """裁定清单（项目里的 adjudicated.txt）：一行一条，# 后面是注释；每行是提醒去掉镜号前缀后的开头文字（到第一个「：」或「「」为止就够），
+    行首写了镜号（镜2 …）的只管那一镜，只有镜号没有文字的行不算。返回去重后的行，镜号后面的空白统一成一个空格。"""
+    out = []
+    for raw in Path(path).read_text(encoding="utf-8-sig").splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        line = re.sub(r"^(镜\d+)\s*", r"\1 ", line)
+        if SHOT_PREFIX_RE.match(line) and not SHOT_PREFIX_RE.sub("", line).strip():
+            continue
+        out.append(line)
+    return list(dict.fromkeys(out))
+
+
+def adjudicated_key(w, keys):
+    """这条提醒被裁定清单里的哪一行删掉（没有就返回 None）：行首带镜号的拿整条提醒比开头，不带的先去掉提醒开头的镜号再比开头。"""
+    rest = SHOT_PREFIX_RE.sub("", w, count=1)
+    for k in keys:
+        if (w if SHOT_PREFIX_RE.match(k) else rest).startswith(k):
+            return k
+    return None
+
+
 def far_near_gap(body):
     """同一镜正文里远处位置词在前、贴镜动作词在后，两者之间没有“拉远 / 后拉 / 逼近 / 推近 / 走到镜头前 / 大步走近”这类过渡时，
-    返回 (远处词, 贴镜词)；贴镜在前、远处在后（人头掠出画后落幅停在远处的灯笼怪）不报。"""
-    fars = [(m.start(), m.group(0)) for m in re.finditer("|".join(FAR_WORDS), body)]
+    返回 (远处词, 贴镜词)；贴镜在前、远处在后（人头掠出画后落幅停在远处的灯笼怪）不报；
+    “背景是 / 背景里 / 远景是 / 远景里……”这类背景层分句里的远处词说的是层次，不算主体位置（M010），也不报。"""
+    fars = [(m.start(), m.group(0)) for m in re.finditer("|".join(FAR_WORDS), body)
+            if not FAR_BG_LAYER_RE.search(body[max(body.rfind(c, 0, m.start()) for c in "，,。；;：:！!？?\n") + 1:m.start()])]
     nears = [(m.start(), m.group(0)) for m in re.finditer("|".join(NEAR_CONTACT_WORDS), body)]
     for fp, fw in fars:
         for npos, nw in nears:
@@ -1263,7 +1598,16 @@ def main():
                          "每条「有效」的要求都要在正文里有落点，缺一条报错误")
     ap.add_argument("--save-checked", default=None)
     ap.add_argument("--report", default=None, help="把机械检查结果另存为 JSON（kind=light），供 hooks/stop_gate.py 守门核对；有错误也写（ready=false）")
-    ap.add_argument("--negative-exception", default="", help="要逐句点名的必要否定句本身，多句用“；”分开。四段稿（位置按 writing-rules 第 62 条：只管一镜的写那一镜；全片级的写一次——身份数量类（含静音“不要任何声音”）写主体段末尾，环境、光、文字水印类写场景段末尾；操作类写命令区）：点名的否定句不再提醒（其余每句给一条提醒），第 62 条的已试例外（句中否定）稿里有这一整句就不报错；五段 / 六段 / 继承旧稿：每句必须与结尾段里一条独立否定条款整句一致，数量要覆盖超出 4 条预算（含旧固定句）的部分。最终放行仍须审查")
+    ap.add_argument("--negative-exception", default="", help="要逐句点名的必要否定句本身，多句用“；”分开。四段稿（位置按 writing-rules 附录第 62 条：只管一镜的写那一镜；全片级的写一次——身份数量类（含静音“不要任何声音”）写主体段末尾，环境、光、文字水印类写场景段末尾；操作类写命令区）：点名的否定句不再提醒（其余每句给一条提醒），附录第 62 条的已试例外（句中否定）稿里有这一整句就不报错；五段 / 六段 / 继承旧稿：每句必须与结尾段里一条独立否定条款整句一致，数量要覆盖超出 4 条预算（含旧固定句）的部分。最终放行仍须审查")
+    ap.add_argument("--mode", choices=["白模", "默认"], default="默认",
+                    help="白模：视频1 是白模或运镜参考视频，命令区的对应句就是该有的内容——命令区总览句提醒不报，反模式表里场合是白模的行才扫；"
+                         "朝向只写方位词、跟拍没有位移证据、未识别到摄影运动三条也不报（朝向和运镜由视频1给）；命令区缺一致性句"
+                         "（严格保持 / 切点前后状态一致 / 角色一致性）报 AP09（候选）")
+    ap.add_argument("--rewrite-authorized", action="store_true",
+                    help="用户已授权整镜重写：不报“父稿有 N 句在新稿里消失”和“新稿比父稿长”；--asks 照旧核对")
+    ap.add_argument("--adjudicated", default=None,
+                    help="裁定清单文件（项目里的 adjudicated.txt，和 asks.txt 同目录）：一行一条、# 后是注释，每行是提醒去掉镜号前缀后的开头文字"
+                         "（到第一个「：」或「「」为止），以它开头的提醒不再报；行首写了镜号的只删那一镜；summary 记“已裁定 M 条”，JSON 的 adjudicated 列出删掉的原文")
     a = ap.parse_args()
     density_line = a.density_line if a.density_line is not None else DENSITY_CHARS_PER_SEC
 
@@ -1282,6 +1626,8 @@ def main():
         bail("--lock 不能是空文字")
     if a.asks and not Path(a.asks).is_file():
         bail(f"--asks 指定的要求清单找不到：{a.asks}")
+    if a.adjudicated and not Path(a.adjudicated).is_file():
+        bail(f"--adjudicated 指定的裁定清单找不到：{a.adjudicated}")
 
     raw = open(a.prompt, encoding="utf-8").read()
     cand_lines = raw.splitlines()
@@ -1319,6 +1665,21 @@ def main():
     ask_words = {w for r in asks_rows if r["active"] for g in r["groups"] for w in g}
     def _asked(w):  # 与 --asks 有效要求的关键词互相包含就不报
         return any(w in aw or aw in w for aw in ask_words)
+    # v37 反模式表（references/antipatterns.md）：读不出来只在 checked 里记一条，不报错、不中断
+    antip, antip_notes = load_antipatterns()
+    checked.extend(antip_notes)
+    if antip:
+        checked.append(f"反模式表已加载：{len(antip['rows'])} 行正则、{antip['index']} 行代码索引（references/antipatterns.md）")
+    ap02 = next((r for r in antip["rows"] if r["id"] == "AP02"), None) if antip else None     # 文案在代码里的那一行
+    shot_rows = [r for r in antip["rows"] if r["scene"] in AP_SHOT_SCENES and r["id"] not in AP_CODE_TEXT] if antip else []
+    ap_found = []   # v38：每条反模式提醒一项（含之后被 --adjudicated 删掉的），收尾时写进报告的 antipatterns
+    def _ap_add(row, hits, shot, text):
+        warnings.append(text)
+        ap_found.append((text, {"id": row["id"], "shot": shot, "hits": list(hits), "evidence": row["evidence"],
+                                "candidate": row["candidate"]}))
+    if a.mode == "白模":
+        checked.append("白模模式：命令区总览句不报")
+        checked.append("白模模式：朝向方位词、跟拍位移证据、摄影运动三条不报")
     # 即梦提示词上限 15000 字符（seedance-format 第 7 节），超过提交不了
     if len(text) > PROMPT_CHAR_LIMIT:
         errors.append(f"正文 {len(text)} 字符，超过即梦提示词上限 {PROMPT_CHAR_LIMIT} 字符（seedance-format 第 7 节）；"
@@ -1402,7 +1763,7 @@ def main():
         if unexpected:
             hints = []
             if "结尾" in unexpected and fmt == "四段":
-                hints.append("新稿不设结尾标题，末尾只有固定句一行；必要的否定句按 writing-rules 第 62 条的位置写（只管一镜的写那一镜，"
+                hints.append("新稿不设结尾标题，末尾只有固定句一行；必要的否定句按 writing-rules 附录第 62 条的位置写（只管一镜的写那一镜，"
                              "全片级的写主体段或场景段末尾，操作类写命令区），操作命令的必填句写进情节段开头的命令区")
             if "概述" in unexpected and fmt in ("四段", "五段"):
                 hints.append("新稿不设概述段；其中的身份、数量写进主体段，时长和镜数由镜头标题表达，风格写进风格段，剩下重复的删掉")
@@ -1428,13 +1789,19 @@ def main():
     overview = operation_text(text)
     command_zone = "情节段开头的命令区（情节：之后、第一个镜头标题之前）"
     # 只看真有“情节：”标题的稿：没有段落标题的稿，operation_text 退回整段前文只为推断任务类型，那不是情节段开头
-    if fmt == "四段" and task == "生成" and overview.strip() and re.search(r"^\s*情节\s*[：:]", text, re.M):
+    # --mode 白模：白模或运镜参考视频驱动的稿，命令区里的对应句就是该有的内容，总览句提醒整个不报（checked 已记）
+    if fmt == "四段" and task == "生成" and a.mode != "白模" and overview.strip() and re.search(r"^\s*情节\s*[：:]", text, re.M):
         # 命令区里的素材职责与操作句（参考视频1的运镜、图3作为首帧、提供宫格分镜、沿用、白模、绿幕……）不是总览句，不报
         summary_like = [s for s in split_sentences(overview) if not COMMAND_SENT_RE.search(s)]
         if summary_like:
             head = " / ".join(summary_like)[:40]
             warnings.append(f"情节段开头有总览句：「{head}」；生成类新稿情节段直接从镜头标题开始，时长与镜数由镜头标题表达，"
                             "身份与数量写进主体段，其余控制写进它发生的那一拍，确认是重复就删掉")
+    ap09 = antip["code_rows"].get("AP09") if antip else None   # 白模命令区缺一致性句：触发在代码里，为什么、证据、改成从表里读
+    if a.mode == "白模" and ap09 and not WB_CONSISTENCY_RE.search(overview):
+        _ap_add(ap09, ["命令区缺一致性句"], None,
+                f"反模式 AP09（{ap_label(ap09)}）：命令区没有「严格保持」「切点前后状态一致」「角色一致性」任一句；"
+                f"{ap09['why']}；改成：{ap09['fix']}")
     command_location = "概述段" if re.search(r"^\s*概述[：:]", text, re.M) else command_zone
     # 四段（含继承）必填句一律在命令区；其它继承旧壳两处都接受（按父稿）。
     m_tail = re.search(r"结尾[：:](.*)$", text, re.S)
@@ -1536,7 +1903,7 @@ def main():
         prev = nonblank[-2].strip()
         if TAIL_ZONE_LINE.search(prev):
             errors.append(f"末尾只留固定句：倒数第二行是否定 / 约束 / “保持…”句「{prev[:40]}」；"
-                          f"必要的否定句按 writing-rules 第 62 条的位置写（只管一镜的写那一镜，全片级的写主体段或场景段末尾，"
+                          f"必要的否定句按 writing-rules 附录第 62 条的位置写（只管一镜的写那一镜，全片级的写主体段或场景段末尾，"
                           f"操作类写命令区），操作命令的必填句写进{command_zone}")
         else:
             checked.append("末尾只有固定句一行，它前面是正文")
@@ -1617,7 +1984,7 @@ def main():
     for w in void_hits(lock_free):
         warnings.append(f"绝对化的空或黑：「{w}」；模型会给一块死区，写暗处还留着什么"
                         + ("；有意的纯黑在同一句写明持续多久或占多大范围（开始的一秒画面是纯黑、"
-                           "画面九成落在纯黑里）就不报，只写按哪处光曝光不算（writing-rules 第 12 条）" if w in VOID_INTENT_WORDS else ""))
+                           "画面九成落在纯黑里）就不报，只写按哪处光曝光不算（writing-rules 附录第 12 条）" if w in VOID_INTENT_WORDS else ""))
 
     # --- 锁定文字与未改镜头（原文匹配，只忽略换行）---
     flat = norm_lock(text)
@@ -1670,8 +2037,10 @@ def main():
             checked.append(f"要求清单 {asks_active} 条有效全部有落点"
                            + (f"，{len(withdrawn)} 条已标撤回：{'、'.join(withdrawn)}" if withdrawn else ""))
 
-    # --- 改稿不丢句：父稿有、新稿没有的句子（提醒）；长度增长（提醒）---
-    if revision:
+    # --- 改稿不丢句：父稿有、新稿没有的句子（提醒）；长度增长（提醒）。--rewrite-authorized：用户授权整镜重写，这两条不报 ---
+    if revision and a.rewrite_authorized:
+        checked.append("已按授权重写关闭父稿句消失提醒；要求清单仍核对")
+    elif revision:
         if a.partial:
             b_body = {h[2]: "\n".join(body) for (h, body, _t) in baseline_blocks if h[2] is not None}
             p_ids = [h[2] for h in parse_heads(cand_lines) if h[2] is not None]
@@ -1705,14 +2074,15 @@ def main():
         hm = HEAD_PATTERNS[h[1]].match(body)
         sbody = strip_dialogue(body[hm.end():] if hm else body)   # 去掉镜头标题本身与台词
         # 编辑命令的摄影按原视频（任务本身就在保护既有摄影），不报
-        if task != "编辑" and not cam_from_ref and not CAMERA_MOVE_RE.search(sbody):
+        # --mode 白模：运镜来自视频1，不报（不再靠命令区出现“白模”二字）
+        if task != "编辑" and not cam_from_ref and a.mode != "白模" and not CAMERA_MOVE_RE.search(sbody):
             warnings.append(f"{tag} 未识别到摄影运动；本用户默认每镜有可见运镜，固定须有用户要求或保护来源（SKILL.md 用户偏好）")
         if weak_camera_hit(sbody):
             warnings.append(f"{tag} 运镜用了弱措辞（几乎不可察觉 / 微微 / 轻微 / 极其缓慢地……）；本用户要可辨认的运动幅度，"
-                            f"核对是否有实际画面变化，不用微抖冒充运镜（writing-rules 第 25 条）")
+                            f"核对是否有实际画面变化，不用微抖冒充运镜（writing-rules 决策 D03）")
         if h[3] is not None and h[4] is not None and h[4] > h[3]:
             dur = h[4] - h[3]
-            # 时序词：句首已算一拍，“先”不另算；“同时”是并行叠加（writing-rules 第 53 条），不算新的一拍。
+            # 时序词：句首已算一拍，“先”不另算；“同时”是并行叠加（writing-rules 决策 D14），不算新的一拍。
             # 讲戏口吻少用时序词、一拍一两句，所以再按句数估一次（两句算一拍），取两者较大的
             n_seq = len(SEQ_WORD_RE.findall(sbody))
             n_sent = len([x for x in re.split(r"[。；;？?！!\n]", sbody) if x.strip()])
@@ -1802,11 +2172,32 @@ def main():
         if gap:
             warnings.append(f"{tag} 同一镜里既有远处位置又有贴镜动作（「{gap[0]}」在前、「{gap[1]}」在后，中间没有逼近或后拉），"
                             f"确认中间有一拍逼近或后拉把距离接上；那一拍写画框切在哪（“画框下缘切在他的膝盖”），不写“退到能装下整条身形”")
-        fits = list(dict.fromkeys(m.group(0) for m in FRAMING_FIT_RE.finditer(_no_lock(tbody))))
+        # 取景写成“能装下什么”（AP02）：两条正则在反模式表里，文案沿用这条老提醒，末尾标编号与证据。表里第一条（能装下）先列，
+        # 第二条（露出 / 看到 + 全身、长身体，L145）和它重叠的不重复列；有露出 / 看到这类命中时句末加注 L145，没有时原文案不变
+        nbody = _no_lock(tbody)
+        fits = ap_scan(ap02, nbody, _asked) if ap02 else []
         if fits:
-            warnings.append(f"{tag} 取景写成了“能装下什么”：{''.join(f'「{w}」' for w in fits)}；取景写画框切在哪"
+            shows = any(w.startswith(("露出", "看到", "看见")) for w in fits)
+            _ap_add(ap02, fits, h[2] or k + 1, f"{tag} 取景写成了“能装下什么”：{''.join(f'「{w}」' for w in fits)}；取景写画框切在哪"
                             f"（“画框下缘切在他的膝盖”），不写“退到刚够装下整条身形”“拉到能看见全身”，模型可能自己挑一个装得下的大景别"
-                            f"（writing-rules 第 10 条、L101）")
+                            f"（writing-rules 决策 D07、L101）" + ("；露出 / 看到 + 全身、长身体同样会把机位拉远（L145）" if shows else "")
+                            + f"；反模式 AP02（{ap_label(ap02)}）")
+        # 2026-10-01 另外三条（nbody 已去镜头标题、挖掉台词与锁定文字；每镜每条最多一次；原来的 ④⑤ 已并进反模式表 AP01、AP03）
+        angs = weak_angle_hits(nbody)
+        if angs:
+            warnings.append(f"{tag} 角度词前加了削弱词：{''.join(f'「{w}」' for w in angs[:3])}；带削弱词的角度会被吃掉，成片接近平视。"
+                            f"角度词前不加微微 / 略 / 稍，直接写“仰拍 / 俯拍”，再跟半句一眼能想象的画面"
+                            f"（“身后只有天空”“看得到头顶和脚下的地面”）（writing-rules 成文主规则第 6 条、L050）")
+        dirs = orient_dir_hits(nbody) if a.mode != "白模" else []   # --mode 白模：头部标记已给朝向，写方向动作即可（L153、决策 D09）
+        if dirs:
+            warnings.append(f"{tag} 朝向只写了方位词：{''.join(f'「{w}」' for w in dirs[:3])}，同一句里没有部位判据；方位词会被忽略或反着执行。"
+                            f"写从这个机位看露出哪些部位（“右耳露出后半只，左耳只露一道边”“两只眼睛都在画里，靠画面左边那只被鼻梁挡住一小半”）"
+                            f"（writing-rules 决策 D09、L059）")
+        follows = (follow_without_evidence(nbody) if task != "编辑" and a.mode != "白模" else [])   # 编辑命令的摄影按原视频，--mode 白模 的运镜来自视频1，都不报
+        if follows:
+            warnings.append(f"{tag} 跟拍没有位移证据：{''.join(f'「{w}」' for w in follows[:3])}，整镜找不到边缘移入移出或背景视差；"
+                            f"只写相机跟着，模型会当成起始站位，开场后镜头停住不跟。跟拍写全三样：镜头贴在主体哪个部位后面、"
+                            f"主体在画框里的位置、一处边缘移入移出或背景视差（“近处栏杆一根根从画面左缘掠过”）（writing-rules 决策 D01、D04，L044、L143）")
         pair = key_occlusion_pair(split_sentences(sbody))
         if pair:
             warnings.append(f"{tag} 关键动作「{pair[0]}」和整幅遮挡「{pair[1]}」写在同一句或相邻句；关键动作要在画里看得见、有光的位置完成，遮挡和它错开（动作在明处做完再遮，或遮挡过去之后再做）；用户要求的遮挡保留，只调先后")
@@ -1830,7 +2221,7 @@ def main():
         if qhits:
             qhits = list(dict.fromkeys(qhits))
             warnings.append(f"{tag} 镜头正文里有画质词{''.join(f'「{w}」' for w in qhits)}；程度写成看得见、数得出的结果"
-                            f"（越转越快、荡出右边缘再荡回来），画质词只作风格段末尾的尾巴（writing-rules 第 77 条）")
+                            f"（越转越快、荡出右边缘再荡回来），画质词只作风格段末尾的尾巴（writing-rules 附录第 77 条）")
         fsents, fwords = [], []
         for s in split_sentences(fbody):
             hs = [w for w in force_process_hits(s) if not _asked(w)]
@@ -1852,11 +2243,31 @@ def main():
             warnings.append(f"{tag} 可能的表演排队：{''.join(f'「{x}」' for x in qshown[:QUEUE_SHOW_MAX])}{qmore}；"
                             f"按成文主规则第 8 条，只核对本镜拍得到的人：反应从实际可感知的进行中起头，画里人物此前有可见的活动或注意；"
                             f"感知、身体条件或观看目的确需先后时可保留（逐条裁定）")
+        # v37 反模式表的逐镜行（镜内 / 速度镜 / 贴身近景）：放在这一镜其它提醒之后；nbody 已去镜头标题、剥台词、去锁定文字
+        for row in shot_rows:
+            gate = antip["gates"].get(row["scene"]) if row["scene"] in AP_GATED else None
+            if row["scene"] in AP_GATED and not (gate and gate.search(nbody)):
+                continue
+            hits = ap_scan(row, nbody, _asked)
+            if hits:
+                _ap_add(row, hits, h[2] or k + 1, ap_warning(row, hits, tag))
     for name, rx in MECHANISM_RES:
         if _asked(name):
             continue
         if len(rx.findall(lock_free)) > sum(len(rx.findall(s)) for s in force_sents_all):
             warnings.append(f"机制词：「{name}」只说原因、不产生画面；改写看得见的结果（越转越快、袖子被甩平、下摆整圈张开、被撞得连退），已经写了结果的删掉它不丢控制；用户点名要的部位细节或原话保留（写成它的可见结果，并记进 asks.txt 的落点关键词）")
+
+    # --- v37 反模式表的全稿级行（任何 / 白模 / 主体段 / 场景段）：放在否定句提醒之前；白模的行只在 --mode 白模 时扫 ---
+    if antip:
+        ap_secs = split_sections(text)
+        for row in antip["rows"]:
+            sc = row["scene"]
+            if sc in AP_SHOT_SCENES or row["id"] in AP_CODE_TEXT or (sc == "白模" and a.mode != "白模"):
+                continue
+            body = lock_free if sc in ("任何", "白模") else _no_lock(strip_dialogue(ap_secs.get(sc[:2]) or ""))
+            hits = ap_scan(row, body, _asked)
+            if hits:
+                _ap_add(row, hits, None, ap_warning(row, hits))
 
     # --- 否定句：四段（含继承）全文逐句提醒；五 / 六段与未知旧外壳用结尾段预算 ---
     neg = 0
@@ -1871,8 +2282,8 @@ def main():
         for s in rest:
             warnings.append(f"否定句：{s[:40]}；确认是特殊情况且无正向写法，否则改成要什么"
                             f"（能改成正向的写进主体、场景、风格或镜内）；改不掉的按位置写：只管一镜的写那一镜，全片级的写一次——"
-                            f"身份数量类（含静音）写主体段末尾，环境、光、文字水印类写场景段末尾，操作类写命令区（writing-rules 第 62 条）")
-        # 句中否定（writing-rules 第 62 条列的已试例外：开始的一秒画面是纯黑，看不到任何轮廓……）不在 found 里，
+                            f"身份数量类（含静音）写主体段末尾，环境、光、文字水印类写场景段末尾，操作类写命令区（writing-rules 附录第 62 条）")
+        # 句中否定（writing-rules 附录第 62 条列的已试例外：开始的一秒画面是纯黑，看不到任何轮廓……）不在 found 里，
         # 点名时对全稿逐句（去掉镜头与段落标题）整句比对，稿里有这一整句就不报错
         found_flat = {x.rstrip("。；;") for x in found}
         whole = {x.strip().rstrip("。；;") for x in re.split(r"[。！？!?；;\n]", strip_heads(text)) if x.strip()}
@@ -1883,7 +2294,7 @@ def main():
         if named:
             checked.append(f"镜内否定 {len(named)} 句已用 --negative-exception 逐句点名")
         if tried:
-            checked.append(f"已试否定例外 {len(tried)} 句已点名（句中否定，脚本不逐句提醒，按 writing-rules 第 62 条自查）")
+            checked.append(f"已试否定例外 {len(tried)} 句已点名（句中否定，脚本不逐句提醒，按 writing-rules 附录第 62 条自查）")
         if not found and not tried:
             checked.append("全稿没有自写否定句，末尾只有固定句")
         neg_note = f"否定句提醒 {neg} 句"  # summary 一行里不写全角括号：Stop 钩子的检查行正则按「）」截断
@@ -1977,20 +2388,20 @@ def main():
             warnings.append("风格段里有时序或具体运镜/动作：" + "".join(f"「{w}」" for w in hit[:8])
                             + "；风格段只写画面质感与镜头性格（不带动作词的材质性格、共享光影、焦段景深手持还是稳定），"
                               "运镜路径、动作、衣物随动、表演与“放慢后恢复”这类时序写进镜内它发生的那一拍"
-                              "（writing-rules 成文主规则第 3 条、第 56 条）")
-    # 3b）画质词（writing-rules 第 77 条）：主体段、场景段出现就提醒；风格段只在它不在最后一句时提醒（镜头正文在逐镜扫描里报）
+                              "（writing-rules 成文主规则第 3 条、附录第 56 条）")
+    # 3b）画质词（writing-rules 附录第 77 条）：主体段、场景段出现就提醒；风格段只在它不在最后一句时提醒（镜头正文在逐镜扫描里报）
     for name in ("主体", "场景"):
         q = list(dict.fromkeys(QUALITY_RE.findall(_no_lock(strip_dialogue(secs.get(name) or "")))))
         if q:
             warnings.append(f"{name}段里有画质词{''.join(f'「{w}」' for w in q)}；画质词不算描述，只作风格段末尾的一小段尾巴，"
-                            f"前面先写具体材质与光的句子（writing-rules 第 77 条）")
+                            f"前面先写具体材质与光的句子（writing-rules 附录第 77 条）")
     if "风格" in secs:
         st_sents = split_sentences(_no_lock(strip_dialogue(secs["风格"])))
         q = list(dict.fromkeys(w for s in st_sents[:-1] for w in QUALITY_RE.findall(s)))
         if q:
             warnings.append(f"风格段的画质词{''.join(f'「{w}」' for w in q)}不在最后一句；画质词只作风格段末尾的一小段尾巴，"
-                            f"前面先写具体材质与光的句子（writing-rules 第 77 条）")
-    # 去掉画质词和标点以后几乎不剩内容，才算“只有画质词”；前面已有具体材质与光的句子、画质词在末尾当尾巴的不报（第 77 条允许）
+                            f"前面先写具体材质与光的句子（writing-rules 附录第 77 条）")
+    # 去掉画质词和标点以后几乎不剩内容，才算“只有画质词”；前面已有具体材质与光的句子、画质词在末尾当尾巴的不报（附录第 77 条允许）
     m = re.search(r"风格[：:](.*?)(?:\n情节[：:]|\n镜头|$)", text, re.S)
     if m and QUALITY_ONLY.search(m.group(1)) and len(PUNCT_RE.sub("", QUALITY_RE.sub("", m.group(1)))) < 12:
         warnings.append("风格段只有画质词、缺少材质与光的具体句")
@@ -2084,7 +2495,7 @@ def main():
                 prop = ("；持物可裁定：这件道具若全片不换手、一直在同一只手里，是身份层面的事实，可以留在主体段"
                         "（写明“全片不换手”或“全程用右手握着”就不再报），会在镜内拿起、扔出、被接住、换手的写进那一镜的开场现状和变化那一拍的终态"
                         if any(w in held for w in acts) else "")
-                feel = ("；情绪不写主体段，在镜内落成可见表演（眉头、嘴角、视线、呼吸），可在可见表现之后带一句情绪方向（writing-rules 第 47 条）"
+                feel = ("；情绪不写主体段，在镜内落成可见表演（眉头、嘴角、视线、呼吸），可在可见表现之后带一句情绪方向（writing-rules 决策 D13）"
                         if any(w in emo for w in acts) else "")
                 warnings.append(f"主体段这句写了动作、随动、持物状态或调度：{''.join(f'「{w}」' for w in acts[:5])}"
                                 f"——「{_excerpt(s)}」{note}；主体段只写是谁、长什么样、有几个，这句写进情节里它发生的那一拍"
@@ -2146,6 +2557,34 @@ def main():
             warnings.append(f"{tag + ' ' if tag else ''}总括保证句：{''.join(f'「{w}」' for w in ps)}——「{_excerpt(s)}」{POS_TAIL}"
                             + (PARENT_NOTE if _parent(s) else ""))
 
+    # --- 裁定清单（--adjudicated）：全部提醒生成完以后，去掉镜号前缀以某一行开头的提醒删掉、计数 ---
+    adjudicated = []
+    if a.adjudicated:
+        adj_keys = parse_adjudicated(a.adjudicated)
+        kept, hit_keys = [], set()
+        for w in warnings:
+            k = adjudicated_key(w, adj_keys)
+            if k is None:
+                kept.append(w)
+            else:
+                adjudicated.append(w)
+                hit_keys.add(k)
+        warnings = kept
+        idle = [k for k in adj_keys if k not in hit_keys]
+        checked.append(f"裁定清单 {len(adj_keys)} 行，删掉已裁定提醒 {len(adjudicated)} 条"
+                       + (f"；这些行这次没对上提醒：{''.join(f'「{k}」' for k in idle[:5])}" if idle else ""))
+
+    # --- v38 度量回路：报告与 stdout 多存六样（summary 一行不变）---
+    adj_set = set(adjudicated)
+    antipatterns = [{**item, "adjudicated": text in adj_set} for text, item in ap_found]
+    metrics = {
+        "antipatterns": antipatterns,
+        "adjudicated_ids": [it["id"] for it in antipatterns if it["adjudicated"]],
+        "mode": a.mode, "rewrite_authorized": bool(a.rewrite_authorized),
+        "asks_file": str(Path(a.asks).resolve()) if a.asks else None,
+        "hint_types": hint_counts(warnings + adjudicated),   # 全部提醒（待裁定加已裁定）按类别计数
+    }
+
     checked_sha = sha(text)
     # 交付出去的那段正文（--partial 时是局部段本身，否则就是整稿）；规范化方式与 hooks/stop_gate.py 的 digest 一致
     delivered_sha = sha("\n".join(cand_lines))
@@ -2166,11 +2605,13 @@ def main():
         else:
             parts.append(f"要求清单 {asks_active} 条有效全部有落点")
     parts.append(f"待裁定提醒 {len(warnings)} 条")
+    if adjudicated:
+        parts.append(f"已裁定 {len(adjudicated)} 条")
     parts.append(f"sha {delivered_sha[:8]}")
     summary = ("check_prompt 通过" if not errors else f"check_prompt 有 {len(errors)} 处错误") + "（" + "｜".join(parts) + "）"
     out = {
         "ok": not errors, "task": task, "revision": revision, "format": requested_fmt, "effective_format": fmt, "partial": a.partial,
-        "errors": errors, "warnings": warnings, "checked": checked,
+        "errors": errors, "warnings": warnings, "adjudicated": adjudicated, **metrics, "checked": checked,
         "stats": {"shots": len(heads), "heading_style": sorted(styles), "total_seconds": timed[-1][4] if timed else None,
                   "labels_used": sorted(used), "chars": len(text)},
         "input_sha256": sha(raw), "baseline_sha256": sha(baseline_text) if baseline_text is not None else None,
@@ -2187,7 +2628,7 @@ def main():
             "kind": "light", "ready": not errors,
             "checked_sha256": checked_sha, "delivered_sha256": delivered_sha,
             "task": task, "format": requested_fmt, "effective_format": fmt, "partial": bool(a.partial),
-            "errors": errors, "warnings": warnings,
+            "errors": errors, "warnings": warnings, "adjudicated": adjudicated, **metrics,
             "labels": sorted(x.strip() for x in a.labels.split(",") if x.strip()), "locks": len(a.lock),
             "asks_checked": asks_checked,
             "baseline_sha256": sha(baseline_text) if baseline_text is not None else None,

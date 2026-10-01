@@ -1,0 +1,40 @@
+{
+  "report_version": 1,
+  "skill_version": "v38",
+  "kind": "light",
+  "ready": true,
+  "checked_sha256": "bbbb222200000000000000000000000000000000000000000000000000000000",
+  "delivered_sha256": "bbbb222200000000000000000000000000000000000000000000000000000000",
+  "task": "生成",
+  "format": "四段",
+  "effective_format": "四段",
+  "partial": false,
+  "errors": [],
+  "warnings": [
+    "情节段开头有总览句：「灰色方块对应漂浮的碎石，半透明圆柱对应龙卷风」；生成类新稿情节段直接从镜头标题开始，时长与镜数由镜头标题表达，身份与数量写进主体段，其余控制写进它发生的那一拍，确认是重复就删掉",
+    "镜1 每秒 260 字，超过参考线 200（暂定，待 A/B 实测）；看看有没有复述或模型自己会补的东西（成文主规则第 5 条）"
+  ],
+  "adjudicated": [],
+  "antipatterns": [],
+  "adjudicated_ids": [],
+  "mode": "默认",
+  "rewrite_authorized": false,
+  "asks_file": null,
+  "hint_types": {
+    "总览句": 1,
+    "父稿句消失": 0,
+    "复读": 0,
+    "密度": 1,
+    "否定句": 0,
+    "反模式": 0,
+    "其它": 0
+  },
+  "labels": [],
+  "locks": 0,
+  "asks_checked": null,
+  "baseline_sha256": null,
+  "summary": "check_prompt 通过（3 镜｜无素材引用｜否定句提醒 0 句｜待裁定提醒 2 条｜sha bbbb2222）",
+  "created_at": 1790672400.0,
+  "session_id": null,
+  "limits": "只是机械文本检查；没核对素材标签之外的内容、画面语义与成片效果；报告文件不是运行签名"
+}

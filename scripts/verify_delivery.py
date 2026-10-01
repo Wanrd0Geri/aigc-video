@@ -151,7 +151,7 @@ def evaluate(args):
         cmd += ['--lock', lock]
     neg_exc = req.get('negative_exception', [])
     if not isinstance(neg_exc, list) or not all(isinstance(x, dict) and x.get('sentence', '').strip() and x.get('reason', '').strip() for x in neg_exc):
-        raise ValueError('negative_exception 必须是 [{"sentence": "稿里那句否定（位置按 writing-rules 第 62 条：只管一镜的写那一镜；全片级的写一次——身份数量类（含静音）写主体段末尾，环境、光、文字水印类写场景段末尾；操作类写命令区；旧外壳为结尾段里的独立条款）", "reason": "防什么、为什么没有正向写法"}] 数组，无例外写 [] 或省略')
+        raise ValueError('negative_exception 必须是 [{"sentence": "稿里那句否定（位置按 writing-rules 附录第 62 条：只管一镜的写那一镜；全片级的写一次——身份数量类（含静音）写主体段末尾，环境、光、文字水印类写场景段末尾；操作类写命令区；旧外壳为结尾段里的独立条款）", "reason": "防什么、为什么没有正向写法"}] 数组，无例外写 [] 或省略')
     sentences = [x['sentence'].strip().rstrip('。；;') for x in neg_exc]
     if len(set(sentences)) != len(sentences):
         errors.append('negative_exception 有重复句子；每条例外必须对应一条不同的独立否定条款')

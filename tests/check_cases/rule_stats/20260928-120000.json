@@ -1,0 +1,65 @@
+{
+  "report_version": 1,
+  "skill_version": "v38",
+  "kind": "light",
+  "ready": true,
+  "checked_sha256": "aaaa111100000000000000000000000000000000000000000000000000000000",
+  "delivered_sha256": "aaaa111100000000000000000000000000000000000000000000000000000000",
+  "task": "生成",
+  "format": "四段",
+  "effective_format": "四段",
+  "partial": false,
+  "errors": [],
+  "warnings": [
+    "镜3 反模式 AP06（候选，单次 L150）：「慢慢」；高速镜里一个慢字就把主体放慢；改成：删掉，或换成一拱一拱往上窜",
+    "复读提醒：「它在画面里的位置和大小稳住」在情节里出现 2 次，第二次起可能是复述，留不留你定；落幅、焦点落点、每镜自足的句子照留（成文主规则第 5 条）"
+  ],
+  "adjudicated": [
+    "镜1 反模式 AP01（两条以上 L047、L144）：「位置和大小稳住」；恒定约束把主体钉在原地，只剩背景在动；改成：写主体在画框里反复越界、镜头追回，或逼近放大、穿越"
+  ],
+  "antipatterns": [
+    {
+      "id": "AP01",
+      "shot": 1,
+      "hits": [
+        "位置和大小稳住"
+      ],
+      "evidence": "两条以上 L047、L144",
+      "candidate": false,
+      "adjudicated": true
+    },
+    {
+      "id": "AP06",
+      "shot": 3,
+      "hits": [
+        "慢慢"
+      ],
+      "evidence": "单次 L150",
+      "candidate": true,
+      "adjudicated": false
+    }
+  ],
+  "adjudicated_ids": [
+    "AP01"
+  ],
+  "mode": "默认",
+  "rewrite_authorized": false,
+  "asks_file": null,
+  "hint_types": {
+    "总览句": 0,
+    "父稿句消失": 0,
+    "复读": 1,
+    "密度": 0,
+    "否定句": 0,
+    "反模式": 2,
+    "其它": 0
+  },
+  "labels": [],
+  "locks": 0,
+  "asks_checked": null,
+  "baseline_sha256": null,
+  "summary": "check_prompt 通过（3 镜｜无素材引用｜否定句提醒 0 句｜待裁定提醒 2 条｜sha aaaa1111）",
+  "created_at": 1790596800.0,
+  "session_id": null,
+  "limits": "只是机械文本检查；没核对素材标签之外的内容、画面语义与成片效果；报告文件不是运行签名"
+}

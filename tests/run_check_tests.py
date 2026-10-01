@@ -234,6 +234,36 @@ CASES = [
     # ---- v35 表演排队（writing-rules 成文主规则第 8 条）：只提醒，不拦 ----
     ("v35 表演排队（说完……才抬头、才开口、放下杯子之后才去开门）：只提醒", "perf_queue_report.txt", ["--total", "12"], 0),
     ("v35 交叠短语、摄影机顺序、台词里的说完、单独的然后 / 随后 / 接着：通过且不提醒", "perf_queue_overlap_ok.txt", ["--total", "12"], 0),
+    # ---- 2026-10-01 五条提醒（蛟龙雷暴、曲伯牌坊复盘；都只提醒，不拦）----
+    ("角度词前的削弱词（机位在胸口高度微微仰起、稍微俯拍）：只提醒", "weak_angle.txt", ["--total", "12"], 0),
+    ("表演句与没带削弱词的角度（嘴角微微上扬、头微微仰起、微微俯下身、略高于、稍作停顿、稍后俯拍）：通过", "weak_angle_ok.txt", ["--total", "12"], 0),
+    ("朝向只写方位词（看向右前方、脸朝画面左侧）：只提醒", "orient_dir_only.txt", ["--total", "12"], 0),
+    ("朝向带部位判据、没有左右、右手是部位、镜头转向、单独的视线句：通过", "orient_dir_parts.txt", ["--total", "12"], 0),
+    ("朝向写人物自身方位（望着自己的右前方，曲伯原句）：只提醒", "orient_dir_self.txt", ["--total", "6"], 0),
+    ("跟拍没有位移证据（贴在他身后、跟拍、一起往巷子深处跑）：只提醒", "follow_no_evidence.txt", ["--total", "12"], 0),
+    ("跟拍有门框一个个从画框两侧退出去；不再跟拍、跟随感、目光跟住：通过", "follow_with_evidence.txt", ["--total", "12"], 0),
+    ("高速镜里写位置和大小稳住 / 大小和位置始终不变（v37 起报反模式 AP01）：只提醒", "hold_frame_speed.txt", ["--total", "12"], 0),
+    ("对话与横移镜里的位置和大小不变（没有速度词，不报 AP01）：通过", "hold_frame_slow.txt", ["--total", "12"], 0),
+    ("尺度比喻用具体实物（有房子那么大、碗口大小的、像山一样高；v37 起报反模式 AP03）：只提醒", "scale_simile_object.txt", ["--total", "12"], 0),
+    ("尺度比喻用主体部位（比它的头还大、和蛇身一样粗、拳头大小的、像它的尾巴一样长）与不同大小的（不报 AP03）：通过", "scale_simile_self.txt", ["--total", "12"], 0),
+    ("露出它往上盘的长身体、看到它的全身：只提醒", "framing_show_body.txt", ["--total", "12"], 0),
+    ("L145 原句：露出它螺旋着往天上盘的长身体（“露出”后隔 9 个字）：只提醒", "framing_show_l145.txt", ["--total", "12"], 0),
+    ("露出它的后颈和一排背刺、看到它的头：通过", "framing_show_ok.txt", ["--total", "12"], 0),
+    # ---- v37 反模式表（references/antipatterns.md）与三个降噪开关：都只提醒，不拦 ----
+    ("反模式 AP01 速度镜报、同一句在慢镜不报；AP06 速度镜里的慢慢：只提醒", "ap_speed_hold.txt", ["--total", "12"], 0),
+    ("反模式 AP02 露出它的全身、AP03 场景段的房子比喻、AP04 龙卷风柱：只提醒", "ap_any_rows.txt", ["--total", "12"], 0),
+    ("反模式 AP01 单写“大小不变”照报，机位的位置固定不报：只提醒", "ap_speed_size.txt", ["--total", "12"], 0),
+    ("白模稿默认模式：命令区对应句报总览句，AP05 不扫", "ap_baimo.txt", ["--total", "12", "--labels", "图1,视频1"], 0),
+    ("白模稿 --mode 白模：总览句不报，AP05 报", "ap_baimo.txt", ["--total", "12", "--labels", "图1,视频1", "--mode", "白模"], 0),
+    ("白模稿标题带秒数、写焦段：--mode 白模 报 AP07、AP08（候选），只提醒", "ap_baimo_lens.txt", ["--total", "12", "--labels", "图1,视频1", "--mode", "白模"], 0),
+    ("白模稿环境形体对应竹子、山路，正文写第几秒：--mode 白模 报 AP05、AP07，只提醒", "ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], 0),
+    ("速度镜里“保持在画面中央”：报 AP01，只提醒", "ap_speed_center.txt", ["--total", "12"], 0),
+    ("远处到“擦着镜头”中间没有逼近：只提醒", "far_near_rub.txt", ["--total", "12"], 0),
+    ("速度镜钉在画面中心报 AP01，留在正中但一点点变小的不报：只提醒", "ap_speed_center_resize.txt", ["--total", "12"], 0),
+    ("背景层句里的远处不算主体位置（M010 镜1 原样）：只提醒", "far_near_bg_layer.txt", ["--total", "12"], 0),
+    ("--rewrite-authorized 不关要求清单：缺落点照样拦", "revise_dropped_two.txt",
+     ["--baseline", str(C / "revise_parent.txt"), "--total", "12", "--rewrite-authorized", "--asks", str(C / "asks_lost_overlap.txt")], 1),
+    ("--adjudicated 裁定清单找不到：参数错误", "ap_speed_hold.txt", ["--total", "12", "--adjudicated", str(C / "不存在的裁定清单.txt")], 2),
 ]
 fails = 0
 for name, f, args, want in CASES:
@@ -398,7 +428,7 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("negative_after_heading.txt", [], "否定句：严禁出现文字水印"),
               ("negative_after_heading.txt", [], "否定句：请勿让窗外出现路人"),
               ("negative_after_heading.txt", [], "否定句：别让轻纱挡住他的脸"),
-              ("negative_after_heading.txt", [], "writing-rules 第 62 条"),
+              ("negative_after_heading.txt", [], "writing-rules 附录第 62 条"),
               # A8：按句取最近的景别或画框切线；“近景（不是特写）”不豁免
               ("micro_scale_per_sentence.txt", [], "镜1 尺度名词「织纹」"),
               ("micro_scale_per_sentence.txt", [], "镜2 尺度名词「抽丝」"),
@@ -463,7 +493,59 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("perf_queue_mixed.txt", [], "镜4 可能的表演排队：「他又说完才回应」；"),
               ("perf_queue_mixed.txt", [], "镜5 可能的表演排队：「苏云推门之后才抬头」；"),
               # 样例对话稿镜头3 的“说完嘴角向下一沉”是应报提醒（D2 baseline 预记，不算误报）
-              ("../sample-dialogue-12s.txt", [], "镜3 可能的表演排队：「“…”说完嘴角向下一沉」")]
+              ("../sample-dialogue-12s.txt", [], "镜3 可能的表演排队：「“…”说完嘴角向下一沉」"),
+              # 2026-10-01 五条提醒：正例的原文
+              ("weak_angle.txt", [], "镜1 角度词前加了削弱词：「微微仰起」"),
+              ("weak_angle.txt", [], "镜2 角度词前加了削弱词：「稍微俯拍」"),
+              ("weak_angle.txt", [], "（writing-rules 成文主规则第 6 条、L050）"),
+              ("orient_dir_only.txt", [], "镜1 朝向只写了方位词：「看向右前方」"),
+              ("orient_face_toward.txt", [], "镜1 朝向只写了方位词：「朝向画面右侧」"),   # 回放补：埋雷稿原句的写法
+              ("orient_face_toward.txt", [], "镜2 朝向只写了方位词：「面向画面左侧」"),   # v38 动词表加「面向」
+              ("orient_face_eye.txt", [], "镜1 朝向只写了方位词：「朝向画面右侧」"),   # 埋雷稿原句：一只暗红的眼睛盯着上方，只有部位字、没有可见写法
+              ("orient_face_eye.txt", [], "镜2 朝向只写了方位词：「转向画面左侧」"),   # “转眼间”的眼不是部位判据
+              ("density_under_line.txt", [], "镜1 朝向只写了方位词：「看向画面左侧」"),   # 嘴角、额头是表情与细节，不是朝向判据，照报
+              ("ap_baimo_lens.txt", ["--labels", "图1,视频1", "--mode", "白模"], "反模式 AP07（候选，未试（模式约定，L153））：「镜头1（0-6秒）」「镜头2（6-12秒）」"),
+              ("ap_baimo_lens.txt", ["--labels", "图1,视频1", "--mode", "白模"], "反模式 AP08（候选，未试（模式约定，L153））：「24mm」「超广角」"),
+              ("ap_baimo_lens.txt", ["--labels", "图1,视频1", "--mode", "白模"], "反模式 AP09（候选，未试（模式约定，L153））：命令区没有「严格保持」「切点前后状态一致」「角色一致性」任一句"),   # 命令区没有严格保持 / 切点前后状态一致 / 角色一致性
+              ("ap_speed_center_resize.txt", [], "镜2 反模式 AP01（两条以上 L047、L144）：「钉在画面中心」"),
+              ("lantern_trial_s.txt", ["--total", "6"], "同一镜里既有远处位置又有贴镜动作"),   # “甩到身后最远处”不在背景层句里，照报
+              ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "反模式 AP05（两条以上 L152）：「方块对应竹子」「圆盘对应山」"),   # 环境词表补竹、草、房、墙、桥、山、路
+              ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "反模式 AP07（候选，未试（模式约定，L153））：「第2秒」"),   # 标题不带秒数，正文的第几秒也抓
+              ("ap_speed_center.txt", [], "镜1 反模式 AP01（两条以上 L047、L144）：「保持在画面中央」"),
+              ("far_near_rub.txt", [], "「尽头」在前、「擦着镜头」在后"),
+              ("orient_dir_only.txt", [], "镜2 朝向只写了方位词：「脸朝画面左侧」"),
+              ("orient_dir_only.txt", [], "（writing-rules 决策 D09、L059）"),
+              ("orient_dir_self.txt", [], "镜1 朝向只写了方位词：「望着自己的右前方」"),
+              ("follow_no_evidence.txt", [], "镜1 跟拍没有位移证据：「贴在他身后」「跟拍」「一起往巷子深处跑」"),
+              ("follow_no_evidence.txt", [], "（writing-rules 决策 D01、D04，L044、L143）"),
+              # v37：④⑤ 并进反模式表 AP01、AP03（同一批夹具，改核对表驱动的文案；AP03 场合是任何，一稿报一条、不带镜号）
+              ("hold_frame_speed.txt", [], "镜1 反模式 AP01（两条以上 L047、L144）：「位置和大小稳住」"),
+              ("hold_frame_speed.txt", [], "镜2 反模式 AP01（两条以上 L047、L144）：「大小和位置始终不变」"),
+              ("hold_frame_speed.txt", [], "；恒定约束把主体钉在原地，只剩背景在动；改成：写主体在画框里反复越界、镜头追回"),
+              ("scale_simile_object.txt", [], "反模式 AP03（候选，单次 L154）：「有房子那么大」"),
+              ("scale_simile_object.txt", [], "碗口大小的」「像山一样高」"),
+              ("scale_simile_object.txt", [], "；比喻的喻体被画成实物（房子）；改成：用画内参照比大小：比它的头还大"),
+              ("framing_show_body.txt", [], "镜1 取景写成了“能装下什么”：「露出它往上盘的长身体」"),
+              ("framing_show_body.txt", [], "镜2 取景写成了“能装下什么”：「看到它的全身」"),
+              ("framing_show_l145.txt", [], "镜1 取景写成了“能装下什么”：「露出它螺旋着往天上盘的长身体」"),   # L145 引的原句，“露出”后隔 9 个字
+              ("framing_show_l145.txt", [], "同样会把机位拉远（L145）"),
+              ("framing_show_body.txt", [], "（writing-rules 决策 D07、L101）；露出 / 看到 + 全身、长身体同样会把机位拉远（L145）"),
+              # ---- v37 反模式表：逐镜的行带镜号、放在这一镜最后，全稿级的不带镜号；单次 / 未试标「候选」；AP02 沿用老文案、末尾标编号 ----
+              ("ap_speed_hold.txt", [], "镜1 反模式 AP01（两条以上 L047、L144）：「位置和大小稳住」；恒定约束把主体钉在原地，只剩背景在动；改成："),
+              ("ap_speed_hold.txt", [], "镜3 反模式 AP06（候选，单次 L150）：「慢慢」"),
+              ("ap_speed_size.txt", [], "镜1 反模式 AP01（两条以上 L047、L144）：「大小不变」"),   # 蛟龙 helix 稿原句，v36 的④报过
+              ("ap_any_rows.txt", [], "反模式 AP03（候选，单次 L154）：「有房子那么大」；比喻的喻体被画成实物（房子）"),
+              ("ap_any_rows.txt", [], "反模式 AP04（候选，单次 L154）：「龙卷风柱」"),
+              ("ap_any_rows.txt", [], "镜1 取景写成了“能装下什么”：「露出它的全身」"),
+              ("ap_any_rows.txt", [], "同样会把机位拉远（L145）；反模式 AP02（两条以上 L145、L045）"),
+              ("framing_fit_words.txt", [], "（writing-rules 决策 D07、L101）；反模式 AP02（两条以上 L145、L045）"),
+              ("ap_baimo.txt", ["--labels", "图1,视频1"], "情节段开头有总览句：「灰色方块对应漂浮的碎石"),
+              ("ap_baimo.txt", ["--labels", "图1,视频1", "--mode", "白模"], "反模式 AP05（两条以上 L152）：「方块对应漂浮的碎石」「圆柱对应龙卷」"),
+              ("hold_frame_speed.txt", ["--adjudicated", str(C / "adjudicated_shot.txt")], "镜1 反模式 AP01"),   # 行首带镜号只删那一镜
+              # 显式 --mode 默认：朝向方位词、跟拍位移证据、摄影运动三条照报（--mode 白模 的反例在 NO_WARN_CASES）
+              ("orient_dir_only.txt", ["--mode", "默认"], "镜1 朝向只写了方位词：「看向右前方」"),
+              ("follow_no_evidence.txt", ["--mode", "默认"], "镜1 跟拍没有位移证据"),
+              ("camera_person_actions.txt", ["--mode", "默认"], "镜1 未识别到摄影运动")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -663,7 +745,60 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("../sample-combat-12s.txt", [], "表演排队"),
                  ("../sample-dialogue-12s.txt", [], "镜1 可能的表演排队"),
                  ("../sample-dialogue-12s.txt", [], "镜2 可能的表演排队"),
-                 ("control_valid.txt", [], "表演排队")]
+                 ("control_valid.txt", [], "表演排队"),
+                 # 2026-10-01 五条提醒：反例不报。表演句（嘴角微微上扬、头微微仰起、微微俯下身）、略高于、稍作停顿、稍后；
+                 # 带部位判据的朝向、没有左右的望向、右手、镜头转向；跟拍有位移证据、不再跟拍、跟随感、目光跟住；编辑命令的“跟随原有动作”；
+                 # 没有速度词的位置和大小不变；总括保证句的跟拍取景豁免保留不动；主体部位做参照的尺度与不同大小的；
+                 # 能看见全身已按 FRAMING_FIT_RE 报过、不重复列也不加 L145
+                 ("weak_angle_ok.txt", [], "角度词前加了削弱词"),
+                 ("weak_motion_person.txt", [], "角度词前加了削弱词"),
+                 ("orient_dir_parts.txt", [], "朝向只写了方位词"),
+                 ("follow_with_evidence.txt", [], "跟拍没有位移证据"),
+                 ("follow_no_evidence.txt", [], "镜2 跟拍没有位移证据"),
+                 ("hold_frame_speed.txt", [], "跟拍没有位移证据"),
+                 ("edit_ok.txt", ["--task", "编辑", "--labels", "视频1,图片1"], "跟拍没有位移证据"),
+                 ("hold_frame_slow.txt", [], "反模式 AP01"),
+                 ("hold_frame_slow.txt", [], "总括保证句"),
+                 ("hold_frame_speed.txt", [], "总括保证句"),
+                 ("guarantee_position_scan.txt", [], "反模式 AP01"),
+                 ("scale_simile_self.txt", [], "反模式 AP03"),
+                 ("framing_show_ok.txt", [], "取景写成了"),
+                 ("framing_fit_words.txt", [], "（L145）"),
+                 # ---- v37 反模式表与降噪开关的反例 ----
+                 ("ap_speed_hold.txt", [], "镜2 反模式 AP01"),          # 同一句写在没有速度词的慢推镜里不报
+                 ("ap_speed_hold.txt", [], "镜1 反模式 AP06"),
+                 ("ap_speed_hold.txt", [], "镜2 反模式 AP06"),          # “慢推”不是慢慢 / 缓缓 / 缓慢，这一镜也不是速度镜
+                 ("ap_speed_size.txt", [], "镜2 反模式 AP01"),          # 机位的位置固定说的是相机
+                 ("ap_any_rows.txt", [], "反模式 AP05"),                # 白模的行只在 --mode 白模 时扫
+                 ("ap_any_rows.txt", [], "「比它的头还大」"),            # 画内参照比大小，不报 AP03
+                 ("ap_any_rows.txt", ["--asks", str(C / "asks_ap_tornado.txt")], "反模式 AP04"),   # 命中词是有效要求的关键词
+                 ("ap_any_rows.txt", ["--lock", "四周悬着几块有房子那么大的岩石。"], "反模式 AP03"),   # 锁定文字不扫
+                 ("ap_baimo.txt", ["--labels", "图1,视频1"], "反模式 AP05"),
+                 ("ap_baimo.txt", ["--labels", "图1,视频1", "--mode", "白模"], "总览句"),
+                 ("ap_baimo.txt", ["--labels", "图1,视频1", "--mode", "白模"], "图1中蛟龙的头部"),   # 对应图N 的角色映射不报 AP05
+                 ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt"), "--rewrite-authorized"], "在新稿里消失"),
+                 ("revise_padded.txt", ["--baseline", str(C / "revise_parent.txt"), "--rewrite-authorized"], "新稿比父稿长"),
+                 ("ap_speed_hold.txt", ["--adjudicated", str(C / "adjudicated_ap.txt")], "反模式 AP01"),
+                 ("hold_frame_speed.txt", ["--adjudicated", str(C / "adjudicated_shot.txt")], "镜2 反模式 AP01"),
+                 # --mode 白模：朝向和运镜由视频1给，朝向方位词、跟拍位移证据、摄影运动三条不报（默认模式照报，见 WARN_CASES）
+                 ("orient_dir_only.txt", ["--mode", "白模"], "朝向只写了方位词"),
+                 ("follow_no_evidence.txt", ["--mode", "白模"], "跟拍没有位移证据"),
+                 ("camera_person_actions.txt", ["--mode", "白模"], "未识别到摄影运动"),   # 命令区没有“白模”二字也不报
+                 ("orient_face_toward_parts.txt", [], "朝向只写了方位词"),   # 同一句写了露出的部位（右耳、后脑）就不报
+                 ("orient_part_visible.txt", [], "朝向只写了方位词"),   # 附录第 33 条、L059 的三种原句写法：鼻尖和下巴指向、后脑留在、右耳露出后半只
+                 ("camera_person_actions.txt", [], "朝向只写了方位词"),   # “抬眼看向画面右上方”是视线
+                 ("repeat_phrase_exempt_subject.txt", [], "朝向只写了方位词"),   # “抬眼看向画面右侧外”是视线
+                 ("repeat_phrase.txt", [], "朝向只写了方位词"),   # “夕阳把她的侧脸勾出一道亮边”：受光面印证朝向（L059、决策 D11）
+                 ("ap_baimo_lens.txt", ["--labels", "图1,视频1"], "反模式 AP07"),   # 白模的行只在 --mode 白模 时扫
+                 ("ap_baimo_lens.txt", ["--labels", "图1,视频1"], "反模式 AP08"),
+                 ("ap_baimo_lens.txt", ["--labels", "图1,视频1"], "反模式 AP09"),   # 默认模式不报
+                 ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "反模式 AP09"),   # 命令区写了严格保持……角色一致性全程保持
+                 ("ap_speed_center_resize.txt", [], "镜1 反模式 AP01"),   # 留在画面正中，后面跟着“一点点变小”：大小在变，不是恒定约束（M007 那种）
+                 ("far_near_bg_layer.txt", [], "远处位置又有贴镜动作"),   # “背景是远处……”是层次，碎块擦着镜头是另一样东西（M010 原句）
+                 ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "人形对应图1"),   # 对应图N 的角色映射照旧不报
+                 ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1"], "反模式 AP05"),   # 默认模式不扫白模的行
+                 ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1"], "反模式 AP07"),
+                 ("ap_speed_center.txt", [], "镜2 反模式 AP01")]   # “留在画面正中”在慢推镜里，不是速度镜
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
@@ -690,7 +825,9 @@ SUMMARY_CASES = [("inline_negative.txt", ["--total", "12"], "否定句提醒 1 �
                  ("asks_draft.txt", ["--total", "12", "--asks", str(C / "asks_bad_format.txt")], "要求清单格式错误"),
                  # v25 B2：没给 --labels 时，正文里没有素材引用写“无素材引用”，有引用才写“素材集合未核对”
                  ("control_valid.txt", ["--total", "12"], "无素材引用"),
-                 ("at_refs_in_new_draft.txt", ["--total", "12"], "素材集合未核对")]
+                 ("at_refs_in_new_draft.txt", ["--total", "12"], "素材集合未核对"),
+                 # v37 --adjudicated：“已裁定 M 条”跟在“待裁定提醒 N 条”后面、sha 前面
+                 ("ap_speed_hold.txt", ["--total", "12", "--adjudicated", str(C / "adjudicated_ap.txt")], "待裁定提醒 2 条｜已裁定 1 条｜sha ")]
 for f, args, needle in SUMMARY_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = needle in d["summary"] and "（" not in d["summary"][d["summary"].index("（") + 1:]
@@ -741,6 +878,20 @@ DETAIL_CASES = [
     ("压缩审校·台词不算字数（镜1 去掉台词 208 字 / 3 秒）", "density_under_line.txt", ["--total", "12"], "checked",
      "镜1 字数密度：208 字，3 秒，每秒 69 字"),
     ("压缩审校·没有复读时 checked 写明", "repeat_phrase_exempt_subject.txt", ["--total", "12"], "checked", "情节里没有 6 字以上的复读短语"),
+    # ---- v37 反模式表与三个降噪开关：checked、errors、adjudicated 字段 ----
+    ("反模式表加载结果写进 checked", "control_valid.txt", ["--total", "12"], "checked", "反模式表已加载："),
+    ("--mode 白模 在 checked 里写明", "ap_baimo.txt", ["--total", "12", "--labels", "图1,视频1", "--mode", "白模"], "checked", "白模模式：命令区总览句不报"),
+    ("--mode 白模 关掉的另外三条也在 checked 里写明", "camera_person_actions.txt", ["--total", "12", "--mode", "白模"], "checked",
+     "白模模式：朝向方位词、跟拍位移证据、摄影运动三条不报"),
+    ("--rewrite-authorized 在 checked 里写明", "revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt"), "--total", "12", "--rewrite-authorized"],
+     "checked", "已按授权重写关闭父稿句消失提醒；要求清单仍核对"),
+    ("--rewrite-authorized 时要求清单照旧核对：缺落点的错误照报", "revise_dropped_two.txt",
+     ["--baseline", str(C / "revise_parent.txt"), "--total", "12", "--rewrite-authorized", "--asks", str(C / "asks_lost_overlap.txt")],
+     "errors", "要求 R4「镜头缓缓推近到胸口高度」在正文里没有落点"),
+    ("--adjudicated：JSON 的 adjudicated 列出删掉的原文", "ap_speed_hold.txt", ["--total", "12", "--adjudicated", str(C / "adjudicated_ap.txt")],
+     "adjudicated", "镜1 反模式 AP01（两条以上 L047、L144）：「位置和大小稳住」"),
+    ("--adjudicated：checked 记清单行数、删掉条数和这次没对上的行", "ap_speed_hold.txt", ["--total", "12", "--adjudicated", str(C / "adjudicated_ap.txt")],
+     "checked", "裁定清单 2 行，删掉已裁定提醒 1 条；这些行这次没对上提醒：「风格段里有时序」"),
 ]
 for name, f, args, field, needle in DETAIL_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
@@ -1215,6 +1366,18 @@ with tempfile.TemporaryDirectory() as tmp:
         ok = not hit; fails += 0 if ok else 1
         print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 不报“{key}” |", hit[:1] or "ok")
 
+# v38 回放：成功案例 M001–M010 在默认模式下不报朝向提醒（M002“朝向画面左侧的那半边脸……被照亮”是受光面描述，M004“话尾回到看向画面左下方的视线”是视线，M003、M005 的“画面向右”不是“面向”）；本来就该报的案例这里一条没有，案例原文不改
+ORIENT_SUCCESS = [f"M{n:03d}" for n in range(1, 11)]
+with tempfile.TemporaryDirectory() as tmp:
+    for cid in ORIENT_SUCCESS:
+        m = re.search(r"^### " + cid + r"\b.*?提示词原文[^\n]*\n\s*```text\n(.*?)\n```", cases_text, re.S | re.M)
+        pf = pathlib.Path(tmp) / f"{cid}.txt"
+        pf.write_text((m.group(1) if m else "") + "\n", encoding="utf-8")
+        p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(pf)], text=True, encoding="utf-8", errors="replace", capture_output=True)
+        hit = [w for w in json.loads(p.stdout)["warnings"] if "朝向只写了方位词" in w] if m else ["找不到提示词原文"]
+        ok = not hit; fails += 0 if ok else 1
+        print(("PASS" if ok else "FAIL"), f"| 成功案例 {cid} 默认模式不报“朝向只写了方位词” |", hit[:1] or "ok")
+
 # ---- v23 审查修复：input_sha256 是整份输入的哈希（v16 起曾被分句循环变量覆盖，不同的稿算出同一个值） ----
 shas = {}
 for f in ("lantern_trial_s.txt", "lantern_trial_v22.txt"):
@@ -1225,13 +1388,232 @@ ok = len(set(shas.values())) == 2 and shas["lantern_trial_s.txt"] == want
 fails += 0 if ok else 1
 print(("PASS" if ok else "FAIL"), "| 两份不同的稿 input_sha256 不同，且等于整份输入的哈希 |", "ok" if ok else shas)
 
+# ---- v37 反模式表（references/antipatterns.md）：表本身的体检、表写错或缺失时不崩、summary 与钩子检查行兼容 ----
+AP_EXTRA = []
+_tbl, _notes = CP.load_antipatterns()
+_bad = [r["id"] for r in (_tbl or {}).get("rows", []) if not re.match(r"^(两条以上|单次|未试)\s*(?:（模式约定，)?L\d{3}", r["evidence"])]
+AP_EXTRA.append(("反模式表读得出、没有写错的行；正则行的证据列以等级开头并带 L 编号（模式约定写「未试（模式约定，Lxxx）」）；代码索引行齐全",
+                 bool(_tbl) and not _notes and not _bad and _tbl["index"] >= 7, f"notes={_notes} bad={_bad}"))
+ESC = chr(92) + "|"     # Markdown 表格里转义过的竖线
+with tempfile.TemporaryDirectory() as tmp:
+    bad_table = pathlib.Path(tmp) / "bad.md"
+    bad_table.write_text(
+        "| 场合 | 扫哪段 | 判定词 |\n|---|---|---|\n| 速度镜 | 同镜内 | \x60冲" + ESC + "窜\x60 |\n\n"
+        "| 编号 | 场合 | 触发 | 为什么 | 证据 | 改成 |\n|---|---|---|---|---|---|\n"
+        "| AP90 | 镜内 | \x60测试词\x60 | 为什么 | 单次 L001 | 改成 |\n"
+        "| AP91 | 镜内 | \x60(\x60 | 为什么 | 单次 L001 | 改成 |\n"
+        "| AP92 | 全片 | \x60测试词\x60 | 为什么 | 单次 L001 | 改成 |\n"
+        "| AP93 | 镜内 | \x60测试词\x60 | 为什么 | 单次 L001 |\n"
+        "| AP94 | 速度镜 | \x60慢" + ESC + "缓\x60 | 为什么 | 大概 L001 | 改成 |\n"
+        "| AP90 | 镜内 | \x60别的词\x60 | 为什么 | 单次 L001 | 改成 |\n"
+        "| AP95 | 任何 | 实现：代码（某张词表） | 为什么 | 单次 L001 | 改成 |\n", encoding="utf-8")
+    t2, n2 = CP.load_antipatterns(bad_table)
+    ids = [r["id"] for r in (t2 or {}).get("rows", [])]
+    ok = (ids == ["AP90", "AP94"] and t2["index"] == 1 and t2["gates"]["速度镜"].search("往上窜") is not None
+          and t2["rows"][1]["candidate"] and t2["rows"][1]["rxs"][0].pattern == "慢|缓"
+          and all(any(k in n for n in n2) for k in ("AP91", "AP92", "AP93", "AP94", "编号重复")))
+    AP_EXTRA.append(("反模式表写错的行（正则编译不过、场合不对、列数不对、编号重复）逐行跳过并说明；证据等级不明按候选；表格里转义的竖线还原",
+                     ok, f"ids={ids} notes={n2}"))
+    empty = pathlib.Path(tmp) / "empty.md"
+    empty.write_text("# 只有标题，没有表\n", encoding="utf-8")
+    t3, n3 = CP.load_antipatterns(empty)
+    t4, n4 = CP.load_antipatterns(pathlib.Path(tmp) / "不存在.md")
+    ok = t3 is None and t4 is None and any("反模式表未加载" in n for n in n3) and any("反模式表未加载" in n for n in n4)
+    AP_EXTRA.append(("反模式表一行都读不出、文件不存在：返回 None 并说明「反模式表未加载」", ok, f"{n3} {n4}"))
+    # 把脚本单独拷到一个没有 references/ 的目录里跑：不崩、退出码照旧、checked 记「反模式表未加载」、不出反模式提醒
+    (pathlib.Path(tmp) / "scripts").mkdir()
+    lone = pathlib.Path(tmp) / "scripts" / "check_prompt.py"
+    shutil.copy(S, lone)
+    why = []
+    for f, want in [("hold_frame_speed.txt", 0), ("duplicate_shot_id.txt", 1)]:
+        p = subprocess.run([sys.executable, "-X", "utf8", str(lone), "--prompt", str(C / f), "--total", "12"],
+                           text=True, encoding="utf-8", errors="replace", capture_output=True)
+        try:
+            d = json.loads(p.stdout)
+        except Exception:
+            why.append(f"{f} 输出不是 JSON：{p.stderr.strip()[-160:]}")
+            continue
+        if p.returncode != want:
+            why.append(f"{f} 退出码 {p.returncode}（期望 {want}）")
+        if not any("反模式表未加载" in c for c in d["checked"]):
+            why.append(f"{f} checked 里没有「反模式表未加载」")
+        if any("反模式" in w for w in d["warnings"]):
+            why.append(f"{f} 表缺失时还出了反模式提醒")
+    AP_EXTRA.append(("反模式表文件缺失：脚本不崩，退出码照旧，checked 记「反模式表未加载」", not why, "；".join(why) or "ok"))
+    # 真表还没用到的三个场合（主体段、场景段、贴身近景）：在同一个临时目录里放一张小表，只扫该扫的那段
+    (pathlib.Path(tmp) / "references").mkdir()
+    (pathlib.Path(tmp) / "references" / "antipatterns.md").write_text(
+        "| 场合 | 扫哪段 | 判定词 |\n|---|---|---|\n| 贴身近景 | 同镜内 | \x60近景" + ESC + "特写\x60 |\n\n"
+        "| 编号 | 场合 | 触发 | 为什么 | 证据 | 改成 |\n|---|---|---|---|---|---|\n"
+        "| AP90 | 主体段 | \x60灰衣" + ESC + "白衣\x60 | 测试 | 单次 L001 | 测试 |\n"
+        "| AP91 | 场景段 | \x60侧窗" + ESC + "门后\x60 | 测试 | 两条以上 L001、L002 | 测试 |\n"
+        "| AP92 | 贴身近景 | \x60抬手\x60 | 测试 | 未试 L001 | 测试 |\n", encoding="utf-8")
+    scoped = pathlib.Path(tmp) / "scoped.txt"
+    scoped.write_text("主体：\n一位穿灰衣的成年人。\n场景：\n室内走廊，侧窗透入柔光。\n风格：\n写实。\n情节：\n"
+                      "镜头1（0-6秒）：全景，镜头慢推，人物抬手推开门，门后站着一个白衣人。\n"
+                      "镜头2（6-12秒）：近景，镜头慢推，人物抬手，窗边的轻纱轻轻飘动。\n全片不添加BGM，不添加字幕。\n", encoding="utf-8")
+    p = subprocess.run([sys.executable, "-X", "utf8", str(lone), "--prompt", str(scoped), "--total", "12"],
+                       text=True, encoding="utf-8", errors="replace", capture_output=True)
+    ws = json.loads(p.stdout)["warnings"]
+    want = ["反模式 AP90（候选，单次 L001）：「灰衣」；", "反模式 AP91（两条以上 L001、L002）：「侧窗」；", "镜2 反模式 AP92（候选，未试 L001）：「抬手」；"]
+    ok = (p.returncode == 0 and all(any(w.startswith(x) for w in ws) for x in want)
+          and not any("镜1 反模式 AP92" in w or "「白衣」" in w or "「门后」" in w for w in ws))
+    AP_EXTRA.append(("场合是主体段 / 场景段的行只扫那一段，贴身近景只扫有判定词的镜；两条以上的不标候选", ok, ws))
+# summary 加了“已裁定 M 条”以后，hooks/stop_gate.py 的检查行正则照样取得到 sha；没删任何提醒时 summary 不出现“已裁定”
+import importlib.util
+_spec = importlib.util.spec_from_file_location("stop_gate_for_check_tests", ROOT / "hooks" / "stop_gate.py")
+_sg = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_sg)
+p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / "ap_speed_hold.txt"), "--total", "12",
+                    "--adjudicated", str(C / "adjudicated_ap.txt")], text=True, encoding="utf-8", errors="replace", capture_output=True)
+d = json.loads(p.stdout)
+m = _sg.CHECK_LINE.search(d["summary"])
+AP_EXTRA.append(("summary 带“已裁定 1 条”时 stop_gate 的检查行正则照样认出“通过”和 sha 短哈希",
+                 bool(m) and m.group(1) == "通过" and m.group(3) == d["delivered_sha256"][:8], d["summary"]))
+p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / "ap_speed_hold.txt"), "--total", "12"],
+                   text=True, encoding="utf-8", errors="replace", capture_output=True)
+d = json.loads(p.stdout)
+AP_EXTRA.append(("没给 --adjudicated 时 summary 不出现“已裁定”，JSON 的 adjudicated 是空列表",
+                 "已裁定" not in d["summary"] and d.get("adjudicated") == [], d["summary"]))
+for name, ok, detail in AP_EXTRA:
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {name} |", detail if not ok else "ok")
+
+# ---- v38 度量回路：报告多存的六样、log_outcome 追加与找不到 sha 报错、rule_stats 在夹具目录上出表 ----
+M_EXTRA = []
+LOGO = ROOT / "scripts" / "log_outcome.py"
+STATS = ROOT / "scripts" / "rule_stats.py"
+RS = C / "rule_stats"            # rule_stats 的夹具目录：v38 报告两份、v37 报告一份、全套报告一份、outcomes.jsonl 两行
+NEW_KEYS = ("antipatterns", "adjudicated_ids", "mode", "rewrite_authorized", "asks_file", "hint_types")
+
+
+def _report_run(args, report):
+    p = subprocess.run([sys.executable, "-X", "utf8", str(S), *map(str, args), "--report", str(report)],
+                       text=True, encoding="utf-8", errors="replace", capture_output=True)
+    return p, json.loads(pathlib.Path(report).read_text(encoding="utf-8")), json.loads(p.stdout)
+
+
+def _logo(gate, *args):
+    return run([LOGO, "--dir", gate, *args])
+
+
+def _lines(f):
+    return [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines() if x.strip()] if f.exists() else []
+
+
+with tempfile.TemporaryDirectory() as tmp:
+    gate = pathlib.Path(tmp) / "gate"
+    # 1) 带 --adjudicated：AP01 被裁、AP06 待裁定；六样字段的形状与值，stdout 与报告一致，hint_types 合计 = 待裁定 + 已裁定
+    p, rep, out = _report_run(["--prompt", C / "ap_speed_hold.txt", "--total", "12", "--adjudicated", C / "adjudicated_ap.txt"], gate / "r1.json")
+    want_ap = [{"id": "AP01", "shot": 1, "hits": ["位置和大小稳住"], "evidence": "两条以上 L047、L144", "candidate": False, "adjudicated": True},
+               {"id": "AP06", "shot": 3, "hits": ["慢慢"], "evidence": "单次 L150", "candidate": True, "adjudicated": False}]
+    ok = (p.returncode == 0 and rep.get("antipatterns") == want_ap and rep.get("adjudicated_ids") == ["AP01"]
+          and rep.get("mode") == "默认" and rep.get("rewrite_authorized") is False and rep.get("asks_file") is None
+          and list(rep.get("hint_types") or {}) == list(CP.HINT_TYPES)
+          and rep["hint_types"] == {**dict.fromkeys(CP.HINT_TYPES, 0), "复读": 1, "反模式": 2}
+          and sum(rep["hint_types"].values()) == len(rep["warnings"]) + len(rep["adjudicated"])
+          and all(out.get(k) == rep.get(k) for k in NEW_KEYS))
+    M_EXTRA.append(("--report 多存六样：antipatterns 一条提醒一项、含已裁定的那条并标 adjudicated，adjudicated_ids、mode、rewrite_authorized、"
+                    "asks_file、hint_types（全部提醒按类别计数）都在，stdout 同样有", ok, {k: rep.get(k) for k in NEW_KEYS}))
+    # 2) 全稿级的反模式行镜号是 null，逐镜的（含 AP02 那条取景提醒）带镜号；没给 --adjudicated 时全标 false
+    _p, rep2, _o = _report_run(["--prompt", C / "ap_any_rows.txt", "--total", "12"], pathlib.Path(tmp) / "r2.json")
+    got = [(it["id"], it["shot"], it["candidate"], it["adjudicated"]) for it in rep2.get("antipatterns") or []]
+    ok = (got == [("AP02", 1, False, False), ("AP03", None, True, False), ("AP04", None, True, False)]
+          and rep2.get("adjudicated_ids") == [] and rep2["hint_types"]["反模式"] == 3)
+    M_EXTRA.append(("antipatterns：全稿级的行 shot 是 null，逐镜的带镜号（AP02 那条取景提醒也记）；没给 --adjudicated 时 adjudicated 全是 false", ok, got))
+    # 3) mode、rewrite_authorized、asks_file 照实记（有错误的稿也写报告）
+    asks = C / "asks_lost_overlap.txt"
+    p3, rep3, _o = _report_run(["--prompt", C / "revise_dropped_two.txt", "--baseline", C / "revise_parent.txt", "--total", "12",
+                                "--mode", "白模", "--rewrite-authorized", "--asks", asks], pathlib.Path(tmp) / "r3.json")
+    ok = (p3.returncode == 1 and rep3.get("mode") == "白模" and rep3.get("rewrite_authorized") is True
+          and rep3.get("asks_file") == str(asks.resolve()))
+    M_EXTRA.append(("mode = 白模、rewrite_authorized = true、asks_file 是要求清单的绝对路径；有错误时照样写进报告", ok,
+                    {k: rep3.get(k) for k in ("mode", "rewrite_authorized", "asks_file")}))
+    # 4) 提醒类别：七类各取一条真实文案（含旧壳结尾段否定句、AP02 句末编号；动作节拍与串行运镜归其它）
+    samples = [("情节段开头有总览句：「灰色方块对应漂浮的碎石」；生成类新稿情节段直接从镜头标题开始", "总览句"),
+               ("父稿有 2 句在新稿里消失：「镜头缓缓推近到胸口高度」；按 references/review/revise-rules.md 核对删改授权", "父稿句消失"),
+               ("复读提醒：「它在画面里的位置和大小稳住」在情节里出现 2 次", "复读"),
+               ("镜1 每秒 102 字，超过参考线 90（暂定，待 A/B 实测）", "密度"),
+               ("否定句：不出现第二个白猿；确认是特殊情况且无正向写法", "否定句"),
+               ("结尾段否定句 5 条，超过上限 4（固定句合算 1 条；操作类官方约束句不计）", "否定句"),
+               ("镜1 取景写成了“能装下什么”：「露出它的全身」；取景写画框切在哪；反模式 AP02（两条以上 L145、L045）", "反模式"),
+               ("反模式 AP03（候选，单次 L154）：「有房子那么大」；比喻的喻体被画成实物（房子）", "反模式"),
+               ("镜1 约 8 个动作节拍挤在 3 秒里（平均不到 0.5 秒一拍", "其它"),
+               ("镜1 串行运镜 4 句挤在 2 秒里", "其它"),
+               ("新稿比父稿长 20%（100→120 字）", "其它")]
+    bad = [(w[:16], CP.hint_type(w), t) for w, t in samples if CP.hint_type(w) != t]
+    M_EXTRA.append(("hint_type 七类：总览句 / 父稿句消失 / 复读 / 密度（只算字数密度）/ 否定句（含旧壳结尾段）/ 反模式（含 AP02）/ 其它", not bad, bad))
+
+    # 5) log_outcome：按 8 位 sha 找到报告，追加一行；字段齐，触发的编号含已裁定的，模式照报告
+    sha8 = rep["delivered_sha256"][:8]
+    outf = gate / "outcomes.jsonl"
+    p = _logo(gate, "--sha", sha8, "--video", "视频节点 5 - 副本 (8).mp4", "--verdict", "采用", "--note", "用户：好了很多", "--lesson", "L144")
+    rows = _lines(outf)
+    r0 = rows[0] if rows else {}
+    ok = (p.returncode == 0 and len(rows) == 1 and r0.get("sha") == sha8 and r0.get("report") == "r1.json"
+          and r0.get("video") == "视频节点 5 - 副本 (8).mp4" and r0.get("verdict") == "采用" and r0.get("note") == "用户：好了很多"
+          and r0.get("lesson") == "L144" and r0.get("antipatterns") == ["AP01", "AP06"] and r0.get("adjudicated_ids") == ["AP01"]
+          and r0.get("mode") == "默认" and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", r0.get("time") or "")))
+    M_EXTRA.append(("log_outcome 按 8 位 sha 找到报告，往 outcomes.jsonl 追加一行：时间、sha、报告、成片、评价、备注、经验编号、触发与裁定的反模式编号、模式",
+                    ok, (p.stdout + p.stderr).strip()[:200] if not ok else "ok"))
+    # 6) 直接给报告路径也行，再追加一行
+    p = _logo(gate, "--sha", gate / "r1.json", "--video", "第二条.mp4", "--verdict", "否")
+    rows = _lines(outf)
+    ok = p.returncode == 0 and len(rows) == 2 and rows[1].get("verdict") == "否" and rows[1].get("antipatterns") == ["AP01", "AP06"]
+    M_EXTRA.append(("log_outcome 的 --sha 给报告路径：同样追加一行", ok, (p.stdout + p.stderr).strip()[:200]))
+    # 7) 找不到 sha：退出 1、说找不到、文件不动；评价不是三档之一：参数错误退出 2、文件不动
+    before = outf.read_bytes()
+    p = _logo(gate, "--sha", "0123abcd", "--video", "x.mp4", "--verdict", "采用")
+    p2 = _logo(gate, "--sha", sha8, "--video", "x.mp4", "--verdict", "还行")
+    ok = p.returncode == 1 and "找不到 sha 0123abcd" in p.stderr and p2.returncode == 2 and outf.read_bytes() == before
+    M_EXTRA.append(("log_outcome 找不到 sha 报错退出 1、评价不是 采用 / 部分 / 否 退出 2，outcomes.jsonl 都不动", ok,
+                    f"{p.returncode} {p.stderr.strip()[:120]} | {p2.returncode}"))
+    # 8) v38 之前的报告（没有 antipatterns / mode）：编号从提醒原文里取，模式记 null
+    shutil.copy(RS / "20260801-120000.json", gate / "old.json")
+    p = _logo(gate, "--sha", "cccc3333", "--video", "旧稿.mp4", "--verdict", "部分")
+    rows = _lines(outf)
+    ok = p.returncode == 0 and len(rows) == 3 and rows[2].get("antipatterns") == ["AP01"] and rows[2].get("mode") is None
+    M_EXTRA.append(("log_outcome 读 v38 之前的报告：反模式编号从提醒原文里取，模式记 null", ok, rows[2] if len(rows) > 2 else p.stderr.strip()[:160]))
+    # 9) rule_stats 在这个临时目录上：两份报告、三行结果，AP01 触发 2 次、被裁 1 次，采用 / 部分 / 否各 1
+    snap = {f.name: f.read_bytes() for f in gate.iterdir()}
+    p = run([STATS, "--dir", gate, "--today", "2026-10-01"])
+    ok = (p.returncode == 0 and "| AP01 | 正式 | 2 | 1 | 1 | 1 | 1 |" in p.stdout and "| AP06 | 候选 | 1 | 0 | 1 | 0 | 1 |" in p.stdout
+          and {f.name: f.read_bytes() for f in gate.iterdir()} == snap)
+    M_EXTRA.append(("rule_stats 读 check_prompt 报告与 log_outcome 写的结果出表，目录里的文件一个字节不动", ok, p.stdout[-400:] if not ok else "ok"))
+
+# 10) rule_stats 在固定夹具目录上（--today 定死）：反模式、类别、最近 30 天三节的数都对；全套报告不计；只读
+snap = {f.name: f.read_bytes() for f in RS.iterdir()}
+p = run([STATS, "--dir", RS, "--today", "2026-10-01"])
+_st = {r["id"]: ("候选" if r["candidate"] else "正式") for r in (CP.load_antipatterns()[0] or {}).get("rows", [])}
+want = [f"| AP01 | {_st.get('AP01')} | 2 | 1 | 1 | 0 | 1 |", f"| AP06 | {_st.get('AP06')} | 1 | 0 | 1 | 0 | 0 |",
+        "| 父稿句消失 | 1 | 0 | 0% |", "| 反模式 | 3 | 1 | 33% |", "| 合计 | 8 | 1 | 12% |",
+        "check_prompt 报告 3 份（v38 之前的 1 份", "全套报告 1 份不计", "成片结果 2 条（outcomes.jsonl）：采用 1、部分 0、否 1",
+        "## 三、最近 30 天（2026-09-02 到 2026-10-01）", "新增报告 2 份，涉及 2 份不同正文；有成片结果的 1 份，占 50%"]
+miss = [x for x in want if x not in p.stdout]
+ok = p.returncode == 0 and not miss and {f.name: f.read_bytes() for f in RS.iterdir()} == snap
+M_EXTRA.append(("rule_stats 在夹具目录上出表：触发、被裁定、采用 / 否成片里触发、正式 / 候选；类别总数与裁定率；最近 30 天报告数与有成片结果的占比", ok,
+                miss or p.stderr.strip()[:200]))
+with tempfile.TemporaryDirectory() as tmp:
+    gate9 = pathlib.Path(tmp)
+    _p9, rep9, _o9 = _report_run(["--prompt", C / "ap_baimo_lens.txt", "--total", "12", "--labels", "图1,视频1", "--mode", "白模"], gate9 / "r9.json")
+    ids9 = [it["id"] for it in rep9.get("antipatterns") or []]
+    p9 = run([STATS, "--dir", gate9, "--today", "2026-10-01"])
+    ok = ("AP09" in ids9 and rep9["hint_types"]["反模式"] == len(ids9) and "| AP09 | 候选 | 1 | 0 | 0 | 0 | 0 |" in p9.stdout)
+    M_EXTRA.append(("AP09（白模命令区缺一致性句）提醒带编号：进报告的 antipatterns，rule_stats 按编号统计、标候选", ok, (ids9, p9.stdout[-300:]) if not ok else "ok"))
+for name, ok, detail in M_EXTRA:
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {name} |", detail if not ok else "ok")
+
 TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES) + 1  # lint_lexicon 当前词库
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
          + 4 + len(SUCCESS_EXTRA) + 1
+         + len(ORIENT_SUCCESS)  # v38 回放：成功案例不报朝向提醒
          + len(DETAIL_CASES) + len(INFER_CASES) + len(QUEUE_SPAN_CASES) + 2
          + len(REVIEW_CHECKS) + (len(SCRIPT_GUARD_CASES) + 1 if GUARD_RUN else 0)
          + len(ARCHIVE_CASES)  # v31 archive 出口
+         + len(AP_EXTRA)  # v37 反模式表体检、表缺失不崩、summary 与钩子兼容
+         + len(M_EXTRA)  # v38 度量回路：报告新字段、log_outcome、rule_stats
          + 1)  # 压缩审校：复读每份稿最多报 5 条
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)
