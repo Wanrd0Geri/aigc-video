@@ -13,6 +13,10 @@ python3 scripts/verify_delivery.py --prompt prompt.txt --requirements requiremen
 requirements.json 里与机械检查有关的字段（quality-gate.md 模板）：
   format   四段 / 五段 / 六段 / 继承；缺省时有父稿按“继承”、无父稿按“四段”，原样转给 check_prompt --format。
   asks     多轮任务的 asks.txt 路径（相对路径先按当前目录找，找不到再按 requirements.json 所在目录找），转给 check_prompt --asks；单轮写 null。
+  mode     白模 / 默认（缺省默认）：白模或运镜参考驱动的稿写 白模，转给 check_prompt --mode；自检用了什么模式，门禁复查就写什么。
+  rewrite_authorized  true / false（缺省 false）：用户授权整镜重写父稿时 true，转给 check_prompt --rewrite-authorized。
+  adjudicated  项目里 adjudicated.txt 的路径（找法同 asks），转给 check_prompt --adjudicated；没有裁定记录写 null 或省略。
+  三个开关和自检保持一致，门禁复查才不会把自检已压掉的提醒重新报出来、也不会重复计进 rule_stats。
   complex  全套路径恒为 true（由严格审 / 约定的技术验收触发，要求独立复核）；缺省或 false 报错不放行。
 局部修订（--partial）合成完整稿时按父稿的实际外壳切镜头块（与 check_prompt 同一口径），四段父稿镜内的否定句不会被当成结尾丢掉。
 
@@ -127,6 +131,25 @@ def evaluate(args):
             errors.append('requirements.asks 指定的要求清单找不到：' + asks)
         else:
             asks_path = str(cand)
+    # v39：三个降噪开关也从 requirements.json 转给 check_prompt，门禁复查与自检同一口径
+    mode = req.get('mode')
+    if mode is not None and mode not in ['白模', '默认']:
+        raise ValueError('requirements.mode 只能是 白模 / 默认，或省略')
+    rewrite_authorized = req.get('rewrite_authorized', False)
+    if not isinstance(rewrite_authorized, bool):
+        raise ValueError('requirements.rewrite_authorized 只能是 true / false')
+    adjudicated = req.get('adjudicated')
+    adjudicated_path = None
+    if adjudicated is not None:
+        if not isinstance(adjudicated, str) or not adjudicated.strip():
+            raise ValueError('requirements.adjudicated 写 adjudicated.txt 的路径；没有裁定记录写 null 或省略')
+        cand = Path(adjudicated).expanduser()
+        if not cand.is_absolute() and not cand.is_file():
+            cand = Path(args.requirements).resolve().parent / cand
+        if not cand.is_file():
+            errors.append('requirements.adjudicated 指定的裁定记录找不到：' + adjudicated)
+        else:
+            adjudicated_path = str(cand)
     requirements = req['requirements']
     if not isinstance(requirements, list) or not requirements:
         raise ValueError('必须先从原请求建立 requirements')
@@ -147,6 +170,12 @@ def evaluate(args):
     cmd += ['--format', fmt]
     if asks_path:
         cmd += ['--asks', asks_path]
+    if mode == '白模':
+        cmd += ['--mode', '白模']
+    if rewrite_authorized:
+        cmd += ['--rewrite-authorized']
+    if adjudicated_path:
+        cmd += ['--adjudicated', adjudicated_path]
     for lock in effective_locks:
         cmd += ['--lock', lock]
     neg_exc = req.get('negative_exception', [])

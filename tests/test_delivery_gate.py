@@ -396,6 +396,64 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(code, 1, res)
         self.assertTrue(any('requirements.asks 指定的要求清单找不到' in e for e in res['errors']), res['errors'])
 
+    # ---- v39：requirements.mode / rewrite_authorized / adjudicated 转给 check_prompt ----
+    def test_v39_mode_forwarded(self):
+        self.setup_gate(check_args=('--mode', '白模'))
+        self.req['mode'] = '白模'
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertEqual(res['mechanical'].get('mode'), '白模')
+        self.assertTrue(any(w.startswith('反模式 AP09') for w in res['mechanical']['warnings']), res['mechanical']['warnings'])
+
+    def test_v39_mode_default_when_absent(self):
+        self.setup_gate()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertEqual(res['mechanical'].get('mode'), '默认')
+        self.assertIs(res['mechanical'].get('rewrite_authorized'), False)
+        self.assertEqual(res['mechanical'].get('adjudicated_ids'), [])
+
+    def test_v39_mode_invalid_rejected(self):
+        self.setup_gate(); self.req['mode'] = '精模'
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 2, res)
+        self.assertTrue(any('requirements.mode 只能是 白模 / 默认' in e for e in res['errors']), res['errors'])
+
+    def test_v39_rewrite_authorized_forwarded(self):
+        self.setup_gate(); self.req['rewrite_authorized'] = True
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertIs(res['mechanical'].get('rewrite_authorized'), True)
+
+    def test_v39_rewrite_authorized_must_be_bool(self):
+        self.setup_gate(); self.req['rewrite_authorized'] = 'yes'
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 2, res)
+        self.assertTrue(any('rewrite_authorized 只能是 true / false' in e for e in res['errors']), res['errors'])
+
+    def test_v39_adjudicated_forwarded(self):
+        text = BASE.replace('衣摆轻晃。', '衣摆轻晃。他身边的石头有卡车那么大。', 1)   # 触发反模式 AP03
+        adj = self.d/'adjudicated.txt'; adj.write_text('反模式 AP03   # 单元测试：裁定为误报\n', encoding='utf-8')
+        self.setup_gate(text=text, check_args=('--adjudicated', str(adj)))
+        self.req['adjudicated'] = 'adjudicated.txt'   # 相对路径：按 requirements.json 所在目录找
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertEqual(res['mechanical'].get('adjudicated_ids'), ['AP03'])
+        self.assertFalse(any(w.startswith('反模式 AP03') for w in res['mechanical']['warnings']), res['mechanical']['warnings'])
+        self.assertIn('已裁定 1 条', res['mechanical']['summary'])
+
+    def test_v39_adjudicated_missing_file_blocks(self):
+        self.setup_gate(); self.req['adjudicated'] = 'no-such-adjudicated.txt'
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 1, res)
+        self.assertTrue(any('requirements.adjudicated 指定的裁定记录找不到' in e for e in res['errors']), res['errors'])
+
     def test_d5_asks_null_is_single_round(self):
         self.setup_gate(); self.req['asks'] = None
         self.refresh_requirement_hash()

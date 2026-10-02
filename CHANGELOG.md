@@ -2,6 +2,14 @@
 
 版本号是本 Skill 自己的迭代号，不对应即梦或 Seedance 的版本。未标日期的历史版本为 2026-09-21。
 
+## v39 交付门禁透传三个降噪开关（2026-10-01）
+
+来源：v38 收口后发现 verify_delivery 复查提示词时不认识 v37 加的 `--mode 白模`、`--rewrite-authorized`、`--adjudicated`：白模稿自检压掉的提醒到了门禁又全部报出来，并且会被 rule_stats 当成新的触发计进统计。
+
+- **改动**：requirements.json 加三个字段 `mode`（白模 / 默认，缺省默认）、`rewrite_authorized`（true / false，缺省 false）、`adjudicated`（adjudicated.txt 路径，找法同 asks；找不到不放行），verify_delivery 原样转给 check_prompt；值不合法按输入无效退出 2。quality-gate.md 模板与说明、白模模式卡「检查参数」同步。
+- **测试与验证边界**：test_delivery_gate 加 7 项（白模模式转发并报 AP09、缺省为默认且三字段为空、mode 非法、rewrite_authorized 转发、非布尔拒绝、adjudicated 转发后 AP03 进 adjudicated_ids 并从 warnings 消失、裁定文件缺失不放行），53 → 60；其余四套不变。只证明机械行为。
+- **没改的**：check_prompt、Stop 钩子、report 字段；errors 口径不变。
+
 ## v38 度量回路、写前七问与模式卡、写法规则按证据压缩、原理页（2026-10-01）
 
 来源：v37 之后的复盘——规则多到执行不下去，提醒不被信，每条规则赚没赚到没数可查。施工图 v38 由主会话（Fable）起草，用户定了四点：模式卡先做三张；writing-rules 正文压到 30 行上下；提醒文案里的条款引用改成「决策 Dxx / 附录第 N 条」；写前七问放 SKILL.md 顶部。检查器、脚本、测试与文档由 Opus 子代理施工；3.1 的分类表先交主会话改判，再执行 3.2–3.4。回放验证（埋雷盲评、真实稿回放、噪音比例前后对比）由主会话做，结果另记。全程不删只搬。
