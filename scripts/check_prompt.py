@@ -4,7 +4,7 @@
 check_prompt.py — Seedance 2.5 提示词文本检查（只查文本，不改稿，不验证画面语义）。
 
 用法：
-  python3 check_prompt.py --prompt 稿.txt [--task 生成|编辑|延长|衔接] [--total 秒] [--untimed] [--labels 图1,图2,视频1]
+  python3 check_prompt.py --prompt 稿.txt [--task 生成|编辑|延长|衔接] [--total 秒] [--untimed [--shot-seconds 0.62,0.67,…]] [--labels 图1,图2,视频1]
                           [--baseline 父稿.txt] [--format 四段|五段|六段|继承] [--partial] [--lock "台词"]... [--unchanged 1,3]
                           [--asks asks.txt] [--save-checked 合成稿.txt] [--report 报告.json]
                           [--mode 白模|默认] [--rewrite-authorized] [--adjudicated adjudicated.txt]
@@ -115,7 +115,8 @@ v23 三类提醒（只提醒不拦截，词表 SUBJECT_*_RE / BG_ACT / SCENE_*_R
   “慢慢”“急速”是速度，“先 / 接着 / 随后 / 最后 / 同时”是时序词（附录第 71 条），“开始的一秒 / 开始时 / 一开始”是时间点，都不计；
   锁定文字与点名的否定句不数。
   密度：有时码的镜头，正文字数（去标题、去台词、去空白）÷ 时长超过 DENSITY_CHARS_PER_SEC（默认 200 字 / 秒，--density-line 可调，暂定，待 A/B 实测，
-  L104）时提醒，checked 里逐镜列出字数与每秒字数。改稿时和父稿逐字相同的镜头不报虚词与密度（压缩只用于本轮获准改写的部分）。
+  L104）时提醒，checked 里逐镜列出字数与每秒字数。无时码稿（白模、衔接）给 --shot-seconds 每镜秒数后同样逐镜算（v40，屋脊打戏 L161：
+  白模短镜字多时成片会拉长这一镜、尾镜被挤）。改稿时和父稿逐字相同的镜头不报虚词与密度（压缩只用于本轮获准改写的部分）。
 v35 表演排队提醒（writing-rules 成文主规则第 8 条，用户 2026-09-28；只提醒不拦截，一镜合并一条，常量 QUEUE_* 在头部、可调）：
   只扫情节段各镜头正文（去掉镜头标题、剥掉台词、锁定文字不扫），报“说完 / 听完 / 话音（刚 / 一）落”“等…说完 / 做完 / 停下 / 结束”
   （本小句内，到最近第一次结束词即止）“之后才 / 然后才 / 随后才 / 接着才”“才 + 开口 / 抬头 / 回头 / 转身 / 回应 / 接话 / 答话 / 回答 /
@@ -1588,6 +1589,9 @@ def main():
     ap.add_argument("--total", type=float, default=None)
     ap.add_argument("--untimed", action="store_true")
     ap.add_argument("--density-line", type=float, default=None, help="字数密度参考线（字/秒），默认取 DENSITY_CHARS_PER_SEC")
+    ap.add_argument("--shot-seconds", default="",
+                    help="无时码稿（白模、衔接）每镜的实际秒数，逗号分开、按镜号顺序（从白模交接卡的切点抄，如 0.62,0.67,0.75）；"
+                         "给了就逐镜算字数密度，和有时码的镜头同一口径。镜头有时码时以时码为准")
     ap.add_argument("--labels", default="", help="本次素材集合，逗号分开；`图1` 与 `图片1` 两种写法都接受（归一成 图N / 视频N / 音频N 再核对）")
     ap.add_argument("--baseline", default=None)
     ap.add_argument("--partial", action="store_true")
@@ -1614,6 +1618,14 @@ def main():
     def bail(msg):
         print(json.dumps({"ok": False, "errors": [msg], "warnings": [], "checked": []}, ensure_ascii=False, indent=2))
         sys.exit(2)
+    shot_secs = []
+    if a.shot_seconds.strip():
+        try:
+            shot_secs = [float(x) for x in re.split(r"[,，\s]+", a.shot_seconds.strip()) if x]
+        except ValueError:
+            bail(f"--shot-seconds 要写成逗号分开的秒数（如 0.62,0.67,0.75）：{a.shot_seconds}")
+        if any(x <= 0 for x in shot_secs):
+            bail(f"--shot-seconds 里的秒数都要大于 0：{a.shot_seconds}")
     if a.task == "修订" and not a.baseline:
         bail("--task 修订 必须给 --baseline 父稿（推荐写法：--task 生成|编辑|延长|衔接 加 --baseline）")
     if a.partial and not a.baseline:
@@ -1699,6 +1711,12 @@ def main():
     first_head = heads[0][0] if heads else None
     # 四段稿末尾只有固定句：镜头块只在固定句那一行切开，写在镜内的否定句仍属于那一镜的正文。
     blocks = shot_blocks(lines, heads, len(lines) if fmt == "四段" else None)
+    if shot_secs:
+        if len(shot_secs) != len(blocks):
+            errors.append(f"--shot-seconds 给了 {len(shot_secs)} 个秒数，稿里有 {len(blocks)} 镜；按镜号顺序每镜一个")
+            shot_secs = []
+        else:
+            checked.append(f"每镜秒数来自 --shot-seconds：{'、'.join(f'{x:g}' for x in shot_secs)}（共 {sum(shot_secs):g} 秒）")
     for h, body, _tail in blocks:
         first = re.split(r"[:：]", body[0], maxsplit=1)
         content = (first[1] if len(first) == 2 else "") + "\n" + "\n".join(body[1:])
@@ -2133,15 +2151,18 @@ def main():
                 counts[w] = counts.get(w, 0) + 1
             shown = "、".join(w + (f"×{c}" if c > 1 else "") for w, c in counts.items())
             warnings.append(f"{tag} 虚词 {len(fills)} 个（{shown}），顺序和时间已清楚的可删，逐渐、缓缓改成具体变化或速度而不是删（成文主规则第 5 条）")
-        if h[3] is not None and h[4] is not None and h[4] > h[3]:
-            dur = h[4] - h[3]
+        has_tc = h[3] is not None and h[4] is not None and h[4] > h[3]
+        dur = (h[4] - h[3]) if has_tc else (shot_secs[k] if k < len(shot_secs) else None)
+        if dur:
             n_chars = nonspace_len(DIALOGUE_RE.sub("", shot_text(h, body_lines)))
             cps = n_chars / dur
             cps_txt = f"{cps:.0f}" if abs(round(cps) - density_line) >= 1 else f"{cps:.1f}"   # 贴着参考线时带一位小数
-            checked.append(f"{tag} 字数密度：{n_chars} 字，{dur:g} 秒，每秒 {cps_txt} 字（参考线 {density_line:g}，暂定）")
+            src = "" if has_tc else "，秒数来自 --shot-seconds"
+            checked.append(f"{tag} 字数密度：{n_chars} 字，{dur:g} 秒，每秒 {cps_txt} 字（参考线 {density_line:g}，暂定{src}）")
             if cps > density_line and not same_as_parent:
-                warnings.append(f"{tag} 每秒 {cps_txt} 字，超过参考线 {density_line:g}（暂定，待 A/B 实测）；"
-                                f"看看有没有复述或模型自己会补的东西（成文主规则第 5 条）")
+                hint = ("看看有没有复述或模型自己会补的东西（成文主规则第 5 条）" if has_tc else
+                        "白模短镜只写一件事的可见结果，细节放到长镜头——短镜字多时成片会把这一镜拉长、后面整体后移、尾镜被挤（L161）")
+                warnings.append(f"{tag} 每秒 {cps_txt} 字，超过参考线 {density_line:g}（暂定，待 A/B 实测）；{hint}")
 
     # --- 景别与内容（提醒；按实际取景判断，焦距不等于景别）---
     TIGHT, BODY_WIDE = ["特写", "大特写"], ["全身", "双脚", "脚下的", "整个房间", "整条街", "远处的山", "整片"]

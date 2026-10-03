@@ -264,6 +264,10 @@ CASES = [
     ("--rewrite-authorized 不关要求清单：缺落点照样拦", "revise_dropped_two.txt",
      ["--baseline", str(C / "revise_parent.txt"), "--total", "12", "--rewrite-authorized", "--asks", str(C / "asks_lost_overlap.txt")], 1),
     ("--adjudicated 裁定清单找不到：参数错误", "ap_speed_hold.txt", ["--total", "12", "--adjudicated", str(C / "不存在的裁定清单.txt")], 2),
+    # ---- v40：无时码稿 --shot-seconds 逐镜算字数密度（屋脊打戏 L161）----
+    ("白模稿 --shot-seconds 个数和镜数不符：拦下", "ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模", "--shot-seconds", "0.7"], 1),
+    ("白模稿 --shot-seconds 写了非数字：参数错误", "ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模", "--shot-seconds", "0.7,快"], 2),
+    ("白模稿 --shot-seconds 两镜短秒数：通过但提醒密度", "ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模", "--shot-seconds", "0.1,0.1"], 0),
 ]
 fails = 0
 for name, f, args, want in CASES:
@@ -511,6 +515,7 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("lantern_trial_s.txt", ["--total", "6"], "同一镜里既有远处位置又有贴镜动作"),   # “甩到身后最远处”不在背景层句里，照报
               ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "反模式 AP05（两条以上 L152）：「方块对应竹子」「圆盘对应山」"),   # 环境词表补竹、草、房、墙、桥、山、路
               ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "反模式 AP07（候选，未试（模式约定，L153））：「第2秒」"),   # 标题不带秒数，正文的第几秒也抓
+              ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模", "--shot-seconds", "0.1,0.1"], "白模短镜只写一件事的可见结果"),   # v40 无时码稿给每镜秒数后逐镜算密度
               ("ap_speed_center.txt", [], "镜1 反模式 AP01（两条以上 L047、L144）：「保持在画面中央」"),
               ("far_near_rub.txt", [], "「尽头」在前、「擦着镜头」在后"),
               ("orient_dir_only.txt", [], "镜2 朝向只写了方位词：「脸朝画面左侧」"),
@@ -796,6 +801,8 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("ap_speed_center_resize.txt", [], "镜1 反模式 AP01"),   # 留在画面正中，后面跟着“一点点变小”：大小在变，不是恒定约束（M007 那种）
                  ("far_near_bg_layer.txt", [], "远处位置又有贴镜动作"),   # “背景是远处……”是层次，碎块擦着镜头是另一样东西（M010 原句）
                  ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "人形对应图1"),   # 对应图N 的角色映射照旧不报
+                 ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模", "--shot-seconds", "6,6"], "超过参考线"),   # v40 秒数够长不报密度
+                 ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "超过参考线"),   # 没给 --shot-seconds 的无时码稿照旧不算密度
                  ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1"], "反模式 AP05"),   # 默认模式不扫白模的行
                  ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1"], "反模式 AP07"),
                  ("ap_speed_center.txt", [], "镜2 反模式 AP01")]   # “留在画面正中”在慢推镜里，不是速度镜
