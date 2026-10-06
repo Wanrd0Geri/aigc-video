@@ -248,7 +248,7 @@ def evaluate(args):
         evidence(row)
     for row in rows_by_id(rev.get('checks', []), DOMAINS, '六个专业检查域'):
         evidence(row, allow_na=True)
-    # Per-shot evidence makes the standing camera preference explicit on every delivery.
+    # Per-shot evidence records, for every shot, whether the camera moves (and why) or stays fixed.
     # 镜头块按 check_prompt 实际采用的外壳切：四段稿只在固定句那一行切开，镜内否定句仍算那一镜的正文
     full_lines = full.splitlines()
     heads = check_prompt.parse_heads(full_lines)
@@ -269,14 +269,19 @@ def evaluate(args):
             effect = row.get('effect_quote', '')
             if not effect.strip() or effect not in body:
                 errors.append(f'摄影 {idx} 缺少本镜可见幅度或画面变化原句')
-        elif mode in ['fixed', 'preserved']:
+        elif mode == 'fixed':
+            authority = row.get('source', '')
+            # 用户点名固定：source 引用原请求里的原话；作者按观看理由固定：source 写「作者」（reason 已在上面要求非空）
+            if not authority.strip() or (authority != '作者' and authority not in source):
+                errors.append(f'摄影 {idx} 固定缺少依据：用户点名的 source 引用用户原话，作者按观看理由定的 source 写「作者」')
+        elif mode == 'preserved':
             authority = row.get('source', '')
             if not authority.strip() or authority not in source:
-                errors.append(f'摄影 {idx} 固定或继承缺少用户要求/父稿依据')
-            if mode == 'preserved' and not args.baseline and req['task'] != '编辑':
+                errors.append(f'摄影 {idx} 继承缺少父稿/源视频依据')
+            if not args.baseline and req['task'] != '编辑':
                 errors.append(f'摄影 {idx} 继承模式仅用于实际父稿修订或保持源视频摄影的编辑')
         elif mode == 'fixed_by_design':
-            errors.append(f'摄影 {idx} 不允许作者自行固定（fixed_by_design 已撤销）；认为固定更合适时先向用户提出，用户确认后用 fixed 并在 source 引用用户确认的原话')
+            errors.append(f'摄影 {idx} fixed_by_design 已改名：作者按观看理由固定记 mode=fixed、source 写「作者」')
         else:
             errors.append(f'摄影 {idx} 模式必须为 moving/fixed/preserved')
     if pronunciation:

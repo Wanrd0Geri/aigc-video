@@ -199,7 +199,12 @@ class DeliveryTests(unittest.TestCase):
     def test_camera_fixed_by_design_is_rejected(self):
         self.setup_gate(BASE.replace('摄影机向右缓移，门框向左错开。','摄影机固定在门框正前方。'))
         self.review['camera'][0]={'id':1,'mode':'fixed_by_design','quote':'摄影机固定在门框正前方','reason':'单元测试：对白近景口型同步，固定更稳','notice':'待你定：镜 1 我按专业理由固定了'}
-        code,res=self.gate(); self.assertEqual(code,1); self.assertTrue(any('已撤销' in e for e in res['errors']))
+        code,res=self.gate(); self.assertEqual(code,1); self.assertTrue(any('已改名' in e for e in res['errors']))
+
+    def test_camera_author_fixed_with_reason_can_export(self):
+        self.setup_gate(BASE.replace('摄影机向右缓移，门框向左错开。','固定机位，摄影机正对门框。'))
+        self.review['camera'][0]={'id':1,'mode':'fixed','quote':'固定机位，摄影机正对门框。','source':'作者','reason':'单元测试：对白近景说不出运镜作用，按观看理由固定'}
+        self.assertEqual(self.gate()[0],0)
 
     def test_negative_exception_duplicates_and_fragments_rejected(self):
         text=BASE.replace('门框向左错开。','门框向左错开。不出现水印。不出现现代物品。不出现重复人物。不出现多余道具。不出现反光。')
