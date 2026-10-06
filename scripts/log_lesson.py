@@ -13,7 +13,7 @@ log_lesson.py — 向经验库追加一条记录，自动编号。
 置信度只有两档：已试（本项目有能定位的成片或截图对得上，或用户本人的实测反馈——来源注明“用户实测，未绑定具体成片”并写日期）/ 未试（没有）。
 只在获得当次授权后运行；来源要能定位（模型版本、提交稿、成片文件名）。
 v31 起：编号从主库与同目录 archive.md 的合集里取最大值加一（归档只搬行、不腾编号）；写入后给三种非阻断提醒（stderr）：
-  写法 A / B 超过 80 字（整句放案例库，这里只写关键短语）；来源只有一条成片、结论又没标"单次观察"；
+  写法 A / B 超过 80 字（整句放案例库，这里只写关键短语）；结论超过 150 字符、来源超过 100 字符（v43 瘦身口径）；来源只有一条成片、结论又没标"单次观察"；
   主库里 `<!-- 整理于 … L0xx -->` 标记之后新增满 10 条（该跑「整理经验」了）。
 并发写入靠同目录的 `.lock` 文件互斥（macOS 用 fcntl，Windows 用 msvcrt），只保证本机；跨机器靠 git 合并与 `merge_lessons.py`。
 """
@@ -31,6 +31,8 @@ from lint_lessons import cats_hint, topic_error, archive_path_for  # 12 个分�
 CONF = ["已试", "未试"]
 SECTION = "## 七、诊断新增"
 WAY_LIMIT = 80          # 写法 A / B 列的建议上限（字），超过只提醒。可调
+CONCL_LIMIT = 150       # 结论列的提醒目标（字符），超过只提醒。可调
+SOURCE_LIMIT = 100      # 来源列的提醒目标（字符），超过只提醒。可调
 TIDY_EVERY = 10         # 整理标记之后新增满这么多条就提醒跑「整理经验」。可调
 TIDY_MARK = re.compile(r"<!--\s*整理于\s*(\d{4}-\d{2}-\d{2})\s*L(\d{3,})\s*-->")
 # 来源里像成片定位的东西：mp4 / mov / jimeng-… / 视频节点… / 截图；数到一个且没写"对照 / 两跑 / 三版"就算单条成片
@@ -45,6 +47,10 @@ def reminders(a, text_after):
     for name, val in (("写法A", a.a), ("写法B", a.b)):
         if val != "—" and len(val) > WAY_LIMIT:
             out.append(f"{name} 列 {len(val)} 字，超过 {WAY_LIMIT} 字：这里只写关键短语，整句放案例库（references/cases/my-cases.md）")
+    if len(a.conclusion) > CONCL_LIMIT:
+        out.append(f"结论列 {len(a.conclusion)} 字符，超过 {CONCL_LIMIT}：只写什么条件下怎么写有效和证据边界，过程叙述放 archive「整理搬出的叙述」节")
+    if len(a.source) > SOURCE_LIMIT:
+        out.append(f"来源列 {len(a.source)} 字符，超过 {SOURCE_LIMIT}：只留能定位的文件名、日期和评价原话")
     hits = len(SOURCE_FILE.findall(a.source)) or len(SOURCE_NAME.findall(a.source))   # 有扩展名按扩展名数，没有再按文件名样式数
     single = hits <= 1 and not SOURCE_MULTI.search(a.source) and "用户实测" not in a.source
     if single and "单次观察" not in a.conclusion:
