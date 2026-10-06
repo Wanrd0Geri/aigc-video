@@ -13,7 +13,7 @@ python3 scripts/verify_delivery.py --prompt prompt.txt --requirements requiremen
 requirements.json 里与机械检查有关的字段（quality-gate.md 模板）：
   format   四段 / 五段 / 六段 / 继承；缺省时有父稿按“继承”、无父稿按“四段”，原样转给 check_prompt --format。
   asks     多轮任务的 asks.txt 路径（相对路径先按当前目录找，找不到再按 requirements.json 所在目录找），转给 check_prompt --asks；单轮写 null。
-  mode     白模 / 默认（缺省默认）：白模或运镜参考驱动的稿写 白模，转给 check_prompt --mode；自检用了什么模式，门禁复查就写什么。
+  mode     白模 / 默认（缺省默认）：仅全量白模驱动的稿写 白模，纯运镜参考写 默认，转给 check_prompt --mode；自检用了什么模式，门禁复查就写什么。
   rewrite_authorized  true / false（缺省 false）：用户授权整镜重写父稿时 true，转给 check_prompt --rewrite-authorized。
   adjudicated  项目里 adjudicated.txt 的路径（找法同 asks），转给 check_prompt --adjudicated；没有裁定记录写 null 或省略。
   shot_seconds  白模等无时码稿的每镜秒数列表（有限正数，按镜号顺序，从交接卡抄），转给 check_prompt --shot-seconds 逐镜算字数密度；有时码的稿写 null 或省略。
