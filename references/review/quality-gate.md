@@ -59,7 +59,7 @@ requirements.json 在写稿前建立，字段如下（JSON 是内部数据）：
 }
 ```
 
-- JSON 里不能写注释，三个字段的说明在这里：complex 全套路径恒为 true（由严格审/约定的技术验收触发，不表示稿子复杂或是第一版）；false 时 verify_delivery 不放行。format 新稿写 "四段"；修订继承父稿写 "继承"；用户授权迁移写 "四段"。asks 多轮任务写 asks.txt 的路径，verify_delivery 会转发给 check_prompt；单轮任务写 null。mode、rewrite_authorized、adjudicated 是 check_prompt 的三个降噪开关（仅全量白模驱动写 "白模"，纯运镜参考写 "默认"；用户授权整镜重写父稿写 true；项目里有 adjudicated.txt 就写它的路径），自检用了什么，这里就写什么，门禁复查才和自检同一口径（v39）。 shot_seconds：白模等无时码稿写每镜秒数列表（有限正数，按镜号顺序，从交接卡抄），verify_delivery 转给 check_prompt --shot-seconds，和自检用同一组秒数；有时码的稿写 null。
+- JSON 里不能写注释，三个字段的说明在这里：complex 全套路径恒为 true（由严格审/约定的技术验收触发，不表示稿子复杂或是第一版）；false 时 verify_delivery 不放行。format 新稿写 "四段"；修订继承父稿写 "继承"；用户授权迁移写 "四段"。asks 多轮任务写 asks.txt 的路径，verify_delivery 会转发给 check_prompt；单轮任务写 null。mode、rewrite_authorized、adjudicated 是 check_prompt 的三个降噪开关（仅全量白模驱动写 "白模"，纯运镜参考写 "默认"；用户授权整镜重写父稿写 true；项目里有 adjudicated.txt 就写它的路径），自检用了什么，这里就写什么，门禁复查才和自检同一口径（v39）。 shot_seconds：无时码稿（含白模与衔接）写每镜秒数列表（有限正数，按镜号顺序，从交接卡抄），verify_delivery 转给 check_prompt --shot-seconds，和自检用同一组秒数；任何任务只要 untimed=true 就必填；有时码且未启用 untimed 的稿写 null。
 - labels 按真实上传顺序，无素材明确写 []；写 `图1` 或旧写法 `图片1` 都行，脚本会归一成 `图N / 视频N / 音频N` 再与正文核对。assets 每份一条 `{ "label": "图1", "status": "read", "role": "只负责衣服", "evidence": "实际读取记录与相关可见事实" }`；读不到标 missing，不能放行。
 - 精确文字用 exact_locks，新稿无需伪造父稿。语义要求须进入 requirements，不能把故事、动作、结果只留在原始请求里不核对。锁定列表由原请求建立，不从成稿倒推。**source 只能引本次对话的原请求、有效补充或真实父稿**：持久记忆、旧项目文件、以前会话里的设定不能当 requirement 的 source，除非用户在本次对话里确认过（那就引用用户本次确认的那句话）；没确认的设定留在表头"待你定"行，不进 requirements、不进 exact_locks。
 - 修订时提供真实 --baseline；可用 unchanged 数组，如 `[1,3]`。局部段用 --partial，review 的 quote 与哈希对应放回父稿后的完整稿。
