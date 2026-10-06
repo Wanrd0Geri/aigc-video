@@ -562,7 +562,7 @@ ESC_PIPE = "\\" + "|"                  # Markdown 表格里转义过的竖线（
 SHOT_PREFIX_RE = re.compile(r"^镜\d+\s+")        # 提醒开头的镜号（镜1 ）；裁定清单比对时去掉
 # v38 回放：--mode 白模 时命令区要有一句一致性约定（seedance-operations 第 0.5 节、白模模式卡），这三样一样都没有就给一条候选提醒；默认模式不报
 WB_CONSISTENCY_RE = re.compile(r"严格保持|切点前后状态一致|角色一致性")
-# ---- v38 度量回路：报告里的提醒类别与反模式编号（scripts/rule_stats.py、scripts/log_outcome.py 也 import 这几样）----
+# ---- v38 度量回路：报告里的提醒类别与反模式编号（scripts/rule_stats.py 也 import 这几样；scripts/log_outcome.py 只 import ap_refs）----
 HINT_TYPES = ("总览句", "父稿句消失", "复读", "密度", "否定句", "反模式", "其它")   # 报告 hint_types 的键，固定这个顺序
 AP_TAG_RE = re.compile(r"反模式 (AP\d+)（")       # 提醒里的反模式编号（AP02 那条的编号在句末）
 SHOT_NO_RE = re.compile(r"^镜(\d+)\s")            # 提醒开头的镜号

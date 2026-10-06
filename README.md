@@ -2,7 +2,7 @@
 
 把想法翻译成 Seedance 2.5 听得懂的可见画面，在锁定项之外主动提升观感，多镜新稿先给一张能改的镜头表、确认后再成文，并把成片反馈整理成可写入经验库的观察。Claude Code 与 Codex 通用（只依赖 SKILL.md、python3 标准库、ffmpeg）。
 
-当前为 v40（v39 交付门禁透传三个降噪开关；v40 白模打斗：模式卡补接触、道具与按时长控字数，check_prompt 加 `--shot-seconds` 逐镜算白模稿字数密度）：写法规则按证据压成正文的决策表 17 行（D01–D17）和建议行 10 行，v38 之前第零组到第十组的原文整份搬进附录 `references/writing-rules-annex.md`，编号不变，别处引用写「决策 Dxx」「附录第 N 条」；写稿前先过 SKILL.md 顶部的写前七问和原理页 `references/principles.md`，再按三张模式卡（多人对话、单主体动作与生物、白模或运镜参考）写；检查报告多存反模式命中、裁定、模式与提醒类别，用户评价成片后 `log_outcome.py` 记一行结果，「整理经验」先跑 `rule_stats.py` 看每条规则赚没赚到。v37 的反模式表 `references/antipatterns.md` 与三个降噪开关（`--mode 白模`、`--rewrite-authorized`、`--adjudicated`），v28 的「压缩审校」（三问删复述、常识、虚词；切线、坐标、秒数、关键事件、情绪方向句等承重内容不碰）与「松紧旋钮」（默认 / 更放 / 更控）、复读 / 虚词 / 密度三条提示（密度参考线默认 200 字/秒，待 A/B 实测），v27 词库 11 张 989 条与拔高机制、v26 去处表、v25 全库审查定案全部保留，见 CHANGELOG。
+当前为 v43（v43 运镜由观看理由决定：说得出这镜为什么要动才写可见运镜，说不出就固定机位、不必申请；v42 默认做法与作者工作习惯对齐；v41、v40 见 CHANGELOG）：写法规则按证据压成正文的决策表 17 行（D01–D17）和建议行 10 行，v38 之前第零组到第十组的原文整份搬进附录 `references/writing-rules-annex.md`，编号不变，别处引用写「决策 Dxx」「附录第 N 条」；写稿前先过 SKILL.md 顶部的写前七问和原理页 `references/principles.md`，再按三张模式卡（多人对话、单主体动作与生物、白模或运镜参考）写；检查报告多存反模式命中、裁定、模式与提醒类别，用户评价成片后 `log_outcome.py` 记一行结果，「整理经验」先跑 `rule_stats.py` 看每条规则赚没赚到。v37 的反模式表 `references/antipatterns.md` 与三个降噪开关（`--mode 白模`、`--rewrite-authorized`、`--adjudicated`），v28 的「压缩审校」（三问删复述、常识、虚词；切线、方位、秒数、关键事件、情绪方向句等承重内容不碰）与「松紧旋钮」（默认 / 更放 / 更控）、复读 / 虚词 / 密度三条提示（密度参考线默认 200 字/秒，待 A/B 实测），v27 词库 11 张 989 条与拔高机制、v26 去处表、v25 全库审查定案全部保留，见 CHANGELOG。
 
 ## 安装
 
@@ -58,9 +58,9 @@ hooks/
   stop_gate.py               Stop 钩子（Claude Code 与 Codex 通用）：三层判定——本轮报告（verify 或 check_prompt --report）对得上就放行；没报告的四段完整稿由钩子代跑 check_prompt（一律按四段新稿查），有错拦下、无错放行并提示"作者未自己跑检查"；局部镜头、不带四段外壳的裸命令和五段 / 六段旧壳没报告则拦下
   README.md                  两个宿主的装法、能拦什么、真实宿主验证清单
 tests/cases.md               端到端用例
-tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检 + 词库体检 + 度量回路（报告新字段、log_outcome、rule_stats）（793 项）
+tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检 + 词库体检 + 度量回路（报告新字段、log_outcome、rule_stats）（800 项）
 tests/test_revision_checks.py 修订格式、旧稿兼容与丢句匹配回归（18 项）
-tests/test_delivery_gate.py  verify_delivery 放行行为回归（53 项）
+tests/test_delivery_gate.py  verify_delivery 放行行为回归（61 项）
 tests/test_stop_gate.py      stop_gate 判定回归（71 项）
 tests/test_lesson_scripts.py 经验库脚本行为回归：归档与证据状态、写入加锁与补充、合并退出码、编号扩位（9 项）
 ```
