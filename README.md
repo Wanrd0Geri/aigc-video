@@ -58,7 +58,7 @@ hooks/
   stop_gate.py               Stop 钩子（Claude Code 与 Codex 通用）：三层判定——本轮报告（verify 或 check_prompt --report）对得上就放行；没报告的四段完整稿由钩子代跑 check_prompt（一律按四段新稿查），有错拦下、无错放行并提示"作者未自己跑检查"；局部镜头、不带四段外壳的裸命令和五段 / 六段旧壳没报告则拦下
   README.md                  两个宿主的装法、能拦什么、真实宿主验证清单
 tests/cases.md               端到端用例
-tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检 + 词库体检 + 度量回路（报告新字段、log_outcome、rule_stats）（800 项）
+tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检 + 词库体检 + 度量回路（报告新字段、log_outcome、rule_stats）（806 项）
 tests/test_revision_checks.py 修订格式、旧稿兼容与丢句匹配回归（18 项）
 tests/test_delivery_gate.py  verify_delivery 放行行为回归（61 项）
 tests/test_stop_gate.py      stop_gate 判定回归（71 项）

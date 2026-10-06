@@ -481,8 +481,21 @@ POSITION_GUARANTEE_RE = re.compile(
 POSITION_FRAME_RE = re.compile(r"(?:画面|画框|画内)(?:里|中|内)?的?(?:大小(?:和|与|、))?$")      # “在画面里的（大小和）位置……”
 POSITION_FRAME_AFTER_RE = re.compile(r"^\s*(?:在|于|停在|留在)(?:画面|画框|画内)")              # “灯笼的位置一直保持在画面左上”
 POSITION_PLURAL_RE = re.compile(r"两人|两个人|双方|彼此|二人|俩|他们|她们|它们")                   # 两人相对位置照报
-# 固定机位：镜内写了这些说法就算「动或定」已写明，不报“未识别到摄影运动”（SKILL.md 用户偏好第 1 条）。词表可调
-FIXED_CAMERA_RE = re.compile(r"固定机位|机位固定|摄影机固定|镜头固定|相机固定|机位不动|镜头不动|摄影机不动|全程固定")
+# 固定机位：镜内肯定地写了摄影固定才算「动或定」已写明，不报“未识别到摄影运动”（SKILL.md 用户偏好第 1 条）。
+# 只认带摄影主体的说法（固定机位、机位固定、摄影机 / 相机 / 镜头固定、机位 / 摄影机不动、镜头全程不动、机位锁死）；
+# 「胸针全程固定」没有摄影主体、「面对镜头不动声色」不是摄影，都不算；前面 3 字内有不 / 不要 / 别 / 非 / 避免 / 禁止 的否定说法也不算。词表可调
+FIXED_CAMERA_RE = re.compile(r"固定机位|机位固定|(?:摄影机|相机|镜头)(?:全程)?固定(?!焦)|(?:机位|摄影机|相机)(?:全程)?不动|镜头全程不动|(?:机位|镜头|摄影机)锁死")
+FIXED_NEG_RE = re.compile(r"(?:不要|不用|不是|不必|别|非|无需|避免|禁止|不)$")
+
+
+def fixed_camera_hit(s):
+    """镜内有没有肯定的摄影固定说法：匹配到的说法前面 3 字内带否定的不算。"""
+    for m in FIXED_CAMERA_RE.finditer(s):
+        if not FIXED_NEG_RE.search(s[max(0, m.start() - 3):m.start()]):
+            return True
+    return False
+
+
 # 摄影运动（SKILL.md 用户偏好第 1 条：动或定要写明，写了“固定机位”的镜不报）：每镜只认摄影运动术语，人物、环境在动不算。单字术语带排除，
 # “推开门”“拉紧背带”“摇头”“移开视线”“跟前”“甩出人头”“一甩”这类人物动作不算。词表可调
 CAMERA_MOVE_RE = re.compile(
@@ -2096,7 +2109,7 @@ def main():
         # 编辑命令的摄影按原视频（任务本身就在保护既有摄影），不报
         # --mode 白模：运镜来自视频1，不报（不再靠命令区出现“白模”二字）
         if (task != "编辑" and not cam_from_ref and a.mode != "白模" and not CAMERA_MOVE_RE.search(sbody)
-                and not FIXED_CAMERA_RE.search(sbody)):
+                and not fixed_camera_hit(sbody)):
             warnings.append(f"{tag} 未识别到摄影运动，也没写「固定机位」；每镜动或定要写明：有观看理由就写运镜和一处可见变化，没有就在首句写固定机位（SKILL.md 用户偏好第 1 条）")
         if weak_camera_hit(sbody):
             warnings.append(f"{tag} 运镜用了弱措辞（几乎不可察觉 / 微微 / 轻微 / 极其缓慢地……）；本用户要可辨认的运动幅度，"

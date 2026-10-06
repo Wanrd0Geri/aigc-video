@@ -466,6 +466,10 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("dense_exact_half_second.txt", [], "镜头标题的秒数不是整数：「0-1.1秒」「1.1-4.1秒」「4.1-12秒」"),
               # B1：只认摄影运动术语（对话样例镜 2、镜 3 只有表演，没有运镜）
               ("camera_person_actions.txt", [], "镜1 未识别到摄影运动，也没写「固定机位」；每镜动或定要写明：有观看理由就写运镜和一处可见变化，没有就在首句写固定机位（SKILL.md 用户偏好第 1 条）"),
+              # 交叉审查第一轮的三句反例：否定、不是摄影、没有摄影主体，都不算写了固定
+              ("fixed_negated.txt", [], "镜1 未识别到摄影运动"),
+              ("fixed_lookalike_person.txt", [], "镜1 未识别到摄影运动"),
+              ("fixed_lookalike_prop.txt", [], "镜1 未识别到摄影运动"),
               ("../sample-dialogue-12s.txt", [], "镜2 未识别到摄影运动"),
               ("../sample-dialogue-12s.txt", [], "镜3 未识别到摄影运动"),
               # B2：正文里有素材引用而没给 --labels 才提醒；B5 对照：没给 --asks 时“震撼”照报空词
@@ -681,6 +685,9 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("weak_motion_person.txt", [], "弱措辞"),
                  ("weak_motion_person.txt", [], "未识别到摄影运动"),
                  ("static_fixed_ok.txt", [], "未识别到摄影运动"),   # 首句写了「固定机位」的镜不报（SKILL.md 用户偏好第 1 条）
+                 ("fixed_lens_full.txt", [], "未识别到摄影运动"),   # 「镜头全程固定」算写了固定
+                 ("fixed_with_rack_focus.txt", [], "未识别到摄影运动"),
+                 ("fixed_with_rack_focus.txt", [], "固定机位与运镜词同时出现"),   # 固定机位加移焦不是矛盾（固定机位不等于固定焦距）
                  # A3：关键主体自己占满画面下半 / 右下一块不算整幅遮挡（成文主规则第 2 条正例、灯笼怪两稿）
                  ("key_event_rule2_example.txt", [], "整幅遮挡"),
                  ("lantern_trial_v22.txt", ["--total", "6"], "整幅遮挡"),
