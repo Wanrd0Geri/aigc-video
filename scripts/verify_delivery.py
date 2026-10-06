@@ -16,6 +16,7 @@ requirements.json 里与机械检查有关的字段（quality-gate.md 模板）�
   mode     白模 / 默认（缺省默认）：白模或运镜参考驱动的稿写 白模，转给 check_prompt --mode；自检用了什么模式，门禁复查就写什么。
   rewrite_authorized  true / false（缺省 false）：用户授权整镜重写父稿时 true，转给 check_prompt --rewrite-authorized。
   adjudicated  项目里 adjudicated.txt 的路径（找法同 asks），转给 check_prompt --adjudicated；没有裁定记录写 null 或省略。
+  shot_seconds  白模等无时码稿的每镜秒数列表（有限正数，按镜号顺序，从交接卡抄），转给 check_prompt --shot-seconds 逐镜算字数密度；有时码的稿写 null 或省略。
   三个开关和自检保持一致，门禁复查才不会把自检已压掉的提醒重新报出来、也不会重复计进 rule_stats。
   complex  全套路径恒为 true（由严格审 / 约定的技术验收触发，要求独立复核）；缺省或 false 报错不放行。
 局部修订（--partial）合成完整稿时按父稿的实际外壳切镜头块（与 check_prompt 同一口径），四段父稿镜内的否定句不会被当成结尾丢掉。
@@ -27,6 +28,7 @@ content is checked for completeness and text binding, not certified as semantica
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -150,6 +152,14 @@ def evaluate(args):
             errors.append('requirements.adjudicated 指定的裁定记录找不到：' + adjudicated)
         else:
             adjudicated_path = str(cand)
+    # v43：白模等无时码稿的每镜秒数也从 requirements.json 转给 check_prompt，严格审与自检同一口径（个数由 check_prompt 按镜数核对）
+    shot_seconds = req.get('shot_seconds')
+    shot_seconds_arg = None
+    if shot_seconds is not None:
+        if (not isinstance(shot_seconds, list) or not shot_seconds
+                or not all(isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and x > 0 for x in shot_seconds)):
+            raise ValueError('requirements.shot_seconds 写每镜秒数的列表（有限正数，按镜号顺序）；有时码的稿写 null 或省略')
+        shot_seconds_arg = ','.join(f'{float(x):g}' for x in shot_seconds)
     requirements = req['requirements']
     if not isinstance(requirements, list) or not requirements:
         raise ValueError('必须先从原请求建立 requirements')
@@ -176,6 +186,8 @@ def evaluate(args):
         cmd += ['--rewrite-authorized']
     if adjudicated_path:
         cmd += ['--adjudicated', adjudicated_path]
+    if shot_seconds_arg:
+        cmd += ['--shot-seconds', shot_seconds_arg]
     for lock in effective_locks:
         cmd += ['--lock', lock]
     neg_exc = req.get('negative_exception', [])

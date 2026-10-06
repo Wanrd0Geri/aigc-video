@@ -74,6 +74,8 @@ CASES = [
     ("局部替换改了时码", "partial_shot2_retimed.txt", ["--task", "生成", "--baseline", str(C / "control_valid.txt"), "--partial", "--total", "12"], 1),
     ("局部替换段自带固定句（合成后重复）", "partial_shot2_with_closing.txt", ["--task", "生成", "--baseline", str(C / "control_valid.txt"), "--partial", "--total", "12"], 1),
     ("白模预演无时码", "untimed_baimo.txt", ["--untimed", "--labels", "视频1,图片1"], 0),
+    ("--shot-seconds 含 nan 按参数错误退出 2", "untimed_baimo.txt", ["--untimed", "--labels", "视频1,图片1", "--shot-seconds", "nan,11.9"], 2),
+    ("--shot-seconds 含 inf 按参数错误退出 2", "untimed_baimo.txt", ["--untimed", "--labels", "视频1,图片1", "--shot-seconds", "inf,11.9"], 2),
     ("有意静止只给警告", "static_locked.txt", ["--total", "12"], 0),
         ("延长缺官方约束句", "extend_missing_constraint.txt", ["--task", "延长", "--total", "5"], 1),
     ("延长写成参考", "extend_as_reference.txt", ["--task", "延长", "--total", "5"], 1),
@@ -470,6 +472,12 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("fixed_negated.txt", [], "镜1 未识别到摄影运动"),
               ("fixed_lookalike_person.txt", [], "镜1 未识别到摄影运动"),
               ("fixed_lookalike_prop.txt", [], "镜1 未识别到摄影运动"),
+              # 交叉审查第二轮的五句反例：前置否定、后置否定、光学参数、固定失败
+              ("fixed_neg_require.txt", [], "镜1 未识别到摄影运动"),
+              ("fixed_neg_use.txt", [], "镜1 未识别到摄影运动"),
+              ("fixed_neg_after.txt", [], "镜1 未识别到摄影运动"),
+              ("fixed_lens_aperture.txt", [], "镜1 未识别到摄影运动"),
+              ("fixed_fail.txt", [], "镜1 未识别到摄影运动"),
               ("../sample-dialogue-12s.txt", [], "镜2 未识别到摄影运动"),
               ("../sample-dialogue-12s.txt", [], "镜3 未识别到摄影运动"),
               # B2：正文里有素材引用而没给 --labels 才提醒；B5 对照：没给 --asks 时“震撼”照报空词
@@ -1608,6 +1616,16 @@ miss = [x for x in want if x not in p.stdout]
 ok = p.returncode == 0 and not miss and {f.name: f.read_bytes() for f in RS.iterdir()} == snap
 M_EXTRA.append(("rule_stats 在夹具目录上出表：触发、被裁定、采用 / 否成片里触发、正式 / 候选；类别总数与裁定率；最近 30 天报告数与有成片结果的占比", ok,
                 miss or p.stderr.strip()[:200]))
+# 10b) v43：成片结果只按 sha 关联；没有 sha 的旧记录才按文件名回退，且别的目录里的同名报告不算到本目录的正文上
+with tempfile.TemporaryDirectory() as tmp:
+    g2 = pathlib.Path(tmp)
+    shutil.copy(RS / "20260929-090000.json", g2 / "same.json")
+    (g2 / "outcomes.jsonl").write_text(json.dumps({"time": "2026-09-30 10:00:00", "sha": "aaaa1111", "report": "C:/different-project/same.json",
+                                                   "video": "别的项目.mp4", "verdict": "采用", "note": "", "lesson": None, "antipatterns": [],
+                                                   "adjudicated_ids": [], "mode": "默认"}, ensure_ascii=False) + "\n", encoding="utf-8")
+    p = run([STATS, "--dir", g2, "--today", "2026-10-01"])
+    ok = p.returncode == 0 and "有成片结果的 0 份，占 0%" in p.stdout
+    M_EXTRA.append(("rule_stats：别的目录同名报告、不同 sha 的成片结果不算到本目录正文上（只按 sha 关联）", ok, p.stdout[-300:] if not ok else "ok"))
 with tempfile.TemporaryDirectory() as tmp:
     gate9 = pathlib.Path(tmp)
     _p9, rep9, _o9 = _report_run(["--prompt", C / "ap_baimo_lens.txt", "--total", "12", "--labels", "图1,视频1", "--mode", "白模"], gate9 / "r9.json")

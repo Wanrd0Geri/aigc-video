@@ -193,7 +193,7 @@ v37 反模式表（references/antipatterns.md，2026-10-01）：已知失效写�
 （非 --partial 时即 checked_sha256 前 8 位），必须来自真实运行结果，可与报告、工具日志和正文核对；哈希不是执行签名或质量证明。
 脚本只报告机械结果；轻量路径核对并裁定警告后即可交付，全套路径再运行 verify_delivery.py 核对专业审查及警告裁定。
 """
-import argparse, difflib, hashlib, json, os, re, sys, time
+import argparse, difflib, hashlib, json, math, os, re, sys, time
 from pathlib import Path
 
 CJK_NUM = "零一二三四五六七八九十百"
@@ -481,18 +481,24 @@ POSITION_GUARANTEE_RE = re.compile(
 POSITION_FRAME_RE = re.compile(r"(?:画面|画框|画内)(?:里|中|内)?的?(?:大小(?:和|与|、))?$")      # “在画面里的（大小和）位置……”
 POSITION_FRAME_AFTER_RE = re.compile(r"^\s*(?:在|于|停在|留在)(?:画面|画框|画内)")              # “灯笼的位置一直保持在画面左上”
 POSITION_PLURAL_RE = re.compile(r"两人|两个人|双方|彼此|二人|俩|他们|她们|它们")                   # 两人相对位置照报
-# 固定机位：镜内肯定地写了摄影固定才算「动或定」已写明，不报“未识别到摄影运动”（SKILL.md 用户偏好第 1 条）。
-# 只认带摄影主体的说法（固定机位、机位固定、摄影机 / 相机 / 镜头固定、机位 / 摄影机不动、镜头全程不动、机位锁死）；
-# 「胸针全程固定」没有摄影主体、「面对镜头不动声色」不是摄影，都不算；前面 3 字内有不 / 不要 / 别 / 非 / 避免 / 禁止 的否定说法也不算。词表可调
-FIXED_CAMERA_RE = re.compile(r"固定机位|机位固定|(?:摄影机|相机|镜头)(?:全程)?固定(?!焦)|(?:机位|摄影机|相机)(?:全程)?不动|镜头全程不动|(?:机位|镜头|摄影机)锁死")
-FIXED_NEG_RE = re.compile(r"(?:不要|不用|不是|不必|别|非|无需|避免|禁止|不)$")
+# 固定机位：镜内肯定地写了摄影固定才算「动或定」已写明，不报“未识别到摄影运动”（SKILL.md 用户偏好第 1 条）。约定写法是首句「固定机位」。
+# 启发式，只认带摄影主体的说法（固定机位、机位固定、摄影机 / 相机 / 镜头固定、机位 / 摄影机不动、镜头全程不动、机位锁死）；
+# 固定后面跟 焦 / 光圈 / 景深 / 白平衡 的是光学参数不算；同一分句里匹配处前 6 字内有 不 / 没 / 别 / 非 / 无 / 避免 / 禁止 / 拒绝 的不算
+# （「不要求固定机位」「不要用固定机位」）；匹配处后面紧跟 不住 / 不了 / 并不 / 不适 / 不合 / 失败 / 不够 / 不稳 的也不算（「固定机位并不适合」「摄影机固定不住」）。
+# 「胸针全程固定」没有摄影主体、「面对镜头不动声色」不是摄影，都不算。词表可调
+FIXED_CAMERA_RE = re.compile(r"固定机位|机位固定|(?:摄影机|相机|镜头)(?:全程)?固定(?!焦|光圈|光|景深|白平衡)|(?:机位|摄影机|相机)(?:全程)?不动|镜头全程不动|(?:机位|镜头|摄影机)锁死")
+FIXED_NEG_BEFORE_RE = re.compile(r"不|没|别|非|无|避免|禁止|拒绝")
+FIXED_NEG_AFTER_RE = re.compile(r"^(?:不住|不了|并不|不适|不合|失败|不够|不稳)")
 
 
 def fixed_camera_hit(s):
-    """镜内有没有肯定的摄影固定说法：匹配到的说法前面 3 字内带否定的不算。"""
+    """镜内有没有肯定的摄影固定说法：同一分句里匹配处前 6 字内带否定、或后面紧跟否定的不算。"""
     for m in FIXED_CAMERA_RE.finditer(s):
-        if not FIXED_NEG_RE.search(s[max(0, m.start() - 3):m.start()]):
-            return True
+        before = re.split(r"[，。；：、！？\n]", s[max(0, m.start() - 6):m.start()])[-1]
+        after = s[m.end():m.end() + 4]
+        if FIXED_NEG_BEFORE_RE.search(before) or FIXED_NEG_AFTER_RE.match(after):
+            continue
+        return True
     return False
 
 
@@ -1639,8 +1645,8 @@ def main():
             shot_secs = [float(x) for x in re.split(r"[,，\s]+", a.shot_seconds.strip()) if x]
         except ValueError:
             bail(f"--shot-seconds 要写成逗号分开的秒数（如 0.62,0.67,0.75）：{a.shot_seconds}")
-        if any(x <= 0 for x in shot_secs):
-            bail(f"--shot-seconds 里的秒数都要大于 0：{a.shot_seconds}")
+        if any(not math.isfinite(x) or x <= 0 for x in shot_secs):
+            bail(f"--shot-seconds 里的秒数都要是大于 0 的有限数（不能是 nan / inf）：{a.shot_seconds}")
     if a.task == "修订" and not a.baseline:
         bail("--task 修订 必须给 --baseline 父稿（推荐写法：--task 生成|编辑|延长|衔接 加 --baseline）")
     if a.partial and not a.baseline:
@@ -1732,6 +1738,8 @@ def main():
             shot_secs = []
         else:
             checked.append(f"每镜秒数来自 --shot-seconds：{'、'.join(f'{x:g}' for x in shot_secs)}（共 {sum(shot_secs):g} 秒）")
+            if a.total is not None and a.total > 0 and abs(sum(shot_secs) - a.total) > 0.1 * a.total:
+                warnings.append(f"--shot-seconds 之和 {sum(shot_secs):g} 秒与 --total {a.total:g} 相差超过 10%，核对秒数单位或镜数")
     for h, body, _tail in blocks:
         first = re.split(r"[:：]", body[0], maxsplit=1)
         content = (first[1] if len(first) == 2 else "") + "\n" + "\n".join(body[1:])
@@ -2176,8 +2184,10 @@ def main():
             src = "" if has_tc else "，秒数来自 --shot-seconds"
             checked.append(f"{tag} 字数密度：{n_chars} 字，{dur:g} 秒，每秒 {cps_txt} 字（参考线 {density_line:g}，暂定{src}）")
             if cps > density_line and not same_as_parent:
-                hint = ("看看有没有复述或模型自己会补的东西（成文主规则第 5 条）" if has_tc else
-                        "白模短镜只写一件事的可见结果，细节放到长镜头——短镜字多时成片会把这一镜拉长、后面整体后移、尾镜被挤（L161）")
+                if has_tc or a.mode != "白模":
+                    hint = "看看有没有复述或模型自己会补的东西（成文主规则第 5 条）"
+                else:
+                    hint = "白模短镜只写一件事的可见结果，细节放到长镜头——短镜字多时成片会把这一镜拉长、后面整体后移、尾镜被挤（L161）"
                 warnings.append(f"{tag} 每秒 {cps_txt} 字，超过参考线 {density_line:g}（暂定，待 A/B 实测）；{hint}")
 
     # --- 景别与内容（提醒；按实际取景判断，焦距不等于景别）---

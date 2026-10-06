@@ -459,6 +459,22 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(code, 1, res)
         self.assertTrue(any('requirements.adjudicated 指定的裁定记录找不到' in e for e in res['errors']), res['errors'])
 
+    def test_v43_shot_seconds_forwarded(self):
+        self.setup_gate(check_args=('--shot-seconds', '6,6'))
+        self.req['shot_seconds'] = [6, 6]
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        self.assertTrue(any('每镜秒数来自 --shot-seconds' in c for c in res['mechanical'].get('checked', [])), res['mechanical'].get('checked'))
+
+    def test_v43_shot_seconds_invalid_rejected(self):
+        for bad in ([0, 6], ['6', '6'], [], 'nan', [True, 6]):
+            self.setup_gate(); self.req['shot_seconds'] = bad
+            self.refresh_requirement_hash()
+            code, res = self.gate()
+            self.assertEqual(code, 2, (bad, res))
+            self.assertTrue(any('requirements.shot_seconds' in e for e in res['errors']), (bad, res['errors']))
+
     def test_d5_asks_null_is_single_round(self):
         self.setup_gate(); self.req['asks'] = None
         self.refresh_requirement_hash()

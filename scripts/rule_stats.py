@@ -175,8 +175,15 @@ def main():
     start = datetime.datetime.combine(first, datetime.time.min).timestamp()
     end = datetime.datetime.combine(today + datetime.timedelta(days=1), datetime.time.min).timestamp()
     recent = [(name, rep) for name, t, rep in reports if start <= t < end]
+    # 有 sha 的结果只按 sha 关联；没有 sha 的旧记录才按报告文件名回退，且只认记录里的路径落在本目录（别的目录同名报告不算）
     out_shas = {str(r.get("sha"))[:8] for r in outcomes if r.get("sha")}
-    out_reports = {Path(str(r.get("report"))).name for r in outcomes if r.get("report")}
+    out_reports = set()
+    for r in outcomes:
+        if r.get("sha") or not r.get("report"):
+            continue
+        rp = Path(str(r.get("report")))
+        if not rp.is_absolute() or rp.resolve().parent == Path(d).resolve():
+            out_reports.add(rp.name)
     texts = {}
     for name, rep in recent:
         key = str(rep.get("delivered_sha256") or rep.get("checked_sha256") or name)
