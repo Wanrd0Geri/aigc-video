@@ -512,6 +512,69 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(code, 1, res)
         self.assertTrue(any('稿里有 2 镜' in e for e in res['mechanical']['errors']), res)
 
+    def setup_splice_gate(self, check_args=()):
+        text = BASE.replace('（0-6秒）', '').replace('（6-12秒）', '').replace(
+            '情节：\n', '情节：\n将视频1和视频2无缝衔接起来，不修改视频1和视频2。\n')
+        self.setup_gate(text, ('--task', '衔接', '--labels', '视频1,视频2', *check_args))
+        self.req.update(task='衔接', request='将视频1和视频2无缝衔接起来。12秒两镜行走。',
+                        labels=['视频1', '视频2'], assets=[
+                            {'label': k, 'status': 'read', 'evidence': '合成测试片段输入，不验证视频语义',
+                             'role': '用于衔接边界'} for k in ['视频1', '视频2']])
+        for row in self.review['warnings']:
+            row.update(quote='人物从门口走到窗前，衣摆轻晃。', decision='accepted_constraint',
+                       reason='仅验证时长密度分支的合成门禁记录，不证明画面语义')
+
+    def test_splice_missing_seconds_rejected_without_explicit_untimed(self):
+        # Catches a gate that overlooks the checker's implicit untimed semantics for splice.
+        for untimed in ('missing', False):
+            for seconds in ('missing', None):
+                with self.subTest(untimed=untimed, seconds=seconds):
+                    self.setup_splice_gate()
+                    if untimed != 'missing':
+                        self.req['untimed'] = untimed
+                    if seconds is None:
+                        self.req['shot_seconds'] = None
+                    self.refresh_requirement_hash()
+                    code, res = self.gate()
+                    self.assertEqual(code, 2, (res.get('ready'), res['errors']))
+                    self.assertFalse(res['ready'])
+                    self.assertTrue(any('requirements.shot_seconds' in e for e in res['errors']), res['errors'])
+
+    def test_splice_seconds_produce_density_without_explicit_untimed(self):
+        # Catches dropped seconds at the first observable consumer: per-shot density.
+        for untimed in ('missing', False):
+            with self.subTest(untimed=untimed):
+                self.setup_splice_gate(('--shot-seconds', '0.1,11.9'))
+                self.req['shot_seconds'] = [0.1, 11.9]
+                if untimed != 'missing':
+                    self.req['untimed'] = untimed
+                self.refresh_requirement_hash()
+                code, res = self.gate()
+                self.assertEqual(code, 0, res['errors'])
+                self.assertTrue(res['ready'])
+                mech = res['mechanical']
+                rows = [r for r in mech['checked'] if '字数密度：' in r]
+                self.assertEqual(len(rows), 2, rows)
+                self.assertIn('0.1 秒，每秒 300 字', rows[0])
+                self.assertIn('11.9 秒', rows[1])
+                self.assertEqual(mech['hint_types']['密度'], 1)
+                self.assertTrue(any(w.startswith('镜1 每秒 300 字') for w in mech['warnings']), mech['warnings'])
+
+    def test_timed_generation_does_not_require_seconds_list(self):
+        # Catches accidental expansion of the new requirement to ordinary timed generation.
+        for untimed in ('missing', False):
+            with self.subTest(untimed=untimed):
+                self.setup_gate()
+                if untimed != 'missing':
+                    self.req['untimed'] = untimed
+                self.refresh_requirement_hash()
+                code, res = self.gate()
+                self.assertEqual(code, 0, res['errors'])
+                self.assertTrue(res['ready'])
+                rows = [r for r in res['mechanical']['checked'] if '字数密度：' in r]
+                self.assertEqual(len(rows), 2, rows)
+                self.assertTrue(all('6 秒' in r for r in rows), rows)
+
     def test_d5_asks_null_is_single_round(self):
         self.setup_gate(); self.req['asks'] = None
         self.refresh_requirement_hash()

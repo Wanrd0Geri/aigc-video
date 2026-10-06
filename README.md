@@ -58,7 +58,7 @@ hooks/
 tests/cases.md               端到端用例
 tests/run_check_tests.py     check_prompt 回归 + 经验库前缀强制 + 案例库体检 + 词库体检 + 度量回路（报告新字段、log_outcome、rule_stats）（819 项）
 tests/test_revision_checks.py 修订格式、旧稿兼容与丢句匹配回归（18 项）
-tests/test_delivery_gate.py  verify_delivery 放行行为回归（66 项）
+tests/test_delivery_gate.py  verify_delivery 放行行为回归（69 项）
 tests/test_stop_gate.py      stop_gate 判定回归（71 项）
 tests/test_lesson_scripts.py 经验库脚本行为回归：归档与证据状态、写入加锁与补充、合并退出码、编号扩位（9 项）
 tests/test_rule_stats.py     成片旧记录的同目录回退与跨项目路径隔离（2 项）

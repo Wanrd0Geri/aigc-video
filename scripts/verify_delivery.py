@@ -16,7 +16,7 @@ requirements.json 里与机械检查有关的字段（quality-gate.md 模板）�
   mode     白模 / 默认（缺省默认）：仅全量白模驱动的稿写 白模，纯运镜参考写 默认，转给 check_prompt --mode；自检用了什么模式，门禁复查就写什么。
   rewrite_authorized  true / false（缺省 false）：用户授权整镜重写父稿时 true，转给 check_prompt --rewrite-authorized。
   adjudicated  项目里 adjudicated.txt 的路径（找法同 asks），转给 check_prompt --adjudicated；没有裁定记录写 null 或省略。
-  shot_seconds  无时码稿（含白模与衔接）的每镜秒数列表（有限正数，按镜号顺序，从交接卡抄），转给 check_prompt --shot-seconds 逐镜算字数密度；任何任务只要 untimed=true 就必填；有时码且未启用 untimed 的稿写 null 或省略。
+  shot_seconds  无时码稿（含白模与衔接）的每镜秒数列表（有限正数，按镜号顺序，从交接卡抄），转给 check_prompt --shot-seconds 逐镜算字数密度；任何任务只要 untimed=true 就必填；衔接自动按无时码处理，untimed 省略或 false 也必填；其余有时码且未启用 untimed 的稿写 null 或省略。
   三个开关和自检保持一致，门禁复查才不会把自检已压掉的提醒重新报出来、也不会重复计进 rule_stats。
   complex  全套路径恒为 true（由严格审 / 约定的技术验收触发，要求独立复核）；缺省或 false 报错不放行。
 局部修订（--partial）合成完整稿时按父稿的实际外壳切镜头块（与 check_prompt 同一口径），四段父稿镜内的否定句不会被当成结尾丢掉。
@@ -155,8 +155,9 @@ def evaluate(args):
     # v43：无时码稿（含白模与衔接）的每镜秒数从 requirements.json 转给 check_prompt，严格审与自检同一口径（个数由 check_prompt 按镜数核对）
     shot_seconds = req.get('shot_seconds')
     shot_seconds_arg = None
-    if req.get('untimed') and shot_seconds is None:
-        raise ValueError('requirements.untimed=true 时必须提供 requirements.shot_seconds（每镜一个有限正数）')
+    effective_untimed = req.get('untimed') or req['task'] == '衔接'   # 同 check_prompt 的无时码语义
+    if effective_untimed and shot_seconds is None:
+        raise ValueError('无时码任务（untimed=true 或 task=衔接）必须提供 requirements.shot_seconds（每镜一个有限正数）')
     if shot_seconds is not None:
         if (not isinstance(shot_seconds, list) or not shot_seconds
                 or not all(isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and x > 0 for x in shot_seconds)):
@@ -177,7 +178,7 @@ def evaluate(args):
         cmd += ['--labels', ','.join(labels)]
     if req.get('total') is not None:
         cmd += ['--total', str(req['total'])]
-    if req.get('untimed'):
+    if effective_untimed:
         cmd += ['--untimed']
     cmd += ['--format', fmt]
     if asks_path:
