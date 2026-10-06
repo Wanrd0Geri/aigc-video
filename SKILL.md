@@ -46,7 +46,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 | 任务 | 本次必读 | 交付 |
 |---|---|---|
 | 写新提示词 | 原理页先过一眼（[principles.md](references/principles.md)）→ 先选模式卡：[references/modes/](references/modes/) 里多人对话（dialogue-multi）、单主体动作与生物（single-creature）、白模或运镜参考（whitebox-driven）三张，按卡里的必写 / 可省 / 禁写写，检查参数照卡；三张都不对口就不用卡 → lessons 按题材 grep 两三个分类 → 案例先查索引：类型与素材形态相同才读其“可复用点/关联经验”（官方案例读“原案例结构/什么时候选它”），确需抄句式才展开原文；没有适配案例就在内部记“未参考案例”，不硬凑两套 → [seedance-format.md](references/seedance-format.md) 必读 → [writing-rules.md](references/writing-rules.md) 正文必读（成文主规则 8 条、五道门、决策表、建议行与去处表）；附录 [writing-rules-annex.md](references/writing-rules-annex.md) 不整份读：用了模式卡就查卡里列的附录条号，其余要看某条的完整说法时按条号只读那一条 → [directing-upgrade.md](references/craft/directing-upgrade.md) 与适用工艺卡（用了模式卡就读卡里列的） → 用户白话里有动作、效果、运镜词才查 [references/lexicon/](references/lexicon/) 对应表，每个词挑 1 个推荐写进表头“升级”行，备选只在意图不清或用户要选方向时给（读法与升级写法见 lexicon/README「词库升级」） | 多镜：先交镜头表，用户确认后交表头 + 完整提示词 + 检查行；单镜或用户说「直接出」：一轮交付 |
-| 改现有提示词 | lessons 按分类 grep → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 完整受影响单元 + ≤3 行变更摘要 + 检查行；不为表头全文加载新稿格式或严格审文件 |
+| 改现有提示词 | lessons 按分类 grep → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 整份重编版（单独一个代码块，未改镜头逐字同父稿）+ 块外修改标记 + 检查行；不为表头全文加载新稿格式或严格审文件 |
 | 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons 的 `操作命令/` 及题材分类 | 四段完整操作命令；旧稿修订按父稿外壳 |
 | 输入「自检」 | 原理页先过一眼（[principles.md](references/principles.md)）→ [qa-checklist.md](references/review/qa-checklist.md) + `scripts/check_prompt.py`；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 一句结论 + 问题清单（镜号｜项及来源｜缺口｜影响｜建议）+ 人核提醒 + 脚本行；只出报告不改稿 |
 | 回传视频、截图或生成反馈 | [diagnose.md](references/review/diagnose.md)；需要时用 `scripts/extract_frames.py` 抽帧 | 逐句兑现、归因、最小修法与一条待审观察；获授权才写经验库 |
@@ -75,7 +75,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 
 **全套路径**只在用户明确要求“严格审 / 走全套 / 要交付校验”，或双方事先约定了这种技术验收时触发。先看分镜、先选方向这类创作审批只决定交付顺序，不启用全套。触发后必须读取并完整执行 [quality-gate.md](references/review/quality-gate.md)；该文件唯一维护九步流程、requirements/review/independent 结构、逐镜摄影与发音记录、一次独立复核闭环及 `verify_delivery.py` 放行。正文、需求、父稿或采用设计变化后须重绑本版证据并重跑。严格审不改变用户的生成授权。
 
-**交付条件**：轻量路径须 `check_prompt` 无错误、警告已裁定、作者六域与保护项核对完成；全套路径须 `verify_delivery` 对本轮最终版本返回 ready。文本检查不等于成片通过。具体表头、镜头表、代码块、检查行与 prompt-only 格式见 [seedance-format.md](references/seedance-format.md) 第 9 节；改稿必须交付完整受影响单元，范围见 [revise-rules.md](references/review/revise-rules.md) 第 9 节。
+**交付条件**：轻量路径须 `check_prompt` 无错误、警告已裁定、作者六域与保护项核对完成；全套路径须 `verify_delivery` 对本轮最终版本返回 ready。文本检查不等于成片通过。具体表头、镜头表、代码块、检查行与 prompt-only 格式见 [seedance-format.md](references/seedance-format.md) 第 9 节；改稿默认交付整份重编版，块外按镜号、句子标出改动处；只有用户点名只要局部时才交局部并加 --partial，范围见 [revise-rules.md](references/review/revise-rules.md) 第 9 节。
 
 ## 成片反馈
 
