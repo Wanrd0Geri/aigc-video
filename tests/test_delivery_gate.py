@@ -475,6 +475,43 @@ class DeliveryTests(unittest.TestCase):
             self.assertEqual(code, 2, (bad, res))
             self.assertTrue(any('requirements.shot_seconds' in e for e in res['errors']), (bad, res['errors']))
 
+    def test_v43_untimed_missing_seconds_rejected(self):
+        text = BASE.replace('（0-6秒）', '').replace('（6-12秒）', '')
+        for value in ('missing', None):
+            with self.subTest(value=value):
+                self.setup_gate(text, ('--untimed', '--mode', '白模'))
+                self.req.update(untimed=True, mode='白模')
+                if value is None:
+                    self.req['shot_seconds'] = None
+                self.refresh_requirement_hash()
+                code, res = self.gate()
+                self.assertEqual(code, 2, res)
+                self.assertTrue(any('requirements.shot_seconds' in e for e in res['errors']), res)
+
+    def test_v43_untimed_seconds_reach_density(self):
+        text = BASE.replace('（0-6秒）', '').replace('（6-12秒）', '')
+        self.setup_gate(text, ('--untimed', '--mode', '白模', '--shot-seconds', '5,7'))
+        self.req.update(untimed=True, mode='白模', shot_seconds=[5, 7])
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 0, res)
+        rows = [r for r in res['mechanical']['checked'] if '字数密度：' in r]
+        self.assertEqual(len(rows), 2, rows)
+        self.assertIn('镜1 字数密度：', rows[0])
+        self.assertIn('5 秒', rows[0])
+        self.assertIn('镜2 字数密度：', rows[1])
+        self.assertIn('7 秒', rows[1])
+        self.assertTrue(all('秒数来自 --shot-seconds' in r for r in rows), rows)
+
+    def test_v43_untimed_seconds_count_mismatch_blocks(self):
+        text = BASE.replace('（0-6秒）', '').replace('（6-12秒）', '')
+        self.setup_gate(text, ('--untimed', '--mode', '白模'))
+        self.req.update(untimed=True, mode='白模', shot_seconds=[12])
+        self.refresh_requirement_hash()
+        code, res = self.gate()
+        self.assertEqual(code, 1, res)
+        self.assertTrue(any('稿里有 2 镜' in e for e in res['mechanical']['errors']), res)
+
     def test_d5_asks_null_is_single_round(self):
         self.setup_gate(); self.req['asks'] = None
         self.refresh_requirement_hash()

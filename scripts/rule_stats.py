@@ -182,8 +182,9 @@ def main():
         if r.get("sha") or not r.get("report"):
             continue
         rp = Path(str(r.get("report")))
-        if not rp.is_absolute() or rp.resolve().parent == Path(d).resolve():
-            out_reports.add(rp.name)
+        resolved = (rp if rp.is_absolute() else Path(d) / rp).resolve()
+        if resolved.parent == Path(d).resolve():
+            out_reports.add(resolved.name)
     texts = {}
     for name, rep in recent:
         key = str(rep.get("delivered_sha256") or rep.get("checked_sha256") or name)
