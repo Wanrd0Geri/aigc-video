@@ -1114,14 +1114,15 @@ def ap_refs(texts):
 
 def parse_adjudicated(path):
     """裁定清单（项目里的 adjudicated.txt）：一行一条，# 后面是注释；每行是提醒去掉镜号前缀后的开头文字（到第一个「：」或「「」为止就够），
-    行首写了镜号（镜2 …）的只管那一镜，只有镜号没有文字的行不算。返回去重后的行，镜号后面的空白统一成一个空格。"""
+    行首写了镜号（镜2 …）的只管那一镜；行末可加 @sha前8位 绑定本版正文。只有镜号没有文字的行不算。返回去重后的行，镜号后面的空白统一成一个空格。"""
     out = []
     for raw in Path(path).read_text(encoding="utf-8-sig").splitlines():
         line = raw.split("#", 1)[0].strip()
         if not line:
             continue
         line = re.sub(r"^(镜\d+)\s*", r"\1 ", line)
-        if SHOT_PREFIX_RE.match(line) and not SHOT_PREFIX_RE.sub("", line).strip():
+        prefix = re.sub(r"\s*@([0-9a-fA-F]{8})$", "", line).strip()
+        if not prefix or (SHOT_PREFIX_RE.match(prefix) and not SHOT_PREFIX_RE.sub("", prefix).strip()):
             continue
         out.append(line)
     return list(dict.fromkeys(out))
@@ -1450,7 +1451,7 @@ def main():
                     help="用户已授权整镜重写：不报“父稿有 N 句在新稿里消失”和“新稿比父稿长”；--asks 照旧核对")
     ap.add_argument("--adjudicated", default=None,
                     help="裁定清单文件（项目里的 adjudicated.txt，和 asks.txt 同目录）：一行一条、# 后是注释，每行是提醒去掉镜号前缀后的开头文字"
-                         "（到第一个「：」或「「」为止），以它开头的提醒不再报；行首写了镜号的只删那一镜；summary 记“已裁定 M 条”，JSON 的 adjudicated 列出删掉的原文")
+                         "（到第一个「：」或「「」为止），以它开头的提醒不再报；行首写了镜号的只删那一镜；行末可加 @sha前8位，只在当前 delivered_sha256 或 checked_sha256 匹配时生效，失效保留提醒并在 checked 记条数；无绑定行沿用前缀匹配；summary 记“已裁定 M 条”，JSON 的 adjudicated 列出删掉的原文")
     a = ap.parse_args()
     density_line = a.density_line if a.density_line is not None else DENSITY_CHARS_PER_SEC
 
@@ -2419,10 +2420,22 @@ def main():
             warnings.append(f"{tag + ' ' if tag else ''}总括保证句：{''.join(f'「{w}」' for w in ps)}——「{_excerpt(s)}」{POS_TAIL}"
                             + (PARENT_NOTE if _parent(s) else ""))
 
-    # --- 裁定清单（--adjudicated）：全部提醒生成完以后，去掉镜号前缀以某一行开头的提醒删掉、计数 ---
+    checked_sha = sha(text)
+    # 交付出去的那段正文（--partial 时是局部段本身，否则就是整稿）；规范化方式与 hooks/stop_gate.py 的 digest 一致
+    delivered_sha = sha("\n".join(cand_lines))
+    # --- 裁定清单（--adjudicated）：全部提醒生成完后，先核对可选正文绑定，再按镜号与前缀删掉提醒 ---
     adjudicated = []
     if a.adjudicated:
-        adj_keys = parse_adjudicated(a.adjudicated)
+        parsed_keys = parse_adjudicated(a.adjudicated)
+        adj_keys, stale_keys = [], []
+        for entry in parsed_keys:
+            binding = re.search(r"\s*@([0-9a-fA-F]{8})$", entry)
+            if binding and not any(h.startswith(binding.group(1).lower()) for h in (delivered_sha, checked_sha)):
+                stale_keys.append(entry)
+                continue
+            key = entry[:binding.start()].strip() if binding else entry
+            if key not in adj_keys:
+                adj_keys.append(key)
         kept, hit_keys = [], set()
         for w in warnings:
             k = adjudicated_key(w, adj_keys)
@@ -2433,7 +2446,8 @@ def main():
                 hit_keys.add(k)
         warnings = kept
         idle = [k for k in adj_keys if k not in hit_keys]
-        checked.append(f"裁定清单 {len(adj_keys)} 行，删掉已裁定提醒 {len(adjudicated)} 条"
+        checked.append(f"裁定清单 {len(parsed_keys)} 行，删掉已裁定提醒 {len(adjudicated)} 条"
+                       + (f"；失效裁定 {len(stale_keys)} 条（正文 sha 不匹配，保留提醒）" if stale_keys else "")
                        + (f"；这些行这次没对上提醒：{''.join(f'「{k}」' for k in idle[:5])}" if idle else ""))
 
     # --- v38 度量回路：报告与 stdout 多存六样（summary 一行不变）---
@@ -2447,9 +2461,6 @@ def main():
         "hint_types": hint_counts(warnings + adjudicated),   # 全部提醒（待裁定加已裁定）按类别计数
     }
 
-    checked_sha = sha(text)
-    # 交付出去的那段正文（--partial 时是局部段本身，否则就是整稿）；规范化方式与 hooks/stop_gate.py 的 digest 一致
-    delivered_sha = sha("\n".join(cand_lines))
     parts = [f"{len(heads)} 镜"]
     if timed:
         time_errors = [e for e in errors if "时码" in e or "编辑区间" in e]

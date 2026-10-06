@@ -71,7 +71,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 
 ## 流程分级
 
-**轻量路径（默认）**：适用于所有新稿（含 L3）、改稿、成片反馈后的修改和操作命令。按路由读取 → 内部设计（每镜 1–2 个关键事件） → 成文 → 压缩审校 → 头脑核对六域（意图与素材、构图与运镜、动作与表演、节奏与连续性、材质光影与特效、声音与交付）及用户锁、历史要求、成功项 → 对**实际交付正文**运行 `scripts/check_prompt.py --report ~/.aigc-video-gate/<时间戳>.json`。按需参数：`--labels / --task / --untimed / --shot-seconds / --baseline / --partial / --lock / --asks / --mode / --rewrite-authorized / --adjudicated`；含义与触发条件见 `check_prompt.py --help`、各模式卡「检查参数」与 revise-rules 第 10、12 节。`--mode 白模` 仅用于全量白模，纯运镜参考仍检查未授权的主体空间与朝向。裁定文件放项目里，与 asks.txt 同目录。错误修完、警告逐条裁定后交付；全套按 quality-gate 记录例外，轻量不为否定例外建立记录文件，不建 requirements/review、不派独立复核、不跑 verify_delivery。L3 与第一版都不自动触发严格审。
+**轻量路径（默认）**：适用于所有新稿（含 L3）、改稿、成片反馈后的修改和操作命令。按路由读取 → 内部设计（每镜 1–2 个关键事件） → 成文 → 压缩审校 → 头脑核对六域（意图与素材、构图与运镜、动作与表演、节奏与连续性、材质光影与特效、声音与交付）及用户锁、历史要求、成功项 → 对**实际交付正文**运行 `scripts/check_prompt.py --report ~/.aigc-video-gate/<时间戳>.json`。按需参数：`--labels / --task / --untimed / --shot-seconds / --baseline / --partial / --lock / --asks / --mode / --rewrite-authorized / --adjudicated`；含义与触发条件见 `check_prompt.py --help`、各模式卡「检查参数」与 revise-rules 第 10、12 节。`--mode 白模` 仅用于全量白模，纯运镜参考仍检查未授权的主体空间与朝向。裁定文件放项目里，与 asks.txt 同目录；行末可加 @sha前8位 绑定本版交付或合成正文，失效不删提醒（seedance-format 第 9 节）。错误修完、警告逐条裁定后交付；全套按 quality-gate 记录例外，轻量不为否定例外建立记录文件，不建 requirements/review、不派独立复核、不跑 verify_delivery。L3 与第一版都不自动触发严格审。
 
 **全套路径**只在用户明确要求“严格审 / 走全套 / 要交付校验”，或双方事先约定了这种技术验收时触发。先看分镜、先选方向这类创作审批只决定交付顺序，不启用全套。触发后必须读取并完整执行 [quality-gate.md](references/review/quality-gate.md)；该文件唯一维护九步流程、requirements/review/independent 结构、逐镜摄影与发音记录、一次独立复核闭环及 `verify_delivery.py` 放行。正文、需求、父稿或采用设计变化后须重绑本版证据并重跑。严格审不改变用户的生成授权。
 

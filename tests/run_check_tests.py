@@ -1637,6 +1637,46 @@ for name, ok, detail in M_EXTRA:
     fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {name} |", detail if not ok else "ok")
 
+# ---- v43 N1：裁定可绑定交付正文或合成正文 sha 前八位；旧无绑定格式保留 ----
+N1_EXTRA = []
+with tempfile.TemporaryDirectory() as tmp:
+    td = pathlib.Path(tmp)
+    parent = C / "hold_frame_speed.txt"
+    def n1_check(prompt, args=(), binding=None):
+        cmd = [sys.executable, "-X", "utf8", str(S), "--prompt", str(prompt), "--total", "12", *map(str, args)]
+        if binding is not None:
+            adj = td / "adjudicated.txt"
+            adj.write_text("镜2 反模式 AP01" + binding + " # 本版主动保留\n", encoding="utf-8")
+            cmd += ["--adjudicated", str(adj)]
+        p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        return p.returncode, json.loads(p.stdout)
+    def n1_has(d, key):
+        return any(w.startswith("镜2 反模式 AP01") for w in d[key])
+    code, full = n1_check(parent)
+    bound = " @" + full["delivered_sha256"][:8]
+    code, d = n1_check(parent, binding=bound)
+    N1_EXTRA.append(("N1 本版 sha 绑定命中：只裁定点名镜，保留另镜提醒", code == 0 and n1_has(d, "adjudicated") and not n1_has(d, "warnings")
+                     and any(w.startswith("镜1 反模式 AP01") for w in d["warnings"]), d))
+    stale = " @" + ("0" if bound[-8] != "0" else "1") + bound[-7:]
+    code, d = n1_check(parent, binding=stale)
+    N1_EXTRA.append(("N1 失效 sha 不删提醒且 checked 记失效条数", code == 0 and n1_has(d, "warnings") and not n1_has(d, "adjudicated")
+                     and any("失效裁定 1 条" in c for c in d["checked"]), d))
+    code, d = n1_check(parent, binding="")
+    N1_EXTRA.append(("N1 无绑定旧格式兼容：继续按镜号和前缀裁定", code == 0 and n1_has(d, "adjudicated") and not n1_has(d, "warnings"), d))
+    partial = td / "partial.txt"
+    row = next(l for l in parent.read_text(encoding="utf-8").splitlines() if l.startswith("镜头2"))
+    partial.write_text(row + "云团变厚。\n", encoding="utf-8")
+    args = ["--baseline", parent, "--partial"]
+    code, merged = n1_check(partial, args)
+    for key in ("delivered_sha256", "checked_sha256"):
+        code, d = n1_check(partial, args, " @" + merged[key][:8])
+        ok = (code == 0 and merged["delivered_sha256"] != merged["checked_sha256"]
+              and n1_has(merged, "warnings") and n1_has(d, "adjudicated") and not n1_has(d, "warnings"))
+        N1_EXTRA.append(("N1 局部稿绑定 " + key + " 均可命中，真实双 sha 不同", ok, d))
+for name, ok, detail in N1_EXTRA:
+    fails += 0 if ok else 1
+    print(("PASS" if ok else "FAIL"), f"| {name} |", detail if not ok else "ok")
+
 TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CASES) + 1  # lint_lexicon 当前词库
          + len(ASK_DETAIL_CASES) + 2 + len(REPORT_CASES)
          + len(LESSON_CASES) + 4 + len(CASE_LINT_CASES) + 1
@@ -1647,6 +1687,7 @@ TOTAL = (len(CASES) + len(WARN_CASES) + len(NO_WARN_CASES) + 2 + len(SUMMARY_CAS
          + len(ARCHIVE_CASES)  # v31 archive 出口
          + len(AP_EXTRA)  # v37 反模式表体检、表缺失不崩、summary 与钩子兼容
          + len(M_EXTRA)  # v38 度量回路：报告新字段、log_outcome、rule_stats
+         + len(N1_EXTRA)  # v43 正文绑定裁定
          + 1)  # 压缩审校：复读每份稿最多报 5 条
 print(f"\n{TOTAL - fails}/{TOTAL} 通过")
 sys.exit(1 if fails else 0)
