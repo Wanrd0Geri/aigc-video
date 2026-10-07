@@ -1594,12 +1594,12 @@ def main():
             warnings.append("镜头标题没有时码；若这是白模预演或衔接，请加 --untimed 明确")
     else:
         checked.append("无时码模式：不检查时码")
-    # 2.5 只响应整数秒时间戳（seedance-format 第 4 节）：标题里的秒数带小数就提醒
+    # 本项目默认整数秒预算（seedance-format 第 4 节；L011：.5 秒对照未可靠控制切点）：标题里的秒数带小数就提醒
     frac = [f"{h[3]:g}-{h[4]:g}秒" for h in timed
             if abs(h[3] - round(h[3])) > 1e-9 or abs(h[4] - round(h[4])) > 1e-9]
     if frac:
-        warnings.append(f"镜头标题的秒数不是整数：{''.join(f'「{x}」' for x in frac)}；Seedance 2.5 只响应整数秒时间戳，"
-                        f"改成整数秒（seedance-format 第 4 节）")
+        warnings.append(f"镜头标题的秒数不是整数：{''.join(f'「{x}」' for x in frac)}；本项目默认采用整数秒预算：本轮 .5 秒对照未可靠控制切点，其他小数精度未测，"
+                        f"建议改成整数秒，精确切点仍需核片（seedance-format 第 4 节、L011）")
 
     # --- 外壳 ---
     hdrs = headers_of(lines, heads)
