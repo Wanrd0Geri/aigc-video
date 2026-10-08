@@ -4,7 +4,7 @@
 
 # aigc-video
 
-[![Version](https://img.shields.io/badge/version-v45-f2b84b.svg)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/%E5%8F%98%E6%9B%B4%E8%AE%B0%E5%BD%95-CHANGELOG-f2b84b.svg)](CHANGELOG.md)
 [![Seedance](https://img.shields.io/badge/即梦-Seedance_2.5-1f6feb.svg)](#能做什么)
 [![Hosts](https://img.shields.io/badge/Claude_Code_·_Codex-通用-blueviolet.svg)](#安装)
 [![Lessons](https://img.shields.io/badge/经验库-122_条-2ea043.svg)](references/lessons/)
