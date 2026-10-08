@@ -12,7 +12,7 @@
 - **经验库索引**：新增 `references/lessons/index.md`（由 `scripts/build_lessons_index.py` 从主库生成，122 条，分类、编号、证据、结论四列），写稿前先 grep 索引再按编号回读主库；lint_lessons 调用 `--check`，log_lesson / merge_lessons 写入后提示重建。
 - **案例与词库**：案例只读索引节的表，词库按 README 读法查对应表；内容不变。
 - **实战验证**（即梦 480p，同一输入两版各写一稿，同日生成，打乱盲评 + 作者盲评）：屋脊打戏白模 3 条不比 v44 差、切点误差更小；苏云屋脊跃起 5 条修后与 v44 持平，空中独立光尾仍弱（记残余风险，未写经验库）；两人走位对白 3 条两条候选都排在 v44 前面。共 1026 分。
-- **README**：改版并改成大白话：顶部一张横幅、能做什么、流程图、八条原理（白话版）、实测数据，技术细节收进折叠区；新增 `assets/banner.jpg`（宣纸墨字横幅）、`assets/how-it-works.svg`。
+- **README**：改版并改成大白话：顶部一张横幅、能做什么、流程图、八条原理（白话版）、实测数据，技术细节收进折叠区；新增 `assets/banner.jpg`（宣纸墨字横幅）、`assets/how-it-works.png`（纸色流程图，与横幅同系列）。
 - **回滚**：安装前打标签 `v44-rollback-20261007-1953`（指向 5c65e23）。
 - **回归**：run_check_tests 819/819 等五套全过（unittest 184 项，1 项既有跳过）；lint_lessons、lint_cases、lint_lexicon、build_lessons_index --check 通过。
 
