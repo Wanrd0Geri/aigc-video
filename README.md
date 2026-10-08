@@ -163,31 +163,8 @@ tests/                       五套回归：check_prompt 819 项、修订 18、�
 
 </details>
 
-<details>
-<summary><b>成片反馈怎么进经验库</b></summary>
-
-成片发回后，它会抽帧，逐句对照哪句拍出来了，分析没拍出来的原因，给出最少的改法，最后给一条结论：新发现、补充已有条目、和已有经验相反，或者这次没有新东西。你同意后，`log_lesson.py` 才把它写进经验库。你对成片的评价（采用 / 部分 / 否）另用 `log_outcome.py` 记一行，用来统计哪条规则管用。你明确说某一版效果好时，会自动记一条成功经验。
-
-交付分轻量和全套两档：什么时候用哪档，见 SKILL.md「流程分级」；全套的细节见 `references/review/quality-gate.md`。`check_prompt` 和 `verify_delivery` 记录的是真实跑过的检查结果。检查通过不代表成片一定好。
-
-改稿第二版起会维护一份 `asks.txt`，交付前用 `--asks` 核对你提过的所有要求。改稿时带上上一版（`--baseline`），上一版有、新版没了的句子会被列出来提醒。你认可过的效果会和你的原话、版本绑在一起，没有你同意不会删弱。
-
-</details>
-
-<details>
-<summary><b>同步与维护</b></summary>
-
-仓库 `https://github.com/Wanrd0Geri/aigc-video` 是唯一来源。本机副本在 `~/Documents/Codex/aigc-video`，两个宿主的 `skills/aigc-video` 都软链到它，所以经验库新记的条目两边马上都能用。
-
-- 改完文件或记完经验：`bash scripts/sync.sh 一句备注`，会依次提交、拉取、推送。需要代理的电脑，把代理地址写进 `~/.aigc-video-proxy`。
-- 组员直接克隆就能用；要推改动，需要被加为协作者，否则走 fork + Pull Request。
-- 维护者改 skill 时，在单独的工作区（dev 分支或候选工作树）里改，回归测试和成片对比都过了，再快进合并到 main。main 是正在用的版本，改到一半的文件不会影响正在用的会话。
-- 每次安装前打一个回滚标签（例如 `v44-rollback-20261007-1953`），要退回只需 `git reset --hard <标签>`。
-
-</details>
-
 ---
 
 <div align="center">
-<sub>为《临渊行》的 Seedance 2.5 镜头而做 · 每条规则都要有官方依据或成片实测 · 版本号是本 skill 自己的，不对应即梦或 Seedance 的版本</sub>
+<sub>每条规则都要有官方依据或成片实测 · 版本号是本 skill 自己的，不对应即梦或 Seedance 的版本</sub>
 </div>
