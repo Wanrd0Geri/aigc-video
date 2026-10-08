@@ -1,4 +1,4 @@
-![aigc-video · 即梦 Seedance 2.5 提示词导演](assets/banner.svg)
+![aigc-video · 即梦 Seedance 2.5 提示词导演](assets/banner.jpg)
 
 <div align="center">
 
