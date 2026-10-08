@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" role="img" aria-label="aigc-video · Seedance 2.5 提示词导演">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1418"/>
+      <stop offset="0.55" stop-color="#12222a"/>
+      <stop offset="1" stop-color="#1b1712"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.78" cy="0.42" r="0.45">
+      <stop offset="0" stop-color="#f2b84b" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#f2b84b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f2b84b" stop-opacity="0"/>
+      <stop offset="0.6" stop-color="#ffd27a" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#fff3d6"/>
+    </linearGradient>
+    <pattern id="holes" width="40" height="22" patternUnits="userSpaceOnUse">
+      <rect x="10" y="6" width="20" height="10" rx="2.5" fill="#000" fill-opacity="0.55"/>
+    </pattern>
+  </defs>
+  <rect width="1280" height="400" fill="url(#bg)"/>
+  <rect width="1280" height="400" fill="url(#glow)"/>
+  <!-- 胶片齿孔 -->
+  <rect y="0" width="1280" height="26" fill="#05090b"/>
+  <rect y="0" width="1280" height="22" fill="url(#holes)" transform="translate(0,2)"/>
+  <rect y="374" width="1280" height="26" fill="#05090b"/>
+  <rect y="374" width="1280" height="22" fill="url(#holes)" transform="translate(0,376)"/>
+  <!-- 远山与斜雪 -->
+  <path d="M0 330 L150 250 L260 300 L400 210 L560 300 L700 240 L860 310 L1010 220 L1160 290 L1280 250 L1280 374 L0 374 Z" fill="#0e1a1f" opacity="0.9"/>
+  <g stroke="#cfe6ee" stroke-opacity="0.18" stroke-width="1.4" stroke-linecap="round">
+    <line x1="120" y1="60" x2="96" y2="84"/><line x1="300" y1="110" x2="276" y2="134"/><line x1="470" y1="70" x2="446" y2="94"/>
+    <line x1="640" y1="150" x2="616" y2="174"/><line x1="820" y1="80" x2="796" y2="104"/><line x1="1180" y1="120" x2="1156" y2="144"/>
+    <line x1="1030" y1="300" x2="1006" y2="324"/><line x1="560" y1="250" x2="536" y2="274"/><line x1="220" y1="210" x2="196" y2="234"/>
+  </g>
+  <!-- 金色光带：一划留下的光痕 -->
+  <path d="M760 300 C 860 120, 1060 90, 1200 170" fill="none" stroke="url(#arc)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M790 312 C 880 160, 1050 130, 1170 190" fill="none" stroke="#f2b84b" stroke-opacity="0.35" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- 取景框角标 -->
+  <g fill="none" stroke="#f2b84b" stroke-opacity="0.7" stroke-width="3">
+    <path d="M70 70 h44 M70 70 v44"/><path d="M700 70 h-44 M700 70 v44"/>
+    <path d="M70 330 h44 M70 330 v-44"/><path d="M700 330 h-44 M700 330 v-44"/>
+  </g>
+  <text x="96" y="104" font-family="Consolas, 'SF Mono', Menlo, monospace" font-size="17" fill="#f2b84b" fill-opacity="0.85" letter-spacing="2">REC ● SHOT 01 · 0–6s</text>
+  <text x="94" y="205" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="84" font-weight="700" fill="#f4efe6" letter-spacing="1">aigc-video</text>
+  <text x="98" y="258" font-family="'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif" font-size="34" fill="#e8dcc4">即梦 Seedance 2.5 提示词导演</text>
+  <text x="98" y="300" font-family="'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#9fb4bb">镜头表 → 成文 → 自检 → 成片诊断 → 经验库</text>
+</svg>
