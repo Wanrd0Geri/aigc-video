@@ -94,6 +94,7 @@ def main():
                 os.remove(tmp)
             raise
         print(f"本次写入 {len(pending)} 条")
+        print(f'提醒：主库已更新，请用 build_lessons_index.py --file "{os.path.abspath(dst_path)}" 重建同目录 index.md，再运行 lint_lessons.py。', file=sys.stderr)
     else:
         print("本次写入 0 条")
     if diff:   # 有同编号不同内容：新增已照常处理，但合并没算完，退出码 3 留给人工裁定

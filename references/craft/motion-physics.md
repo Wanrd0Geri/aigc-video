@@ -2,7 +2,7 @@
 
 > 用于执行清单第 ⑤ 步（导演与工艺）与第 ⑦ 步（成文）；动作、追逐、天气题材必读（SKILL.md 题材路由）；水火烟雾、粒子、慢动作需要时查对应节。
 > 读完必须产出：本镜的世界模式（耦合 / 只写主动作 / 有意静止）、主动作的可见结果句（做到哪、多快、结束成什么样）；被选中的环境响应写成场景段的一句共享响应，只有是关键事件一部分的才进那一拍；衣物、头发、持物随动的去处见 writing-rules 成文主规则第 3 条。
-> 经验采用与优先级见 [../lessons/README.md](../lessons/README.md)：分清"试过的"和"没试过的"；没试过的照常可用但不冒称已验证，专业方案按当前任务适配性判断。词条查 `../lexicon/action-terms.md`、`../lexicon/light-material-terms.md`。
+> 经验采用与证据边界见 [../lessons/README.md](../lessons/README.md)「证据与采用规则」「怎么用」（需要核对某条经验算已试还是未试、或要写入新条目时再读）。词条查 `../lexicon/action-terms.md`、`../lexicon/light-material-terms.md`。
 
 ## 1 先定这一镜的世界模式
 

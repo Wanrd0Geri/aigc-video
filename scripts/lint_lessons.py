@@ -4,7 +4,7 @@
 lint_lessons.py — 经验库体检：每条的第 3 列必须是合法的 `分类/主题`，主库与 archive.md 合起来的 L 编号必须从 L001 起连续递增。
 
 用法：
-  python3 lint_lessons.py [--file <经验库路径>] [--archive <归档路径>]
+  python3 lint_lessons.py [--file <经验库路径>] [--archive <归档路径>] [--index <索引路径>]
 
 --archive 不给时，取 --file 同目录下的 archive.md（存在才读）。归档里的条目同样要九字段、分类合法；
 同一编号两边都有算问题；编号连续性按两边合集查（v31 起，归档只搬行、不腾编号）。
@@ -84,14 +84,18 @@ def lint(text, archive_text=""):
 
 
 def main():
+    from build_lessons_index import check_index
     ap = argparse.ArgumentParser(description="经验库分类前缀与编号连续性检查")
     ap.add_argument("--file", default=DEFAULT_FILE)
     ap.add_argument("--archive", default=None, help="归档路径；不给取 --file 同目录的 archive.md")
+    ap.add_argument("--index", default=None, help="索引路径；默认 --file 同目录 index.md，缺失或不同步报错")
     a = ap.parse_args()
     path = os.path.abspath(os.path.expanduser(a.file))
     apath = os.path.abspath(os.path.expanduser(a.archive)) if a.archive else archive_path_for(path)
     atext = open(apath, encoding="utf-8").read() if apath and os.path.isfile(apath) else ""
     n, problems = lint(open(path, encoding="utf-8").read(), atext)
+    index = os.path.abspath(os.path.expanduser(a.index)) if a.index else os.path.join(os.path.dirname(path), "index.md")
+    problems.extend(check_index(path, index))
     if problems:
         print(f"经验库 {path} 有 {len(problems)} 处问题：", file=sys.stderr)
         for p in problems:

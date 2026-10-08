@@ -171,6 +171,7 @@ def main():
                 os.remove(tmp)
             raise
     print(nid)
+    print(f'提醒：主库已更新，请用 build_lessons_index.py --file "{path}" 重建同目录 index.md，再运行 lint_lessons.py。', file=sys.stderr)
     for r in ([] if a.supplement else reminders(a, text)):
         print("提醒：" + r, file=sys.stderr)
 

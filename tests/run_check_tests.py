@@ -1208,6 +1208,9 @@ with tempfile.TemporaryDirectory() as tmp:
     lf.write_text("# 临时经验库\n\n## 七、诊断新增\n<!-- 整理于 2026-09-01 L001 -->\n" + ROW.format(n=1, date="2026-09-01", concl="结论", src="来源"), encoding="utf-8")
     af.write_text("# 归档\n\n## 已升级为规则\n\n" + ROW.format(n=2, date="2026-09-02", concl="结论【已升级为规则：writing-rules.md 第 1 条】", src="来源"), encoding="utf-8")
     common = ["--phenomenon", "现象", "--conclusion", "结论", "--confidence", "未试"]
+    # lint 现在同时校验索引；先为本用例的临时主库显式生成，不改变原编号断言。
+    built = run([ROOT / "scripts" / "build_lessons_index.py", "--file", lf])
+    assert built.returncode == 0, built.stdout + built.stderr
     p = run([LINT, "--file", lf])
     ARCHIVE_CASES.append(("lint_lessons 主库 L001 + archive L002：合集连续，通过", p.returncode == 0 and "archive 另有 1 条" in p.stdout, (p.stdout + p.stderr)[:100]))
     p = run([LOG, "--file", lf, "--topic", "通用/取号", "--a", "写法A → 效果", "--source", "a.mp4 与 b.mp4 对照", *common])
