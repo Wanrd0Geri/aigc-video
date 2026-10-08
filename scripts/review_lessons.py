@@ -14,7 +14,7 @@ review_lessons.py — 「整理经验」用的候选清单生成器：只读、�
   四、各分类条目数（超过 15 条的点名）
   五、主库里还带着「已升级为规则」「已撤回推荐」「并入」标记没搬走的条目（v31 起这三种都该整行在 archive.md，主库里出现就是漏搬），
       以及 archive.md 现有条目数
-  六、单次观察保质期：结论里标了「单次观察」、记录满 30 天、来源没有第二条成片或对照的条目——归档候选（用户 2026-09-25：
+  六、单次观察复核：结论里标了「单次观察」、记录满 30 天、来源没有第二条成片或对照的条目——复核提醒（用户 2026-09-25：
       经验库里有抽卡也有写得不到位的，要甄别；只出现过一次的观察不当定律）；"第二个来源"除了认对照、两跑这类词，
       也数来源里的成片文件名（先数 .mp4 / .mov，没有再数 jimeng-… / 视频节点 / 截图），数到 2 个就算，与 log_lesson.py 同一口径
 
@@ -40,10 +40,10 @@ DEFAULT_CASES = os.path.join(HERE, "..", "references", "cases", "my-cases.md")
 ENTRY = re.compile(r"^(L\d{3,})\s*\|")
 CJK = re.compile(r"[一-鿿]+")
 BIG_CAT = 15
-SINGLE_DAYS = 30        # 单次观察满这么多天还没第二个来源就列为归档候选。可调
+SINGLE_DAYS = 30        # 单次观察满这么多天还没第二个来源就列为复核提醒，不按日历归档。可调
 MERGED_MARK = re.compile(r"【并入\s*(L\d{3,})】")
 SINGLE_MARK = "单次观察"
-SOURCE_MULTI = re.compile(r"对照|两跑|两次|三版|三跑|多版|各跑|[2-9]\s*条|[两三四五六七八九]条|用户实测")
+SOURCE_MULTI = re.compile(r"对照|两跑|两次|三版|三跑|多版|各跑|[2-9]\s*条|[两三四五六七八九]条")
 # 来源里像成片定位的东西：有扩展名按扩展名数，没有再按文件名样式数，数到 2 个就算有第二个来源。与 log_lesson.py 同步
 SOURCE_FILE = re.compile(r"\.mp4|\.mov")
 SOURCE_NAME = re.compile(r"jimeng-\d{4}-\d{2}-\d{2}-\d+|视频节点\s?\d+|截图")
@@ -261,7 +261,7 @@ def main():
         out.append(f"archive.md 现有 {len(arch)} 条：" + "、".join(f"{k} {n}" for k, n in kinds.items() if n))
         out.append("")
 
-    # 六、单次观察保质期
+    # 六、单次观察复核提醒
     aged = []
     for r in rows.values():
         src = r["source"]
@@ -274,7 +274,7 @@ def main():
             continue
         if days >= SINGLE_DAYS:
             aged.append((days, r))
-    out.append(f"## 六、单次观察满 {SINGLE_DAYS} 天还没有第二个来源的条目（{len(aged)} 条，归档候选）")
+    out.append(f"## 六、单次观察满 {SINGLE_DAYS} 天还没有第二个来源的条目（{len(aged)} 条，复核提醒）")
     out.append("")
     if aged:
         out.append("| 编号 | 分类/主题 | 记录日期 | 已过天数 | 结论摘要 |")
@@ -283,8 +283,9 @@ def main():
             concl = (r["conclusion"][:60] + "…") if len(r["conclusion"]) > 60 else r["conclusion"]
             out.append(f"| {r['id']} | {r['topic']} | {r['date']} | {days} | {concl} |")
         out.append("")
-        out.append("只见过一次的现象可能是生成波动。再遇到同题材时优先验证这几条：复现了就在来源里补第二条成片，"
-                   "没复现或用不上就搬到 archive.md（结论开头加【<日期> 单次观察到期归档】），不当定律留在主库里。")
+        out.append("只见过一次的现象可能是生成波动。再遇到同题材时顺手核一下：复现了就在来源里补第二条成片；"
+                   "被新证据否定、与别条重复或用户不再需要的才搬到 archive.md（结论开头加【<日期> 单次观察归档：原因】）。"
+                   "过了日子本身不是归档理由，也不为它专门补跑。")
     else:
         out.append("（没有）")
     out.append("")

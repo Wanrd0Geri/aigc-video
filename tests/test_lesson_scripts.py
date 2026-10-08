@@ -103,7 +103,7 @@ class LessonScripts(unittest.TestCase):
             sec = section(p.stdout, "## 一、", "## 二、")
             self.assertIn("| 证据状态 |", sec)
             expected = {"L001": "来源待核对、单来源", "L002": "修法待验、多来源",
-                        "L003": "多来源", "L004": "多来源", "L005": "来源待核对、修法待验、单来源",
+                        "L003": "单来源", "L004": "多来源", "L005": "来源待核对、修法待验、单来源",
                         "L006": "修法待验、单来源", "L007": "修法待验、单来源"}
             for lid, state in expected.items():
                 with self.subTest(lid=lid):

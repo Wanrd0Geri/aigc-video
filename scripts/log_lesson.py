@@ -54,8 +54,8 @@ def reminders(a, text_after):
     hits = len(SOURCE_FILE.findall(a.source)) or len(SOURCE_NAME.findall(a.source))   # 有扩展名按扩展名数，没有再按文件名样式数
     single = hits <= 1 and not SOURCE_MULTI.search(a.source) and "用户实测" not in a.source
     if single and "单次观察" not in a.conclusion:
-        out.append("来源只有一条成片、结论没标「单次观察」：只有一次的观察可能是生成波动，结论开头写「单次观察」，"
-                   "30 天内没有第二个来源会在整理时列为归档候选")
+        out.append("来源只有一条成片、结论没标「单次观察」：只有一次的观察可能是生成波动，结论开头写「单次观察」；"
+                   "整理时会提醒复核，有第二个来源再用 --supplement 补到这条")
     m = list(TIDY_MARK.finditer(text_after))
     if m:
         last = int(m[-1].group(2))
