@@ -143,14 +143,26 @@ def motion_report(ffmpeg, ffprobe, video, out, own, log):
     if not repeats:
         lines.append(f"重演候选：无（相隔 ≥ {MOTION_GAP:g} 秒、差值 < {MOTION_SAME:g} 的相似帧没有连成段）")
     lines.append("读数低先看帧：大景别里又小又快的主体读数也低；渐变、闪光、淡入淡出也算运动")
-    (out / "motion.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # 先登记进清单再写：写到一半失败，下次运行也能当自己的文件清掉
     own("motion.txt")
+    (out / "motion.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    own("motion.json")
     (out / "motion.json").write_text(json.dumps({"fps": fps, "seg_frames": seg, "size": [w, h], "mean_motion": float(diffs.mean()),
                                                  "still_segments": n_still, "segments": segs, "holds": holds, "repeats": repeats},
                                                 ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    own("motion.json")
     log(f"运动量: 均值 {float(diffs.mean()):.1f}，近乎静止的半秒段 {n_still}/{len(segs)}，定住 {len(holds)} 处，"
         f"重演候选 {len(repeats)} 处（详见 motion.txt）")
+
+
+def motion_step(ffmpeg, ffprobe, video, out, own, log):
+    """运动量这一步的任何异常都只记一行，不影响抽帧的退出码。"""
+    try:
+        motion_report(ffmpeg, ffprobe, video, out, own, log)
+    except Exception as e:   # noqa: BLE001 —— 附加产出，出什么错都不能拖垮原有的抽帧结果
+        try:
+            log(f"运动量: 失败（{type(e).__name__}: {e}），其他产出不受影响")
+        except OSError:
+            pass
 
 
 def main(argv):
@@ -282,7 +294,7 @@ def main(argv):
                 status = 3
 
     # 运动量（v47）：缺 numpy 或失败只记一行，不改退出码
-    motion_report(ffmpeg, ffprobe, video, out, own, log)
+    motion_step(ffmpeg, ffprobe, video, out, own, log)
 
     log({0: "结果: 全部成功", 3: "结果: 部分成功（见上）"}.get(status, "结果: 失败"))
     print(f"输出目录: {out}")

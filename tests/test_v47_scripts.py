@@ -39,45 +39,44 @@ class LogLessonSources(unittest.TestCase):
             self.assertNotIn("来源只有一条成片", self.log(src), src)
 
     def test_single_source_still_reminds(self):
-        self.assertIn("来源只有一条成片", self.log("某片 镜头_v03.mp4 2026-10-15"))
+        for src in ("某片 镜头_v03.mp4 2026-10-15", "镜头_v3-final.mp4", "镜头_对比图.mp4", "镜头_v3-20261015.mp4",
+                    "针对v3.mp4", "背对v3.mp4"):
+            self.assertIn("来源只有一条成片", self.log(src), src)
 
 
-class ReportIndex(unittest.TestCase):
-    def test_project_report_found_by_short_sha(self):
+class ReportCopy(unittest.TestCase):
+    def run_check(self, gate, rep):
+        env = {**os.environ, "AIGC_GATE_DIR": str(gate)}
+        p = run("check_prompt.py", "--prompt", CASES / "control_valid.txt", "--total", "12", "--report", rep, env=env)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return env
+
+    def test_project_report_copied_into_gate_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
             gate, proj = Path(tmp) / "gate", Path(tmp) / "proj"
             proj.mkdir()
-            env = {**os.environ, "AIGC_GATE_DIR": str(gate)}
             rep = proj / "检查报告.json"
-            p = run("check_prompt.py", "--prompt", CASES / "control_valid.txt", "--total", "12", "--report", rep, env=env)
-            self.assertEqual(p.returncode, 0, p.stderr)
-            sha8 = json.loads(rep.read_text(encoding="utf-8"))["delivered_sha256"][:8]
-            idx = gate / "report-index.jsonl"
-            self.assertTrue(idx.is_file())
-            self.assertEqual(list(gate.glob("*.json")), [])            # 报告目录里只多索引，不多报告
+            env = self.run_check(gate, rep)
+            original = json.loads(rep.read_text(encoding="utf-8"))
+            copies = list(gate.glob("*.json"))
+            self.assertEqual(len(copies), 1)
+            copy = json.loads(copies[0].read_text(encoding="utf-8"))
+            self.assertEqual(copy["copied_from"], str(rep.resolve()))
+            self.assertEqual({k: v for k, v in copy.items() if k != "copied_from"}, original)
+            sha8 = original["delivered_sha256"][:8]
+            # 门禁、统计、记成片结果都只扫报告目录：副本让三处都看得到
             q = run("log_outcome.py", "--sha", sha8, "--video", "x.mp4", "--verdict", "采用", env=env)
             self.assertEqual(q.returncode, 0, q.stderr)
             row = json.loads((gate / "outcomes.jsonl").read_text(encoding="utf-8").splitlines()[-1])
             self.assertEqual(row["sha"], sha8)
-            self.assertEqual(Path(row["report"]), rep.resolve())
+            r = run("rule_stats.py", "--dir", gate, env=env)
+            self.assertEqual(r.returncode, 0, r.stderr)
 
-    def test_report_inside_gate_dir_not_indexed(self):
+    def test_report_inside_gate_dir_not_copied(self):
         with tempfile.TemporaryDirectory() as tmp:
             gate = Path(tmp) / "gate"
-            env = {**os.environ, "AIGC_GATE_DIR": str(gate)}
-            p = run("check_prompt.py", "--prompt", CASES / "control_valid.txt", "--total", "12", "--report", gate / "r.json", env=env)
-            self.assertEqual(p.returncode, 0, p.stderr)
-            self.assertFalse((gate / "report-index.jsonl").exists())
-
-    def test_missing_indexed_report_still_fails_cleanly(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            gate = Path(tmp) / "gate"
-            gate.mkdir()
-            (gate / "report-index.jsonl").write_text(
-                json.dumps({"delivered_sha256": "abcdef12" * 8, "path": str(Path(tmp) / "gone.json")}) + "\n坏行\n", encoding="utf-8")
-            q = run("log_outcome.py", "--sha", "abcdef12", "--video", "x.mp4", "--verdict", "否", "--dir", gate)
-            self.assertEqual(q.returncode, 1)
-            self.assertFalse((gate / "outcomes.jsonl").exists())
+            self.run_check(gate, gate / "r.json")
+            self.assertEqual([p.name for p in gate.glob("*.json")], ["r.json"])
 
 
 class Motion(unittest.TestCase):
@@ -110,6 +109,15 @@ class Motion(unittest.TestCase):
         _d, segs, holds, repeats = self.ef.motion_analyze(self.frames(vals), 24.0, 12)
         self.assertFalse(any(s["still"] for s in segs))
         self.assertEqual(holds, [])
+
+    def test_motion_errors_do_not_escape(self):
+        from unittest.mock import patch
+        logs = []
+        for exc in (PermissionError("写不进"), OSError("ffprobe 起不来"), ValueError("坏数据")):
+            with patch.object(self.ef, "motion_report", side_effect=exc):
+                self.ef.motion_step("ffmpeg", "ffprobe", "x.mp4", Path("."), lambda n: None, logs.append)
+        self.assertEqual(len(logs), 3)
+        self.assertTrue(all(x.startswith("运动量: 失败") for x in logs))
 
     def test_extract_frames_writes_motion_files(self):
         ff = self.ef.find_tool("ffmpeg")

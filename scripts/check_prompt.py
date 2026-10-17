@@ -239,25 +239,33 @@ SUBJECT_CAMERA_RE = re.compile(r"镜头|画框|机位|入画|出画|前景|跟�
 SUBJECT_FACING_RE = re.compile(r"(?:对着|朝着|朝向|面向|面对|背对|正对|侧对|看向|望向|直视)镜头")      # 朝向说法，扫调度词前挖掉
 # v47 参考图职责（seedance-format 第 2 节；L108、L136）：场景段挂了图，镜内又点名大角度时提醒核对图本身的机位——图的机位和文字
 # 要的不一样时，文字和「不采用图中的机位」都压不住（平视裁图配 45 度俯拍，两种写法都出平视）。白模与编辑 / 延长 / 衔接不扫。词表可调
-ANGLE_RE = re.compile(r"俯拍|俯视|俯瞰|鸟瞰|顶拍|顶视|仰拍|仰视|低角度|高角度|低机位|高机位|(?:45|四十五)\s*(?:度|°)|垂直向下")
+# 只认说摄影机的角度词：俯视 / 仰视 / 俯瞰单独出现多半是人物在看（男孩仰视高楼），要跟着镜头、角度、视角才算；45 度要跟着角、俯、仰、斜
+ANGLE_RE = re.compile(r"俯拍|仰拍|顶拍|鸟瞰|顶视|低角度|高角度|低机位|高机位|俯角|仰角|垂直向下"
+                      r"|(?:俯视|仰视|俯瞰)(?:镜头|角度|视角|机位)|(?:45|四十五)\s*(?:度|°)\s*(?:俯拍|仰拍|角|俯|仰|斜)")
 # v47 镜内把图当成某一刻的画面（中段或落幅）：带构图或事件的整场景静帧只当首帧（L174 锚时间会定住、不锚会被当开场重演；
-# L171 后半段出现场景图构图）。同句写了首帧、起幅、开场的不报；「变成图N那样的道具」归反模式 AP17。词表可调
+# L171 后半段出现场景图构图）。按分句看，同一分句写了首帧、起幅、开场的不报；稿里声明为尾帧的图（首尾帧通道）不报；
+# 「变成图N那样的道具」归反模式 AP17。词表可调
 STILL_MID_RE = re.compile(r"图\s?\d+(?:的|那样的|里的)?(?:构图|画面|机位|景别|取景)"
                           r"|(?:到达|回到|停成|锁成|定格成|定格在|落成|落幅是|落幅为|推成|拉成)\s*图\s?\d+")
 FIRST_FRAME_RE = re.compile(r"首帧|起幅|开场|第\s*0\s*秒|第一帧|第一个画面")
-# v47 拍法逐镜写（L175；用户 2026-10-15：「涉及到的镜头，镜头的描述里面要写」）：风格段写了手持、呼吸、运动相机这类拍法，
-# 某镜正文里一个也没有就提醒；写了固定机位的镜不报。词表可调
-STYLE_RIG_RE = re.compile(r"手持|呼吸|肩扛|FPV|穿越机|运动相机")
-SHOT_RIG_RE = re.compile(r"手持|呼吸|肩扛|FPV|穿越机|运动相机|晃动|颠簸|起伏|顿挫|修正")
-# v47 镜头先到位、角色再做（L175）：「摄影机……绕到 / 推到 / 来到……：角色……」这种到点再动作的冒号句，镜头会停下等动作。候选，词表可调
+TAIL_FRAME_RE = re.compile(r"图\s?(\d+)[^。；;，,\n]{0,10}?尾帧|尾帧[^。；;，,\n]{0,6}?图\s?(\d+)")
+# v47 拍法逐镜写（L175；用户 2026-10-15：「涉及到的镜头，镜头的描述里面要写」）：风格段写了手持、呼吸感、运动相机这类拍法，
+# 某镜正文里没有就提醒；写了固定机位的镜、全量白模（摄影由视频1 承担）不报。「呼吸、起伏、晃」要跟着画面 / 镜头才算拍法
+# （人物呼吸声、胸口随呼吸起伏不算）；「手持」后面跟着道具名词是持物。词表可调
+_RIG_HANDHELD = r"手持(?![^，,。；;]{0,4}" + HANDHELD_PROP + r")"
+STYLE_RIG_RE = re.compile(_RIG_HANDHELD + r"|呼吸感|呼吸般|(?:画面|镜头|画框|摄影机)[^，,。；;]{0,8}呼吸|肩扛|FPV|穿越机|运动相机")
+SHOT_RIG_RE = re.compile(_RIG_HANDHELD + r"|肩扛|FPV|穿越机|运动相机"
+                         r"|(?:画面|镜头|画框|摄影机|机身)[^。；;！!？?\n]{0,10}(?:呼吸|晃|颠簸|起伏|顿挫|修正)")
+# v47 镜头先到位、角色再做（L175）：「摄影机……绕到 / 推到 / 来到……：角色……」这种到点再动作的冒号句，镜头会停下等动作。
+# 写明同时、途中、同一瞬间的是动作挂在经过的瞬间，不报。候选，词表可调
 ARRIVE_THEN_ACT_RE = re.compile(r"(?:摄影机|镜头|相机|机位)[^。；;：:\n]{0,24}?(?:绕到|推到|移到|来到|停在|到达|落到|转到|摇到|飞到|滑到)"
                                 r"[^。；;：:\n]{0,24}[：:]")
+SYNC_RE = re.compile(r"同时|途中|瞬间|同一刻")
 # v47 代词（用户偏好：他 / 她 / 它会指错人，每镜第一次点名带图号，之后用固定称呼）：主体段与镜头正文里出现就提醒，台词不算
 PRONOUN_RE = re.compile(r"(?<![其吉利])(?:他|她|它)(?:们)?(?![人乡山])")
 # v47 旁白（用户 2026-10-14：旁白只在用户要求时写，画里人物自己说的话照写）：稿里写了旁白 / 画外音、--asks 里又没有就提醒
-NARRATION_RE = re.compile(r"旁白|画外音|解说词|(?<![A-Za-z])V\.?O\.?(?![A-Za-z])")   # 前 3 字内有不 / 无 / 没的不算
+NARRATION_RE = re.compile(r"旁白|画外音|解说词|(?<![A-Za-z])V\.?O\.?(?![A-Za-z])")   # 同一分句里前面有不 / 无 / 没 / 别 / 勿的不算
 AVOID_FILE = "avoid.txt"   # v47 项目禁用写法清单：和 asks.txt 同目录时自动读，也可用 --avoid 指定
-REPORT_INDEX = "report-index.jsonl"   # v47：报告目录里的 sha → 项目内报告路径索引（log_outcome 读；*.json 通配不会扫到它）
 SUBJECT_SKIP_RE = re.compile(r"(?:也)?不(?:采用|需要|要|用|取)[^，。；：]*")
 # v23 场景段只写环境、风格段只写画面质感与镜头性格（writing-rules 成文主规则第 3 条）：角色类背景群体名词后面跟着活动动词的
 # 句子提醒，角色活动写进情节里它第一次出现的那一拍。天气与环境反应（雨丝斜着落下、风吹动破幡）和鸟群、落叶这类环境不在
@@ -2181,19 +2189,28 @@ def main():
                 _ap_add(row, hits, None, ap_warning(row, hits))
 
     # --- v47 参考图职责、拍法逐镜、到点再动作、代词、旁白、项目禁用写法（提醒）---
-    # 改稿时和父稿逐字相同的镜头、父稿原样的句子不报（只管本轮改写的部分）
+    # 改稿口径按每条依赖的内容比：逐句的提醒（中段静帧、到点再动作、代词、旁白、禁用写法）父稿里原样有的句子不报；
+    # 角度要看场景段和镜头、拍法要看风格段和镜头——相关的段或这一镜改了就重查这一镜，都没改才跳过
     v47_secs = split_sections(text)
-    def _v47_shots():
-        for k, (h, body_lines, _t) in enumerate(blocks):
-            if revision and parent_shots.get(shot_key(h)) == norm_shot(body_lines):
-                continue
-            body = "\n".join(body_lines)
-            hm = HEAD_PATTERNS[h[1]].match(body)
-            yield f"镜{h[2] or k + 1}", _no_lock(strip_dialogue(body[hm.end():] if hm else body))
+    base_secs = split_sections(baseline_text) if revision and baseline_text else {}
+    def _sec_changed(name):
+        return not revision or re.sub(r"\s", "", v47_secs.get(name) or "") != re.sub(r"\s", "", base_secs.get(name) or "")
+    base_flat_nd = re.sub(r"\s", "", strip_dialogue(baseline_text)) if revision and baseline_text else ""   # 父稿剥掉台词后
+    def _new(s):   # 改稿时父稿里原样有的句子（含剥掉台词后的样子）不算本轮新写的
+        f = re.sub(r"\s", "", s)
+        return not (revision and f and (f in base_flat or f in base_flat_nd))
+    shots47 = []   # (镜号, 去标题、台词、锁定文字后的正文, 和父稿这一镜逐字相同)
+    for k, (h, body_lines, _t) in enumerate(blocks):
+        body = "\n".join(body_lines)
+        hm = HEAD_PATTERNS[h[1]].match(body)
+        shots47.append((f"镜{h[2] or k + 1}", _no_lock(strip_dialogue(body[hm.end():] if hm else body)),
+                        revision and parent_shots.get(shot_key(h)) == norm_shot(body_lines)))
     scene_imgs = list(dict.fromkeys(f"图{m.group(3)}" for m in LABEL_RE.finditer(v47_secs.get("场景") or "")
                                     if m.group(2) in ("图", "图片")))
     if task == "生成" and a.mode != "白模" and scene_imgs:
-        ang = [(tg, list(dict.fromkeys(m.group(0) for m in ANGLE_RE.finditer(sb)))) for tg, sb in _v47_shots()]
+        scene_new = _sec_changed("场景")
+        ang = [(tg, list(dict.fromkeys(m.group(0) for m in ANGLE_RE.finditer(sb))))
+               for tg, sb, same in shots47 if scene_new or not same]
         ang = [(tg, ws) for tg, ws in ang if ws]
         if ang:
             shown = "、".join(f"{tg}「{'、'.join(ws[:2])}」" for tg, ws in ang[:4])
@@ -2201,39 +2218,61 @@ def main():
                             f"文字和「不采用图中的机位」都压不住（seedance-format 第 2 节；L108、L136）；核对这张图本身就是这个机位，"
                             f"不是就换一张机位对的图（先出首帧）或不挂")
     if task == "生成":
-        mids = [(tg, s.strip()) for tg, sb in _v47_shots() for s in re.split(r"[。；;！!？?\n]", sb)
-                if STILL_MID_RE.search(s) and not FIRST_FRAME_RE.search(s)]
+        # 按分句看：同一分句写了首帧 / 起幅 / 开场的不报（别的分句里的首帧不豁免）；稿里声明为尾帧的图（首尾帧通道）不报
+        tail_imgs = {m.group(1) or m.group(2) for m in TAIL_FRAME_RE.finditer(text)}
+        mids = []
+        for tg, sb, _same in shots47:
+            for s in re.split(r"[。；;！!？?\n]", sb):
+                if not _new(s):
+                    continue
+                for c in re.split(r"[，,]", s):
+                    m = STILL_MID_RE.search(c)
+                    if m and not FIRST_FRAME_RE.search(c) and re.search(r"\d+", m.group(0)).group(0) not in tail_imgs:
+                        mids.append((tg, c.strip()))
+                        break
         if mids:
             shown = "".join(f"{tg}「{s[:30]}」" for tg, s in mids[:3])
             warnings.append(f"参考图当中段画面：{shown}——带构图或事件的整场景静帧只当首帧；挂成中段，锚时间会定住、不锚会被当开场重演"
                             f"（L174），落幅同理（L171）；站位和比例改用文字写，确要尾帧按 seedance-operations 首尾帧")
-    rig = list(dict.fromkeys(m.group(0) for m in STYLE_RIG_RE.finditer(v47_secs.get("风格") or "")))
-    if rig and task != "编辑":
-        miss = [tg for tg, sb in _v47_shots() if not SHOT_RIG_RE.search(sb) and not fixed_camera_hit(sb)]
+    rig = list(dict.fromkeys("呼吸感" if "呼吸" in m.group(0) else m.group(0)   # 提醒里统一叫法
+                             for m in STYLE_RIG_RE.finditer(v47_secs.get("风格") or "")))
+    if rig and task != "编辑" and a.mode != "白模":   # 全量白模的摄影由视频1 承担，不要求文字重复
+        style_new = _sec_changed("风格")
+        miss = [tg for tg, sb, same in shots47
+                if (style_new or not same) and not SHOT_RIG_RE.search(sb) and not fixed_camera_hit(sb)]
         if miss:
             warnings.append(f"拍法没逐镜写：风格段写了「{'、'.join(rig)}」，{'、'.join(miss)} 的正文里没有——风格段的拍法管不到每一镜，"
                             f"用到的镜在运镜句里各写一次画面怎么动（手持写画面边缘随呼吸起伏、不规则小晃）；用户 2026-10-15 要求逐镜写")
     if task != "编辑":
-        for tg, sb in _v47_shots():
-            hit = ARRIVE_THEN_ACT_RE.search(sb)
+        for tg, sb, _same in shots47:
+            hit = next((m for s in re.split(r"[。；;！!？?\n]", sb) if _new(s)
+                        for m in [ARRIVE_THEN_ACT_RE.search(s)] if m and not SYNC_RE.search(m.group(0))), None)
             if hit:
                 warnings.append(f"{tg} 镜头先到位、角色再做（候选）：「{hit.group(0)[:34]}」——到点再动作的写法，镜头会减速停下等动作；"
                                 f"要不停顿就把动作挂在摄影机经过的那一瞬间（擦过、掠过、绕圈途中），风格段写全程连续运动压不住（L175）")
-    base_flat = re.sub(r"\s", "", baseline_text) if revision and baseline_text else ""
-    p_scope = _no_lock(strip_dialogue(v47_secs.get("主体") or "")) + "\n" + "\n".join(sb for _tg, sb in _v47_shots())
+    p_scope = _no_lock(strip_dialogue(v47_secs.get("主体") or "")) + "\n" + "\n".join(sb for _tg, sb, _s in shots47)
     pro = []   # 每句取代词前后各一小段当摘录
     for s in split_sentences(p_scope):
         m = PRONOUN_RE.search(s)
-        if m and not (base_flat and re.sub(r"\s", "", s) in base_flat):
+        if m and _new(s):
             pro.append(s[max(0, m.start() - 10):m.end() + 12].strip())
     if pro:
         more = f"…（共 {len(pro)} 句）" if len(pro) > 3 else ""
         warnings.append(f"代词：{''.join(f'「{x}」' for x in pro[:3])}{more}——他 / 她 / 它会指错人；每镜第一次点名带图号，"
                         f"之后用固定称呼（seedance-format 第 2 节）")
-    nar_text = _no_lock(text)
-    nar = [m.group(0) for m in NARRATION_RE.finditer(nar_text)
-           if not re.search(r"[不无没]", nar_text[max(0, m.start() - 3):m.start()])]
-    nar = [w for w in dict.fromkeys(nar) if not _asked(w)]
+    # 旁白：台词和书名号里的不算；同一分句里有不 / 无 / 没 / 别 / 勿在它前面的是禁止说法，不算；父稿原样的句子不报；
+    # 只有要求清单里有效、本身不是否定的那条提到旁白，才算用户要了（关键词命中只说明提过，不说明授权）
+    nar = []
+    for s in split_sentences(re.sub(r"《[^》]*》", "", _no_lock(scan_text))):
+        if not _new(s):
+            continue
+        for m in NARRATION_RE.finditer(s):
+            clause = re.split(r"[，,：:]", s[:m.start()])[-1]
+            if not re.search(r"[不无没别勿]", clause):
+                nar.append(m.group(0))
+    nar_ok = any(r["active"] and NARRATION_RE.search(r["quote"]) and not re.search(r"[不无没别勿]", r["quote"])
+                 for r in asks_rows)
+    nar = [] if nar_ok else list(dict.fromkeys(nar))
     if nar:
         warnings.append(f"旁白：稿里写了「{'、'.join(nar)}」——旁白只在用户要求时写，画里人物自己说的话照写；用户要了就在 asks.txt 记一条，"
                         f"关键词带「{nar[0]}」")
@@ -2249,8 +2288,9 @@ def main():
             warnings.append(f"项目禁用写法清单读不出来：{avoid_path}")
         else:
             checked.append(f"项目禁用写法清单 {len(avoid_rows)} 条（{avoid_path}）")
+            avoid_sents = [s for s in split_sentences(lock_free) if _new(s)]   # 父稿原样的句子不报
             for word, why in avoid_rows:
-                if word in lock_free and not _asked(word):
+                if any(word in s for s in avoid_sents) and not _asked(word):
                     warnings.append(f"项目禁用写法「{word}」：{why or '见清单'}（{avoid_path.name}）；改写，确要保留就在 adjudicated.txt 裁定")
 
     # --- 否定句：四段（含继承）全文逐句提醒；五 / 六段与未知旧外壳用结尾段预算 ---
@@ -2630,17 +2670,17 @@ def main():
             "limits": "只是机械文本检查；没核对素材标签之外的内容、画面语义与成片效果；报告文件不是运行签名",
         }
         rp.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        # v47：报告写在报告目录以外（项目目录）时，在报告目录的 report-index.jsonl 记一行 sha → 路径，log_outcome 用 8 位 sha 才找得到；
-        # 记不上不影响检查结果
+        # v47：报告写在报告目录以外（项目目录）时，在报告目录另存一份副本（同一份内容，多记 copied_from），
+        # log_outcome 用 8 位 sha、hooks/stop_gate.py 门禁和 rule_stats 统计都只扫报告目录，这样都找得到；存不上不影响检查结果
         gate = Path(os.environ.get("AIGC_GATE_DIR") or os.path.expanduser("~/.aigc-video-gate")).expanduser()
         try:
             if rp.resolve().parent != gate.resolve():
                 gate.mkdir(parents=True, exist_ok=True)
-                with open(gate / REPORT_INDEX, "a", encoding="utf-8", newline="\n") as f:
-                    f.write(json.dumps({"delivered_sha256": delivered_sha, "checked_sha256": checked_sha,
-                                        "path": str(rp.resolve()), "created_at": report["created_at"]}, ensure_ascii=False) + "\n")
+                cp = gate / f"{time.strftime('%Y%m%d-%H%M%S')}-{delivered_sha[:8]}-copy.json"
+                cp.write_text(json.dumps({**report, "copied_from": str(rp.resolve())}, ensure_ascii=False, indent=2) + "\n",
+                              encoding="utf-8")
         except OSError as e:
-            out["checked"].append(f"报告索引没记上（{e}）；log_outcome 改传报告路径")
+            out["checked"].append(f"报告目录副本没存上（{e}）；log_outcome 改传报告路径")
     print(json.dumps(out, ensure_ascii=False, indent=2))
     sys.exit(0 if not errors else 1)
 

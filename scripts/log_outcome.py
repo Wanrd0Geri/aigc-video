@@ -9,8 +9,7 @@ log_outcome.py — 用户评价成片之后，记一行「这份稿交出去，�
 
 --sha 写交付检查行里的 sha 短哈希（check_prompt 的 summary 末尾那 8 位），也可以直接给报告文件路径。
 按 sha 找报告：报告目录里 delivered_sha256 或 checked_sha256 以它开头的报告，check_prompt 的轻量报告（kind=light）优先，
-同一 sha 有几份时取最新的一份。报告目录里没有时（v47 起），再按 check_prompt 记在报告目录 report-index.jsonl 里的路径找项目内的报告。
-找不到就报错退出 1，什么都不写。
+同一 sha 有几份时取最新的一份。找不到就报错退出 1，什么都不写。
 写入：往报告目录下的 outcomes.jsonl 追加一行 JSON——时间、sha、报告、成片、评价、备注、经验编号、这份报告触发的反模式编号
 （含已裁定的，去重保序）、裁定掉的反模式编号、模式、报告的 skill_version。v38 之前的报告没有 antipatterns / mode 字段：
 反模式编号从提醒原文里取，模式记 null。
@@ -22,7 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from check_prompt import ap_refs, REPORT_INDEX   # 提醒原文里的反模式编号（v38 之前的报告用）；项目内报告的索引文件名
+from check_prompt import ap_refs   # 提醒原文里的反模式编号（v38 之前的报告用）
 
 VERDICTS = ("采用", "部分", "否")
 OUTCOMES = "outcomes.jsonl"
@@ -55,36 +54,6 @@ def find_reports(d, prefix):
             found.append((rep.get("kind") == "light", t, p, rep))
     found.sort(key=lambda x: (x[0], x[1]), reverse=True)
     return [(rep, p) for _light, _t, p, rep in found]
-
-
-def find_indexed(d, prefix):
-    """报告目录里 report-index.jsonl（check_prompt v47 起，--report 写在报告目录以外时记一行 sha → 路径）里 sha 以 prefix 开头、
-    文件还在的报告 [(报告, 路径)]，新的在前。索引坏行跳过。"""
-    found = []
-    try:
-        lines = (d / REPORT_INDEX).read_text(encoding="utf-8").splitlines()
-    except (OSError, UnicodeDecodeError):
-        return []
-    for ln in lines:
-        try:
-            row = json.loads(ln)
-        except ValueError:
-            continue
-        if not isinstance(row, dict) or not any(str(row.get(k) or "").startswith(prefix)
-                                                for k in ("delivered_sha256", "checked_sha256")):
-            continue
-        p = Path(str(row.get("path") or ""))
-        rep = load_json(p) if p.is_file() else None
-        if rep is not None and any(str(rep.get(k) or "").startswith(prefix) for k in ("delivered_sha256", "checked_sha256")):
-            t = row.get("created_at")
-            found.append((float(t) if isinstance(t, (int, float)) else p.stat().st_mtime, p, rep))
-    found.sort(key=lambda x: x[0], reverse=True)
-    seen, out = set(), []
-    for _t, p, rep in found:
-        if str(p.resolve()) not in seen:
-            seen.add(str(p.resolve()))
-            out.append((rep, p))
-    return out
 
 
 def ap_ids(rep):
@@ -125,8 +94,6 @@ def main():
         if not SHA_RE.fullmatch(prefix):
             ap.error("--sha 要写交付检查行里的 8 位 sha（十六进制），或一份报告文件的路径")
         hits = find_reports(d, prefix) if d.is_dir() else []
-        if not hits:
-            hits = find_indexed(d, prefix)   # v47：报告写在项目目录时，check_prompt 在报告目录的索引里记了路径
         if not hits:
             n = len(list(d.glob("*.json"))) if d.is_dir() else 0
             sys.exit(f"找不到 sha {prefix} 对应的检查报告（在 {d} 里看了 {n} 份）；"
