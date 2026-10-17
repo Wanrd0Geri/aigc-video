@@ -7,6 +7,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import os
+# v47：check_prompt --report 写在报告目录以外时会往报告目录记索引；测试一律指向临时目录，不碰真实的 ~/.aigc-video-gate
+os.environ["AIGC_GATE_DIR"] = tempfile.mkdtemp(prefix="aigc-gate-test-")
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = (ROOT/'tests/check_cases/control_valid.txt').read_text(encoding='utf-8').replace('衣摆轻晃。', '衣摆轻晃。摄影机向右缓移，门框向左错开。').replace('轻纱缓缓飘动。', '轻纱缓缓飘动。摄影机缓推，人脸逐渐放大。')

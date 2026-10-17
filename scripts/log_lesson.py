@@ -38,7 +38,9 @@ TIDY_MARK = re.compile(r"<!--\s*整理于\s*(\d{4}-\d{2}-\d{2})\s*L(\d{3,})\s*--
 # 来源里像成片定位的东西：mp4 / mov / jimeng-… / 视频节点… / 截图；数到一个且没写"对照 / 两跑 / 三版"就算单条成片
 SOURCE_FILE = re.compile(r"\.mp4|\.mov")
 SOURCE_NAME = re.compile(r"jimeng-\d{4}-\d{2}-\d{2}-\d+|视频节点\s?\d+|截图")
-SOURCE_MULTI = re.compile(r"对照|两跑|两次|三版|三跑|多版|各跑|[2-9]\s*条|[两三四五六七八九]条")
+SOURCE_MULTI = re.compile(r"对照|两跑|两次|三版|三跑|多版|各跑|[2-9]\s*条|[两三四五六七八九]条"
+                          # v47：缩写的多条来源——版本区间（v09–v12、v9~v12）、版本列举（v09/v10、v11、v12）、「A 对 B」
+                          r"|[vV]\d+\s*[–—\-~～至到]\s*[vV]?\d+|[vV]\d+\s*[/／、,，]\s*[vV]?\d+|\S\s*对\s*(?:[vV]\d|\S+\.mp4)")
 
 
 def reminders(a, text_after):

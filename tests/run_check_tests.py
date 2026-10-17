@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """check_prompt.py 回归：python3 tests/run_check_tests.py  （全部通过退出 0）"""
 import hashlib, json, os, pathlib, re, shutil, subprocess, sys, tempfile
+# v47：check_prompt --report 写在报告目录以外时会往报告目录记索引；测试一律指向临时目录，不碰真实的 ~/.aigc-video-gate
+os.environ["AIGC_GATE_DIR"] = tempfile.mkdtemp(prefix="aigc-gate-test-")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 C = ROOT / "tests" / "check_cases"
 S = ROOT / "scripts" / "check_prompt.py"
@@ -562,7 +564,19 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               # 显式 --mode 默认：朝向方位词、跟拍位移证据、摄影运动三条照报（--mode 白模 的反例在 NO_WARN_CASES）
               ("orient_dir_only.txt", ["--mode", "默认"], "镜1 朝向只写了方位词：「看向右前方」"),
               ("follow_no_evidence.txt", ["--mode", "默认"], "镜1 跟拍没有位移证据"),
-              ("camera_person_actions.txt", ["--mode", "默认"], "镜1 未识别到摄影运动")]
+              ("camera_person_actions.txt", ["--mode", "默认"], "镜1 未识别到摄影运动"),
+              # ---- v47：参考图职责、中段静帧、拍法逐镜、到点再动作、代词、旁白、项目禁用写法、AP17/AP18、授权重写提示 ----
+              ("v47_ref_angle.txt", [], "参考图职责：镜1「45度、俯拍」点名了角度，场景段又挂了图2"),
+              ("v47_still_mid.txt", [], "参考图当中段画面：镜1「第3秒画面到达图3的构图"),
+              ("v47_rig_per_shot.txt", [], "拍法没逐镜写：风格段写了「手持、呼吸」，镜2 的正文里没有"),
+              ("v47_arrive_then_act.txt", [], "镜1 镜头先到位、角色再做（候选）：「摄影机一边推进一边绕到小男孩的侧前方：」"),
+              ("v47_pronoun.txt", [], "代词：「板坐在工位前敲键盘，她抬头看向屏幕，嘴角往上一」"),
+              ("v47_narration.txt", [], "旁白：稿里写了「旁白」"),
+              ("v47_avoid_prompt.txt", ["--avoid", str(C / "v47_avoid.txt")], "项目禁用写法「挥手」：角色臂端是圆头，写挥手会长出手指（v47_avoid.txt）"),
+              ("v47_avoid_prompt.txt", ["--asks", str(C / "v47_avoid_auto" / "asks.txt")], "项目禁用写法「挥手」"),   # 和 asks.txt 同目录的 avoid.txt 自动读
+              ("v47_ap17.txt", [], "镜1 反模式 AP17（候选，单次 L177）：「变成图2那样的」"),
+              ("v47_ap18.txt", [], "反模式 AP18（候选，单次 L172）：「抱住摄影机」「自拍视角」"),
+              ("v47_rewrite_new.txt", ["--baseline", str(C / "v47_rewrite_parent.txt")], "加 --rewrite-authorized 关掉这条")]
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -821,10 +835,23 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1", "--mode", "白模"], "超过参考线"),   # 没给 --shot-seconds 的无时码稿照旧不算密度
                  ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1"], "反模式 AP05"),   # 默认模式不扫白模的行
                  ("ap_baimo_env.txt", ["--untimed", "--labels", "图1,视频1"], "反模式 AP07"),
-                 ("ap_speed_center.txt", [], "镜2 反模式 AP01")]   # “留在画面正中”在慢推镜里，不是速度镜
+                 ("ap_speed_center.txt", [], "镜2 反模式 AP01"),   # “留在画面正中”在慢推镜里，不是速度镜
+                 # ---- v47 反例 ----
+                 ("v47_ref_angle.txt", ["--mode", "白模"], "参考图职责"),          # 白模定机位，不扫
+                 ("v47_ref_angle.txt", ["--task", "延长"], "参考图职责"),          # 操作命令不扫
+                 ("v47_still_mid.txt", [], "以图3为首帧"),                          # 同句写了首帧的不算中段
+                 ("v47_rig_per_shot.txt", [], "镜1、"),                             # 镜1 写了手持、镜3 写了固定机位，都不列
+                 ("v47_pass_through.txt", [], "镜头先到位"),                        # 动作挂在摄影机经过的瞬间
+                 ("v47_pronoun_other.txt", [], "代词"),                             # 其他、其它不是代词
+                 ("v47_narration.txt", ["--asks", str(C / "v47_narration_asks.txt")], "旁白："),   # 用户要了旁白
+                 ("v47_avoid_prompt.txt", [], "项目禁用写法"),                      # 没给清单、asks 同目录也没有
+                 ("v47_subject_facing.txt", [], "主体段这句写了"),                  # 对着镜头是朝向，不是调度
+                 ("v47_ap17.txt", [], "AP18"),
+                 ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "--rewrite-authorized 关掉")]   # 只消失两句不加提示
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
-    d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w]; ok = not hit; fails += 0 if ok else 1
+    # v47 代词提醒会引用原句，原句里碰巧有本条关键词时不算本条提醒（关键词本身以「代词」开头的除外）
+    d = json.loads(p.stdout); hit = [w for w in d["warnings"] if key in w and (not w.startswith("代词：") or key.startswith("代词"))]; ok = not hit; fails += 0 if ok else 1
     print(("PASS" if ok else "FAIL"), f"| {f} 不触发“{key}”提醒 |", hit[:1] or "ok")
 
 # ---- 四段稿的否定提醒：镜内一条给一条提醒；--negative-exception 点名后不再提醒 ----
@@ -850,7 +877,7 @@ SUMMARY_CASES = [("inline_negative.txt", ["--total", "12"], "否定句提醒 1 �
                  ("control_valid.txt", ["--total", "12"], "无素材引用"),
                  ("at_refs_in_new_draft.txt", ["--total", "12"], "素材集合未核对"),
                  # v37 --adjudicated：“已裁定 M 条”跟在“待裁定提醒 N 条”后面、sha 前面
-                 ("ap_speed_hold.txt", ["--total", "12", "--adjudicated", str(C / "adjudicated_ap.txt")], "待裁定提醒 2 条｜已裁定 1 条｜sha ")]
+                 ("ap_speed_hold.txt", ["--total", "12", "--adjudicated", str(C / "adjudicated_ap.txt")], "待裁定提醒 3 条｜已裁定 1 条｜sha ")]   # v47 起多一条代词提醒（稿里用了「它」）
 for f, args, needle in SUMMARY_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), *args], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = needle in d["summary"] and "（" not in d["summary"][d["summary"].index("（") + 1:]
@@ -1536,7 +1563,7 @@ with tempfile.TemporaryDirectory() as tmp:
     ok = (p.returncode == 0 and rep.get("antipatterns") == want_ap and rep.get("adjudicated_ids") == ["AP01"]
           and rep.get("mode") == "默认" and rep.get("rewrite_authorized") is False and rep.get("asks_file") is None
           and list(rep.get("hint_types") or {}) == list(CP.HINT_TYPES)
-          and rep["hint_types"] == {**dict.fromkeys(CP.HINT_TYPES, 0), "复读": 1, "反模式": 2}
+          and rep["hint_types"] == {**dict.fromkeys(CP.HINT_TYPES, 0), "复读": 1, "反模式": 2, "其它": 1}   # v47：其它 1 = 代词提醒
           and sum(rep["hint_types"].values()) == len(rep["warnings"]) + len(rep["adjudicated"])
           and all(out.get(k) == rep.get(k) for k in NEW_KEYS))
     M_EXTRA.append(("--report 多存六样：antipatterns 一条提醒一项、含已裁定的那条并标 adjudicated，adjudicated_ids、mode、rewrite_authorized、"

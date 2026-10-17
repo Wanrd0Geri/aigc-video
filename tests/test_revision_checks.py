@@ -6,6 +6,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import os
+# v47：check_prompt --report 写在报告目录以外时会往报告目录记索引；测试一律指向临时目录，不碰真实的 ~/.aigc-video-gate
+os.environ["AIGC_GATE_DIR"] = tempfile.mkdtemp(prefix="aigc-gate-test-")
 
 ROOT = Path(__file__).resolve().parent.parent
 CASES = ROOT / "tests" / "check_cases"
