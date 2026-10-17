@@ -248,9 +248,17 @@ ANGLE_RE = re.compile(r"俯拍|仰拍|顶拍|鸟瞰|顶视|低角度|高角度|�
 STILL_MID_RE = re.compile(r"图\s?\d+(?:的|那样的|里的)?(?:构图|画面|机位|景别|取景)"
                           r"|(?:到达|回到|停成|锁成|定格成|定格在|落成|落幅是|落幅为|推成|拉成)\s*图\s?\d+")
 FIRST_FRAME_RE = re.compile(r"首帧|起幅|开场|第\s*0\s*秒|第一帧|第一个画面")
-# 只认肯定的尾帧绑定（图2为尾帧、图2作为尾帧、尾帧是图2）；「图2不作为尾帧」「尾帧不用图2」不算
+# 只认肯定的尾帧绑定（图2为尾帧、图2作为尾帧、尾帧是图2）；「图2不作为尾帧」「尾帧不用图2」不算，
+# 前面 4 个字里有否定或撤销（不要用图2作为尾帧）也不算
 TAIL_FRAME_RE = re.compile(r"图\s?(\d+)\s*(?:作为|为|是|当作|当|用作)尾帧|尾帧(?:是|为|用|用的是|采用|选)\s*图\s?(\d+)")
-TAIL_USE_RE = re.compile(r"落幅|尾帧|结尾|最后一帧|收尾")
+TAIL_NEG_RE = re.compile(r"不|别|勿|无|没|取消|去掉")
+
+
+def tail_use_re(n):
+    """「落幅 / 尾帧 / 结尾 / 最后一帧」直接修饰图n 这次引用（落幅是图2的构图、图2的构图作为落幅）才算尾帧用法；
+    同一分句里别处的「结尾」（第3秒到达图2构图并在结尾转身）不算。"""
+    return re.compile(r"(?:落幅|尾帧|结尾|最后一帧|收尾)(?:是|为|定格成|定格在|停成|回到|落在|成)?\s*图\s?" + n + r"(?!\d)"
+                      r"|图\s?" + n + r"(?!\d)(?:的)?(?:构图|画面)?(?:作为|当作|为|是)(?:落幅|尾帧)")
 # v47 拍法逐镜写（L175；用户 2026-10-15：「涉及到的镜头，镜头的描述里面要写」）：风格段写了手持、呼吸感、运动相机这类拍法，
 # 某镜正文里没有就提醒；写了固定机位的镜、全量白模（摄影由视频1 承担）不报。「呼吸、起伏、晃」要跟着画面 / 镜头才算拍法
 # （人物呼吸声、胸口随呼吸起伏不算）；「手持」后面跟着道具名词是持物。词表可调
@@ -267,18 +275,20 @@ ARRIVE_THEN_ACT_RE = re.compile(r"(?:摄影机|镜头|相机|机位)[^。；;：
 SYNC_RE = re.compile(r"同时|途中|瞬间|同一刻")
 # v47 代词（用户偏好：他 / 她 / 它会指错人，每镜第一次点名带图号，之后用固定称呼）：主体段与镜头正文里出现就提醒，台词不算
 PRONOUN_RE = re.compile(r"(?<![其吉利])(?:他|她|它)(?:们)?(?![人乡山])")
-# v47 旁白（用户 2026-10-14：旁白只在用户要求时写，画里人物自己说的话照写）：稿里写了旁白 / 画外音、--asks 里又没有就提醒
-NARRATION_RE = re.compile(r"旁白|画外音|解说词|(?<![A-Za-z])V\.?O\.?(?![A-Za-z])")   # 同一分句里前面有不 / 无 / 没 / 别 / 勿的不算
+# v47 旁白（用户 2026-10-14：旁白只在用户要求时写，画里人物自己说的话照写）：稿里写了旁白 / 画外音 / VO 就提醒。
+# 检查器不替用户判断「要没要」：要求清单里的说法千变万化，用户要了就在 adjudicated.txt 裁定保留（只会多提醒，不会漏）
+NARRATION_RE = re.compile(r"旁白|画外音|解说词|(?<![A-Za-z])V\.?O\.?(?![A-Za-z])")
 AVOID_FILE = "avoid.txt"   # v47 项目禁用写法清单：和 asks.txt 同目录时自动读，也可用 --avoid 指定
 NARRATION_NEG_BEFORE = re.compile(r"不|无|没|别|勿|取消|去掉|删掉|删除|拿掉")
-NARRATION_NEG_AFTER = re.compile(r"^(?:都|也|全)?(?:不要|不加|不用|去掉|删掉|删除|拿掉|取消)")
+NARRATION_NEG_AFTER = re.compile(r"^(?:都|也|全)?(?:不要|不加|不用|不需要|不必|去掉|删掉|删除|拿掉|取消)")
 
 
 def _narration_negated(t, start, end):
-    """旁白这一处是不是被否定或撤销：往前看 6 个字，截到最近的并 / 和 / 而 / 逗号之后（「没有字幕并加入旁白」的没不管旁白），
-    里面有不 / 无 / 没 / 别 / 勿 / 取消 / 去掉 / 删就算；或者紧跟着「不要 / 去掉 / 删掉 / 取消」（旁白去掉）。"""
-    before = re.split(r"[并和而且，,、；;：:]", t[max(0, start - 6):start])[-1]
-    return bool(NARRATION_NEG_BEFORE.search(before) or NARRATION_NEG_AFTER.search(t[end:end + 4]))
+    """稿里这一处旁白是不是否定说法（不加任何旁白、没有旁白、旁白不需要）：往前看 8 个字，截到最近的并 / 而 / 逗号之后
+    （「没有字幕并加入旁白」的没不管旁白；「和 / 、」是名词并列，不截：「不要字幕和旁白」的不管到旁白），
+    里面有不 / 无 / 没 / 别 / 勿 / 取消 / 去掉 / 删就算；或者紧跟着「不要 / 不需要 / 去掉 / 取消」。"""
+    before = re.split(r"[并而且，,；;：:]", t[max(0, start - 8):start])[-1]
+    return bool(NARRATION_NEG_BEFORE.search(before) or NARRATION_NEG_AFTER.search(t[end:end + 5]))
 SUBJECT_SKIP_RE = re.compile(r"(?:也)?不(?:采用|需要|要|用|取)[^，。；：]*")
 # v23 场景段只写环境、风格段只写画面质感与镜头性格（writing-rules 成文主规则第 3 条）：角色类背景群体名词后面跟着活动动词的
 # 句子提醒，角色活动写进情节里它第一次出现的那一拍。天气与环境反应（雨丝斜着落下、风吹动破幡）和鸟群、落叶这类环境不在
@@ -2208,9 +2218,9 @@ def main():
     base_secs = split_sections(baseline_text) if revision and baseline_text else {}
     def _sec_changed(name):
         return not revision or re.sub(r"\s", "", v47_secs.get(name) or "") != re.sub(r"\s", "", base_secs.get(name) or "")
-    def _sents47(t):   # v47 逐句提醒共用的切句：父稿和新稿用同一种去标题、去台词、切句方式
+    def _sents47(t):   # v47 逐句提醒共用的切句：父稿和新稿用同一种去标题、去台词、去锁定文字、切句方式
         return [x for x in re.split(r"[。；;！!？?\n]", t) if x.strip()]
-    base_sents = ({re.sub(r"\s", "", x) for x in _sents47(strip_heads(strip_dialogue(baseline_text)))}
+    base_sents = ({re.sub(r"\s", "", x) for x in _sents47(_no_lock(strip_heads(strip_dialogue(baseline_text))))}
                   if revision and baseline_text else set())
     def _new(s):   # 改稿时父稿里有一模一样的整句才算继承（不按子串算，父稿台词也不豁免新写的动作）
         return not (revision and re.sub(r"\s", "", s) in base_sents)
@@ -2234,7 +2244,8 @@ def main():
                             f"不是就换一张机位对的图（先出首帧）或不挂")
     if task == "生成":
         # 按分句看：同一分句写了首帧 / 起幅 / 开场的不报（别的分句里的首帧不豁免）；稿里声明为尾帧的图（首尾帧通道）不报
-        tail_imgs = {m.group(1) or m.group(2) for m in TAIL_FRAME_RE.finditer(text)}   # 只认肯定的尾帧绑定
+        tail_imgs = {m.group(1) or m.group(2) for m in TAIL_FRAME_RE.finditer(text)   # 只认肯定的尾帧绑定
+                     if not TAIL_NEG_RE.search(text[max(0, m.start() - 4):m.start()])}
         mids = []
         for tg, sb, _same in shots47:
             for s in _sents47(sb):
@@ -2244,8 +2255,9 @@ def main():
                     m = STILL_MID_RE.search(c)
                     if not m or FIRST_FRAME_RE.search(c):
                         continue
-                    # 声明为尾帧的图，只豁免这一分句本身就在说落幅 / 尾帧 / 结尾的用法；镜中某秒到达它照报
-                    if re.search(r"\d+", m.group(0)).group(0) in tail_imgs and TAIL_USE_RE.search(c):
+                    # 声明为尾帧的图，只豁免「落幅 / 尾帧」直接修饰这次引用的用法；镜中某秒到达它照报
+                    n = re.search(r"\d+", m.group(0)).group(0)
+                    if n in tail_imgs and tail_use_re(n).search(c):
                         continue
                     mids.append((tg, c.strip()))
                     break
@@ -2268,7 +2280,7 @@ def main():
             hit = next((m for s in _sents47(sb) if _new(s)
                         for m in [ARRIVE_THEN_ACT_RE.search(s)] if m and not SYNC_RE.search(s[m.start():m.end() + 12])), None)
             if hit:
-                warnings.append(f"{tg} 镜头先到位、角色再做（候选）：「{hit.group(0)[:34]}」——到点再动作的写法，镜头会减速停下等动作；"
+                warnings.append(f"{tg} 镜头先到位、角色再做（候选）：「{hit.group(0)[:34]}」——到点再动作的写法，镜头可能减速停下等动作；"
                                 f"要不停顿就把动作挂在摄影机经过的那一瞬间（擦过、掠过、绕圈途中），风格段写全程连续运动压不住（L175）")
     p_scope = _no_lock(strip_dialogue(v47_secs.get("主体") or "")) + "\n" + "\n".join(sb for _tg, sb, _s in shots47)
     pro = []   # 每句取代词前后各一小段当摘录
@@ -2280,20 +2292,19 @@ def main():
         more = f"…（共 {len(pro)} 句）" if len(pro) > 3 else ""
         warnings.append(f"代词：{''.join(f'「{x}」' for x in pro[:3])}{more}——他 / 她 / 它会指错人；每镜第一次点名带图号，"
                         f"之后用固定称呼（seedance-format 第 2 节）")
-    # 旁白：台词和书名号里的不算；否定或撤销说的就是旁白（不加任何旁白、取消旁白、旁白去掉）的不算；父稿原样的句子不报；
-    # 只有要求清单里有效、且提到旁白那一处不是否定或撤销的要求，才算用户要了（关键词命中只说明提过，不说明授权）
-    def _nar_hits(t):
-        out = []
-        for m in NARRATION_RE.finditer(re.sub(r"《[^》]*》", lambda x: "　" * len(x.group(0)), t)):
-            if not _narration_negated(t, m.start(), m.end()):
-                out.append(m.group(0))
-        return out
-    nar = [w for s in _sents47(strip_heads(_no_lock(scan_text))) if _new(s) for w in _nar_hits(s)]
-    nar_ok = any(r["active"] and _nar_hits(r["quote"]) for r in asks_rows)
-    nar = [] if nar_ok else list(dict.fromkeys(nar))
+    # 旁白：台词和书名号里的不算；稿里的否定说法（不加任何旁白、旁白不需要）不算；父稿原样的句子不报。
+    # 不从要求清单推断「用户要了」，用户要了就裁定保留（只会多提醒，不会漏）
+    nar = []
+    for s in _sents47(strip_heads(_no_lock(scan_text))):
+        if not _new(s):
+            continue
+        for m in NARRATION_RE.finditer(re.sub(r"《[^》]*》", lambda x: "　" * len(x.group(0)), s)):
+            if not _narration_negated(s, m.start(), m.end()):
+                nar.append(m.group(0))
+    nar = list(dict.fromkeys(nar))
     if nar:
-        warnings.append(f"旁白：稿里写了「{'、'.join(nar)}」——旁白只在用户要求时写，画里人物自己说的话照写；用户要了就在 asks.txt 记一条，"
-                        f"关键词带「{nar[0]}」")
+        warnings.append(f"旁白：稿里写了「{'、'.join(nar)}」——旁白只在用户要求时写，画里人物自己说的话照写；"
+                        f"用户要了就在 adjudicated.txt 裁定保留")
     avoid_path = Path(a.avoid).expanduser() if a.avoid else None
     if avoid_path is None:
         for p in (a.asks, a.adjudicated):

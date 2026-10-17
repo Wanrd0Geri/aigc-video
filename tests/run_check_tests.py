@@ -590,8 +590,12 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("v47s_rig_cross_clause.txt", [], "拍法没逐镜写：风格段写了「手持」，镜1"),
               ("v47s_tail_negated.txt", [], "参考图当中段画面：镜1「落幅是图2的构图」"),   # 「不作为尾帧」不算声明
               ("v47s_tail_mid_use.txt", [], "参考图当中段画面：镜1「第3秒到达图2构图」"),   # 尾帧图在镜中某秒用照报
-              ("v47_narration.txt", ["--asks", str(C / "v47s_nar_ask_cancel.txt")], "旁白：稿里写了「旁白」"),   # 取消旁白不算授权
-              ("v47s_nar_conj.txt", [], "旁白：稿里写了「旁白」")]   # 「没有字幕并加入旁白」的没不管旁白
+              ("v47_narration.txt", ["--asks", str(C / "v47s_nar_ask_cancel.txt")], "旁白：稿里写了「旁白」"),   # 取消旁白
+              ("v47_narration.txt", ["--asks", str(C / "v47s_nar_ask_ok.txt")], "旁白：稿里写了「旁白」"),   # 不从要求清单推断授权，要了就裁定
+              ("v47s_nar_conj.txt", [], "旁白：稿里写了「旁白」"),   # 「没有字幕并加入旁白」的没不管旁白
+              # ---- v47 第 4 轮（Codex 第 3 轮反例）----
+              ("v47s_tail_neg_use.txt", [], "参考图当中段画面：镜1「落幅是图2的构图」"),   # 「不要用图2作为尾帧」不算声明
+              ("v47s_tail_end_word.txt", [], "参考图当中段画面：镜1「第3秒到达图2构图并在结尾转身」")]   # 别处的结尾不豁免
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
@@ -858,7 +862,7 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("v47_rig_per_shot.txt", [], "镜1、"),                             # 镜1 写了手持、镜3 写了固定机位，都不列
                  ("v47_pass_through.txt", [], "镜头先到位"),                        # 动作挂在摄影机经过的瞬间
                  ("v47_pronoun_other.txt", [], "代词"),                             # 其他、其它不是代词
-                 ("v47_narration.txt", ["--asks", str(C / "v47_narration_asks.txt")], "旁白："),   # 用户要了旁白
+                 ("v47_narration.txt", ["--adjudicated", str(C / "v47_narration_adj.txt")], "旁白："),   # 用户要了旁白：裁定保留
                  ("v47_avoid_prompt.txt", [], "项目禁用写法"),                      # 没给清单、asks 同目录也没有
                  ("v47_subject_facing.txt", [], "主体段这句写了"),                  # 对着镜头是朝向，不是调度
                  ("v47_ap17.txt", [], "AP18"),
@@ -871,8 +875,9 @@ NO_WARN_CASES = [("no_at_refs.txt", ["--labels", "图1,图2,音频1"], "新稿�
                  ("v47_rig_per_shot.txt", ["--mode", "白模"], "拍法没逐镜写"),   # 全量白模的摄影由视频1 承担
                  ("v47_narration_neg.txt", [], "旁白："),                   # 否定、书名、台词里的不算
                  ("v47_ap18_selfie.txt", [], "AP18"),                       # 真自拍、举起相机
-                 ("v47_narration.txt", ["--asks", str(C / "v47s_nar_ask_ok.txt")], "旁白："),   # 「不要字幕，要旁白」算授权
                  ("v47s_arrive_sync_after.txt", [], "镜头先到位"),          # 冒号后写了同时
+                 ("v47s_lock.txt", ["--baseline", str(C / "v47s_lock.txt"), "--lock", "镜头慢推"], "代词"),   # 锁定文字不让未改句重报
+                 ("v47s_nar_coord.txt", [], "旁白："),                      # 不要旁白和画外音、旁白不需要
                  ("revise_dropped_two.txt", ["--baseline", str(C / "revise_parent.txt")], "--rewrite-authorized 关掉")]   # 只消失两句不加提示
 for f, extra, key in NO_WARN_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
