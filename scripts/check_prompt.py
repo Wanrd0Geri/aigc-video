@@ -248,14 +248,18 @@ ANGLE_RE = re.compile(r"俯拍|仰拍|顶拍|鸟瞰|顶视|低角度|高角度|�
 STILL_MID_RE = re.compile(r"图\s?\d+(?:的|那样的|里的)?(?:构图|画面|机位|景别|取景)"
                           r"|(?:到达|回到|停成|锁成|定格成|定格在|落成|落幅是|落幅为|推成|拉成)\s*图\s?\d+")
 FIRST_FRAME_RE = re.compile(r"首帧|起幅|开场|第\s*0\s*秒|第一帧|第一个画面")
-TAIL_FRAME_RE = re.compile(r"图\s?(\d+)[^。；;，,\n]{0,10}?尾帧|尾帧[^。；;，,\n]{0,6}?图\s?(\d+)")
+# 只认肯定的尾帧绑定（图2为尾帧、图2作为尾帧、尾帧是图2）；「图2不作为尾帧」「尾帧不用图2」不算
+TAIL_FRAME_RE = re.compile(r"图\s?(\d+)\s*(?:作为|为|是|当作|当|用作)尾帧|尾帧(?:是|为|用|用的是|采用|选)\s*图\s?(\d+)")
+TAIL_USE_RE = re.compile(r"落幅|尾帧|结尾|最后一帧|收尾")
 # v47 拍法逐镜写（L175；用户 2026-10-15：「涉及到的镜头，镜头的描述里面要写」）：风格段写了手持、呼吸感、运动相机这类拍法，
 # 某镜正文里没有就提醒；写了固定机位的镜、全量白模（摄影由视频1 承担）不报。「呼吸、起伏、晃」要跟着画面 / 镜头才算拍法
 # （人物呼吸声、胸口随呼吸起伏不算）；「手持」后面跟着道具名词是持物。词表可调
 _RIG_HANDHELD = r"手持(?![^，,。；;]{0,4}" + HANDHELD_PROP + r")"
-STYLE_RIG_RE = re.compile(_RIG_HANDHELD + r"|呼吸感|呼吸般|(?:画面|镜头|画框|摄影机)[^，,。；;]{0,8}呼吸|肩扛|FPV|穿越机|运动相机")
+# 「画面 / 镜头……呼吸、晃、起伏」只在同一分句里、且画面 / 镜头后面不是「里 / 中 / 内 / 前」（那是在说画面里的人）才算
+_RIG_CAM = r"(?:画面|镜头|画框|摄影机|机身)(?![里中内前])"
+STYLE_RIG_RE = re.compile(_RIG_HANDHELD + r"|呼吸感|呼吸般|" + _RIG_CAM + r"[^，,。；;！!？?\n]{0,8}呼吸|肩扛|FPV|穿越机|运动相机")
 SHOT_RIG_RE = re.compile(_RIG_HANDHELD + r"|肩扛|FPV|穿越机|运动相机"
-                         r"|(?:画面|镜头|画框|摄影机|机身)[^。；;！!？?\n]{0,10}(?:呼吸|晃|颠簸|起伏|顿挫|修正)")
+                         r"|" + _RIG_CAM + r"[^，,。；;！!？?\n]{0,10}(?:呼吸|晃|颠簸|起伏|顿挫|修正)")
 # v47 镜头先到位、角色再做（L175）：「摄影机……绕到 / 推到 / 来到……：角色……」这种到点再动作的冒号句，镜头会停下等动作。
 # 写明同时、途中、同一瞬间的是动作挂在经过的瞬间，不报。候选，词表可调
 ARRIVE_THEN_ACT_RE = re.compile(r"(?:摄影机|镜头|相机|机位)[^。；;：:\n]{0,24}?(?:绕到|推到|移到|来到|停在|到达|落到|转到|摇到|飞到|滑到)"
@@ -266,6 +270,15 @@ PRONOUN_RE = re.compile(r"(?<![其吉利])(?:他|她|它)(?:们)?(?![人乡山])
 # v47 旁白（用户 2026-10-14：旁白只在用户要求时写，画里人物自己说的话照写）：稿里写了旁白 / 画外音、--asks 里又没有就提醒
 NARRATION_RE = re.compile(r"旁白|画外音|解说词|(?<![A-Za-z])V\.?O\.?(?![A-Za-z])")   # 同一分句里前面有不 / 无 / 没 / 别 / 勿的不算
 AVOID_FILE = "avoid.txt"   # v47 项目禁用写法清单：和 asks.txt 同目录时自动读，也可用 --avoid 指定
+NARRATION_NEG_BEFORE = re.compile(r"不|无|没|别|勿|取消|去掉|删掉|删除|拿掉")
+NARRATION_NEG_AFTER = re.compile(r"^(?:都|也|全)?(?:不要|不加|不用|去掉|删掉|删除|拿掉|取消)")
+
+
+def _narration_negated(t, start, end):
+    """旁白这一处是不是被否定或撤销：往前看 6 个字，截到最近的并 / 和 / 而 / 逗号之后（「没有字幕并加入旁白」的没不管旁白），
+    里面有不 / 无 / 没 / 别 / 勿 / 取消 / 去掉 / 删就算；或者紧跟着「不要 / 去掉 / 删掉 / 取消」（旁白去掉）。"""
+    before = re.split(r"[并和而且，,、；;：:]", t[max(0, start - 6):start])[-1]
+    return bool(NARRATION_NEG_BEFORE.search(before) or NARRATION_NEG_AFTER.search(t[end:end + 4]))
 SUBJECT_SKIP_RE = re.compile(r"(?:也)?不(?:采用|需要|要|用|取)[^，。；：]*")
 # v23 场景段只写环境、风格段只写画面质感与镜头性格（writing-rules 成文主规则第 3 条）：角色类背景群体名词后面跟着活动动词的
 # 句子提醒，角色活动写进情节里它第一次出现的那一拍。天气与环境反应（雨丝斜着落下、风吹动破幡）和鸟群、落叶这类环境不在
@@ -2195,10 +2208,12 @@ def main():
     base_secs = split_sections(baseline_text) if revision and baseline_text else {}
     def _sec_changed(name):
         return not revision or re.sub(r"\s", "", v47_secs.get(name) or "") != re.sub(r"\s", "", base_secs.get(name) or "")
-    base_flat_nd = re.sub(r"\s", "", strip_dialogue(baseline_text)) if revision and baseline_text else ""   # 父稿剥掉台词后
-    def _new(s):   # 改稿时父稿里原样有的句子（含剥掉台词后的样子）不算本轮新写的
-        f = re.sub(r"\s", "", s)
-        return not (revision and f and (f in base_flat or f in base_flat_nd))
+    def _sents47(t):   # v47 逐句提醒共用的切句：父稿和新稿用同一种去标题、去台词、切句方式
+        return [x for x in re.split(r"[。；;！!？?\n]", t) if x.strip()]
+    base_sents = ({re.sub(r"\s", "", x) for x in _sents47(strip_heads(strip_dialogue(baseline_text)))}
+                  if revision and baseline_text else set())
+    def _new(s):   # 改稿时父稿里有一模一样的整句才算继承（不按子串算，父稿台词也不豁免新写的动作）
+        return not (revision and re.sub(r"\s", "", s) in base_sents)
     shots47 = []   # (镜号, 去标题、台词、锁定文字后的正文, 和父稿这一镜逐字相同)
     for k, (h, body_lines, _t) in enumerate(blocks):
         body = "\n".join(body_lines)
@@ -2219,17 +2234,21 @@ def main():
                             f"不是就换一张机位对的图（先出首帧）或不挂")
     if task == "生成":
         # 按分句看：同一分句写了首帧 / 起幅 / 开场的不报（别的分句里的首帧不豁免）；稿里声明为尾帧的图（首尾帧通道）不报
-        tail_imgs = {m.group(1) or m.group(2) for m in TAIL_FRAME_RE.finditer(text)}
+        tail_imgs = {m.group(1) or m.group(2) for m in TAIL_FRAME_RE.finditer(text)}   # 只认肯定的尾帧绑定
         mids = []
         for tg, sb, _same in shots47:
-            for s in re.split(r"[。；;！!？?\n]", sb):
+            for s in _sents47(sb):
                 if not _new(s):
                     continue
                 for c in re.split(r"[，,]", s):
                     m = STILL_MID_RE.search(c)
-                    if m and not FIRST_FRAME_RE.search(c) and re.search(r"\d+", m.group(0)).group(0) not in tail_imgs:
-                        mids.append((tg, c.strip()))
-                        break
+                    if not m or FIRST_FRAME_RE.search(c):
+                        continue
+                    # 声明为尾帧的图，只豁免这一分句本身就在说落幅 / 尾帧 / 结尾的用法；镜中某秒到达它照报
+                    if re.search(r"\d+", m.group(0)).group(0) in tail_imgs and TAIL_USE_RE.search(c):
+                        continue
+                    mids.append((tg, c.strip()))
+                    break
         if mids:
             shown = "".join(f"{tg}「{s[:30]}」" for tg, s in mids[:3])
             warnings.append(f"参考图当中段画面：{shown}——带构图或事件的整场景静帧只当首帧；挂成中段，锚时间会定住、不锚会被当开场重演"
@@ -2245,14 +2264,15 @@ def main():
                             f"用到的镜在运镜句里各写一次画面怎么动（手持写画面边缘随呼吸起伏、不规则小晃）；用户 2026-10-15 要求逐镜写")
     if task != "编辑":
         for tg, sb, _same in shots47:
-            hit = next((m for s in re.split(r"[。；;！!？?\n]", sb) if _new(s)
-                        for m in [ARRIVE_THEN_ACT_RE.search(s)] if m and not SYNC_RE.search(m.group(0))), None)
+            # 同时 / 途中 / 瞬间写在冒号前或冒号后的动作里都算挂在经过的瞬间
+            hit = next((m for s in _sents47(sb) if _new(s)
+                        for m in [ARRIVE_THEN_ACT_RE.search(s)] if m and not SYNC_RE.search(s[m.start():m.end() + 12])), None)
             if hit:
                 warnings.append(f"{tg} 镜头先到位、角色再做（候选）：「{hit.group(0)[:34]}」——到点再动作的写法，镜头会减速停下等动作；"
                                 f"要不停顿就把动作挂在摄影机经过的那一瞬间（擦过、掠过、绕圈途中），风格段写全程连续运动压不住（L175）")
     p_scope = _no_lock(strip_dialogue(v47_secs.get("主体") or "")) + "\n" + "\n".join(sb for _tg, sb, _s in shots47)
     pro = []   # 每句取代词前后各一小段当摘录
-    for s in split_sentences(p_scope):
+    for s in _sents47(p_scope):
         m = PRONOUN_RE.search(s)
         if m and _new(s):
             pro.append(s[max(0, m.start() - 10):m.end() + 12].strip())
@@ -2260,18 +2280,16 @@ def main():
         more = f"…（共 {len(pro)} 句）" if len(pro) > 3 else ""
         warnings.append(f"代词：{''.join(f'「{x}」' for x in pro[:3])}{more}——他 / 她 / 它会指错人；每镜第一次点名带图号，"
                         f"之后用固定称呼（seedance-format 第 2 节）")
-    # 旁白：台词和书名号里的不算；同一分句里有不 / 无 / 没 / 别 / 勿在它前面的是禁止说法，不算；父稿原样的句子不报；
-    # 只有要求清单里有效、本身不是否定的那条提到旁白，才算用户要了（关键词命中只说明提过，不说明授权）
-    nar = []
-    for s in split_sentences(re.sub(r"《[^》]*》", "", _no_lock(scan_text))):
-        if not _new(s):
-            continue
-        for m in NARRATION_RE.finditer(s):
-            clause = re.split(r"[，,：:]", s[:m.start()])[-1]
-            if not re.search(r"[不无没别勿]", clause):
-                nar.append(m.group(0))
-    nar_ok = any(r["active"] and NARRATION_RE.search(r["quote"]) and not re.search(r"[不无没别勿]", r["quote"])
-                 for r in asks_rows)
+    # 旁白：台词和书名号里的不算；否定或撤销说的就是旁白（不加任何旁白、取消旁白、旁白去掉）的不算；父稿原样的句子不报；
+    # 只有要求清单里有效、且提到旁白那一处不是否定或撤销的要求，才算用户要了（关键词命中只说明提过，不说明授权）
+    def _nar_hits(t):
+        out = []
+        for m in NARRATION_RE.finditer(re.sub(r"《[^》]*》", lambda x: "　" * len(x.group(0)), t)):
+            if not _narration_negated(t, m.start(), m.end()):
+                out.append(m.group(0))
+        return out
+    nar = [w for s in _sents47(strip_heads(_no_lock(scan_text))) if _new(s) for w in _nar_hits(s)]
+    nar_ok = any(r["active"] and _nar_hits(r["quote"]) for r in asks_rows)
     nar = [] if nar_ok else list(dict.fromkeys(nar))
     if nar:
         warnings.append(f"旁白：稿里写了「{'、'.join(nar)}」——旁白只在用户要求时写，画里人物自己说的话照写；用户要了就在 asks.txt 记一条，"
@@ -2288,7 +2306,7 @@ def main():
             warnings.append(f"项目禁用写法清单读不出来：{avoid_path}")
         else:
             checked.append(f"项目禁用写法清单 {len(avoid_rows)} 条（{avoid_path}）")
-            avoid_sents = [s for s in split_sentences(lock_free) if _new(s)]   # 父稿原样的句子不报
+            avoid_sents = [s for s in _sents47(strip_heads(lock_free)) if _new(s)]   # 父稿原样的句子不报
             for word, why in avoid_rows:
                 if any(word in s for s in avoid_sents) and not _asked(word):
                     warnings.append(f"项目禁用写法「{word}」：{why or '见清单'}（{avoid_path.name}）；改写，确要保留就在 adjudicated.txt 裁定")

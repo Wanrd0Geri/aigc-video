@@ -40,7 +40,7 @@ class LogLessonSources(unittest.TestCase):
 
     def test_single_source_still_reminds(self):
         for src in ("某片 镜头_v03.mp4 2026-10-15", "镜头_v3-final.mp4", "镜头_对比图.mp4", "镜头_v3-20261015.mp4",
-                    "针对v3.mp4", "背对v3.mp4"):
+                    "针对v3.mp4", "背对v3.mp4", "镜头_v3 对 v20261015.mp4"):
             self.assertIn("来源只有一条成片", self.log(src), src)
 
 
