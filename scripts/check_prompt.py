@@ -287,7 +287,7 @@ def _narration_negated(t, start, end):
     """稿里这一处旁白是不是否定说法（不加任何旁白、没有旁白、旁白不需要）：往前看 8 个字，截到最近的并 / 而 / 逗号之后
     （「没有字幕并加入旁白」的没不管旁白；「和 / 、」是名词并列，不截：「不要字幕和旁白」的不管到旁白），
     里面有不 / 无 / 没 / 别 / 勿 / 取消 / 去掉 / 删就算；或者紧跟着「不要 / 不需要 / 去掉 / 取消」。"""
-    before = re.split(r"[并而且，,；;：:]", t[max(0, start - 8):start])[-1]
+    before = re.split(r"[并而且，,；;：:]|但是|但|不过|可是", t[max(0, start - 8):start])[-1]   # 转折后面是新的说法
     return bool(NARRATION_NEG_BEFORE.search(before) or NARRATION_NEG_AFTER.search(t[end:end + 5]))
 SUBJECT_SKIP_RE = re.compile(r"(?:也)?不(?:采用|需要|要|用|取)[^，。；：]*")
 # v23 场景段只写环境、风格段只写画面质感与镜头性格（writing-rules 成文主规则第 3 条）：角色类背景群体名词后面跟着活动动词的
@@ -2257,7 +2257,8 @@ def main():
                         continue
                     # 声明为尾帧的图，只豁免「落幅 / 尾帧」直接修饰这次引用的用法；镜中某秒到达它照报
                     n = re.search(r"\d+", m.group(0)).group(0)
-                    if n in tail_imgs and tail_use_re(n).search(c):
+                    if n in tail_imgs and any(u.start() <= m.end() and u.end() >= m.start()   # 尾帧说法要落在这次命中上
+                                              for u in tail_use_re(n).finditer(c)):
                         continue
                     mids.append((tg, c.strip()))
                     break

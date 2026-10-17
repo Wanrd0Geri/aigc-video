@@ -595,7 +595,10 @@ WARN_CASES = [("weak_motion.txt", [], "弱措辞"), ("dense_beats.txt", [], "节
               ("v47s_nar_conj.txt", [], "旁白：稿里写了「旁白」"),   # 「没有字幕并加入旁白」的没不管旁白
               # ---- v47 第 4 轮（Codex 第 3 轮反例）----
               ("v47s_tail_neg_use.txt", [], "参考图当中段画面：镜1「落幅是图2的构图」"),   # 「不要用图2作为尾帧」不算声明
-              ("v47s_tail_end_word.txt", [], "参考图当中段画面：镜1「第3秒到达图2构图并在结尾转身」")]   # 别处的结尾不豁免
+              ("v47s_tail_end_word.txt", [], "参考图当中段画面：镜1「第3秒到达图2构图并在结尾转身」"),   # 别处的结尾不豁免
+              # ---- v47 第 5 轮（Codex 第 4 轮建议）----
+              ("v47t_nar_but.txt", [], "旁白：稿里写了「旁白」"),   # 「不加字幕但加旁白」：转折后的旁白是要的
+              ("v47t_tail_two_refs.txt", [], "参考图当中段画面：镜1「第3秒到达图2构图")]   # 尾帧说法要落在这次命中上
 for f, extra, key in WARN_CASES:
     p = subprocess.run([sys.executable, "-X", "utf8", str(S), "--prompt", str(C / f), "--total", "12", *extra], text=True, encoding="utf-8", errors="replace", capture_output=True)
     d = json.loads(p.stdout); ok = any(key in w for w in d["warnings"]); fails += 0 if ok else 1
