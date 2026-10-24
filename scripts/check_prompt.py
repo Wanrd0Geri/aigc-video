@@ -496,6 +496,8 @@ QUOTE_OPEN = {"“": "”", "「": "」", "『": "』", "\"": "\""}
 SENT_SIMILAR = 0.6
 # 长度增长：超过父稿这个倍数时提醒核对新增信息，不据此要求压缩。
 LENGTH_BUDGET = 1.15
+# 累计增长提醒线：比本轮起点稿多 30%；推测、待实测，可调，不是质量阈值。
+ORIGIN_LENGTH_BUDGET = 1.30
 LOST_REWRITE_HINT = 5   # v47：父稿消失这么多句以上时，提醒里加一句「授权重写就加 --rewrite-authorized」。可调
 # 即梦提示词长度上限（seedance-format 第 7 节）：正文超过就报错误
 PROMPT_CHAR_LIMIT = 15000
@@ -1507,6 +1509,8 @@ def main():
                          "给了就逐镜算字数密度，和有时码的镜头同一口径。镜头有时码时以时码为准")
     ap.add_argument("--labels", default="", help="本次素材集合，逗号分开；`图1` 与 `图片1` 两种写法都接受（归一成 图N / 视频N / 音频N 再核对）")
     ap.add_argument("--baseline", default=None)
+    ap.add_argument("--origin", default=None,
+                    help="本轮起点完整稿（asks.txt 顶部记 # 起点，路径须在此显式传入）；去空白字数比起点多 30% 提醒（推测、待实测），授权重写只报数")
     ap.add_argument("--partial", action="store_true")
     ap.add_argument("--lock", action="append", default=[], help="逐字保护一段用户原文（仅忽略换行），传原文本身，可重复给多条；不是布尔开关或文件路径，可单独用于新稿，无逐字锁时省略")
     ap.add_argument("--unchanged", default="")
@@ -1521,7 +1525,7 @@ def main():
                          "朝向只写方位词、跟拍没有位移证据、未识别到摄影运动三条也不报（朝向和运镜由视频1给）；命令区缺一致性句"
                          "（严格保持 / 切点前后状态一致 / 角色一致性）报 AP09（候选）")
     ap.add_argument("--rewrite-authorized", action="store_true",
-                    help="用户已授权整镜重写：不报“父稿有 N 句在新稿里消失”和“新稿比父稿长”；--asks 照旧核对")
+                    help="用户已授权整镜重写：不报“父稿有 N 句在新稿里消失”和父稿、起点稿的长度增长提醒，只报字数；--asks 照旧核对")
     ap.add_argument("--avoid", default=None,
                     help="项目禁用写法清单（avoid.txt：一行一条「写法 # 原因」）；不给时和 --asks 或 --adjudicated 同目录有 avoid.txt 就自动读")
     ap.add_argument("--adjudicated", default=None,
@@ -1553,12 +1557,17 @@ def main():
         bail("--lock 不能是空文字")
     if a.asks and not Path(a.asks).is_file():
         bail(f"--asks 指定的要求清单找不到：{a.asks}")
+    if a.origin and not Path(a.origin).is_file():
+        bail(f"--origin 指定的起点稿找不到：{a.origin}")
     if a.adjudicated and not Path(a.adjudicated).is_file():
         bail(f"--adjudicated 指定的裁定清单找不到：{a.adjudicated}")
 
     raw = open(a.prompt, encoding="utf-8").read()
     cand_lines = raw.splitlines()
     baseline_text = open(a.baseline, encoding="utf-8").read() if a.baseline else None
+    origin_text = open(a.origin, encoding="utf-8").read() if a.origin else None
+    if origin_text is not None and not nonspace_len(origin_text):
+        bail("--origin 起点稿去空白后为空，无法计算累计增长")
     baseline_lines = baseline_text.splitlines() if a.baseline else None
     revision = a.baseline is not None
     requested_fmt = a.fmt or ("继承" if revision else "四段")
@@ -1626,6 +1635,15 @@ def main():
     first_head = heads[0][0] if heads else None
     # 四段稿末尾只有固定句：镜头块只在固定句那一行切开，写在镜内的否定句仍属于那一镜的正文。
     blocks = shot_blocks(lines, heads, len(lines) if fmt == "四段" else None)
+    # v48：一镜到底与多标题的结构冲突。只看风格、情节，台词和否定声明不算。
+    one_take_sections = split_sections(strip_dialogue(text))
+    one_take_scope = "\n".join(one_take_sections.get(s, "") for s in ("风格", "情节"))
+    one_take = any("一镜到底" in clause and not re.search(
+        r"(?:不|非|无需|无须|避免|禁止)[^，,。；;：:\n]{0,8}一镜到底", clause)
+        for clause in re.split(r"[，,。；;：:\n]", one_take_scope))
+    plot_heads = parse_heads(one_take_sections.get("情节", "").splitlines())
+    if one_take and len(plot_heads) >= 2:
+        warnings.append(f"一镜到底却有多个镜头标题：情节里有 {len(plot_heads)} 个；连续镜头只留一个镜头标题，镜内按拍写；真要硬切才拆镜，白模秒数规则照旧")
     if shot_secs:
         if len(shot_secs) != len(blocks):
             errors.append(f"--shot-seconds 给了 {len(shot_secs)} 个秒数，稿里有 {len(blocks)} 镜；按镜号顺序每镜一个")
@@ -1952,6 +1970,8 @@ def main():
     asks_checked = None
     if a.asks:
         errors.extend(asks_fmt_errs)
+        if not any(line.startswith("# 父稿") for line in Path(a.asks).read_text(encoding="utf-8").splitlines()):
+            warnings.append("要求清单缺父稿：顶部补 # 父稿 vX = <路径或版本>，先确认本轮在谁的基础上改")
         active_rows = [r for r in asks_rows if r["active"]]
         asks_active = len(active_rows)
         asks_checked = asks_active
@@ -1996,6 +2016,28 @@ def main():
         if old_n and new_n > old_n * LENGTH_BUDGET:
             warnings.append(f"新稿比父稿长 {round((new_n - old_n) / old_n * 100)}%（{old_n}→{new_n} 字）；"
                             f"仅核对新增必要信息与重复补丁，不强制压缩或为降字数删成功项；详见 references/review/revise-rules.md")
+
+    # v48：交付用字数均比较完整稿；局部交付用合成全文，旧父稿提醒的局部口径不变。
+    length_comparison = None
+    if revision or origin_text is not None:
+        current_n = nonspace_len(text)
+        length_comparison = {"scope": "full_checked_prompt", "current_chars": current_n}
+        length_notes = []
+        if revision:
+            baseline_n = nonspace_len(baseline_text)
+            delta = current_n - baseline_n
+            length_comparison.update(baseline_chars=baseline_n, baseline_delta=delta)
+            length_notes.append(f"比父稿 {delta:+d} 字")
+        if origin_text is not None:
+            origin_n = nonspace_len(origin_text)
+            growth = (current_n - origin_n) / origin_n * 100
+            length_comparison.update(origin_chars=origin_n, origin_delta_percent=round(growth, 2),
+                                     origin_sha256=sha(origin_text))
+            length_notes.append(f"比起点版 {growth:+.1f}%（{origin_n}→{current_n} 字）")
+            if not a.rewrite_authorized and current_n > origin_n * ORIGIN_LENGTH_BUDGET:
+                warnings.append(f"新稿比起点版累计增长：{growth:+.1f}%（{origin_n}→{current_n} 字），超过 {(ORIGIN_LENGTH_BUDGET - 1) * 100:g}% 暂定提醒线（推测、待实测）；"
+                                "只核对必要新增信息与重复补丁，不为降字数删成功项")
+        checked.append("字数对照（完整稿、去空白）：" + "；".join(length_notes))
 
     # --- 每镜摄影运动、弱运镜与动作密度（提醒）---
     # 命令区写了参考视频N的运镜 / 白模 / 沿用视频N的镜头时，摄影由参考片承担，不报“未识别到摄影运动”
@@ -2650,6 +2692,8 @@ def main():
         "asks_file": str(Path(a.asks).resolve()) if a.asks else None,
         "hint_types": hint_counts(warnings + adjudicated),   # 全部提醒（待裁定加已裁定）按类别计数
     }
+    if length_comparison is not None:
+        metrics["length_comparison"] = length_comparison
 
     parts = [f"{len(heads)} 镜"]
     if timed:

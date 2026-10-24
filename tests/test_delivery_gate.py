@@ -389,7 +389,8 @@ class DeliveryTests(unittest.TestCase):
 
     def test_d5_asks_forwarded_passes_when_landed(self):
         self.setup_gate()
-        asks = self.write_asks('asks.txt', ['R1 | 03:12 | 两镜行走 | 走到窗前 | 有效'])
+        asks = self.write_asks('asks.txt', [f'# 父稿 v1 = {ROOT / "tests/check_cases/control_valid.txt"}',
+                                             'R1 | 03:12 | 两镜行走 | 走到窗前 | 有效'])
         self.req['asks'] = str(asks)
         self.refresh_requirement_hash()
         code, res = self.gate()
