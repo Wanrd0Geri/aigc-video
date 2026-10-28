@@ -19,7 +19,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 6. 稿里有没有反模式表里的词：高速镜里的位置大小不变、露出全身、有…那么大、给气流起名叫柱、快镜里的慢慢。
 7. 动作密度与有效时长匹配吗；多镜稿每个切点前后的动作与画面接得上吗。
 
-## 必须守住
+## 必须遵守
 
 1. **只写当前画面。** 每镜只写此刻能拍到的人、部位、物件与空间；详细写法与信息取舍只在 [writing-rules.md](references/writing-rules.md) 维护：多镜世界布局与逐镜可见清单见 D06；画外线索、已完成动作、抽象词与发力结果、用户点名要的部位细节和用户原话里的词保留，并写成它的可见结果（细则见成文主规则及附录第6–8、20、59条）。
 2. **新稿四段，固定句收尾；改稿继承父稿。** 新稿主体、场景、风格、情节四段及末行逐字 `全片不添加BGM，不添加字幕。`，改稿父稿外壳/固定句保护与格式迁移授权，按 [seedance-format.md](references/seedance-format.md) 第1、6节；公开交付见第9节。
@@ -45,10 +45,10 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 
 | 任务 | 本次必读 | 交付 |
 |---|---|---|
-| 多镜新稿：先镜头表 | principles.md → 匹配 modes/ 三卡：whitebox-driven：视频1 是白模或运镜参考视频；dialogue-multi：画里两人以上、有台词，固定机位或慢运镜，机位和运镜由文字定（视频参考先用whitebox-driven，只有一个主体在动转single-creature适用判定）；single-creature：画里一个主体（人、兽、龙）在动，速度快，或身边有大参照物（门洞、巨物、龙卷、崖壁），没有白模也没有运镜参考视频。按这三句选定才读那一张，不开另外两张；无适配则不用。选中卡的必写/可省/禁写、检查参数及卡列依赖照旧→ lessons 先按题材 grep index.md 的两三个分类（摄影触发及按编号回读主库的条件按必须守住5）→ 案例先索引（只读「索引」节的表，不读文件头的读法段）：类型与素材形态同才读可复用点/关联经验，官方案例按编号读索引详项的原案例结构/精简索引的什么时候选它；抄句式才展开原文，无适配内部记“未参考案例”，不硬凑 → seedance-format.md §2、§9（涉及起点/风格、时间预算补§3/§4相关条款）→ writing-rules.md 成文主规则及五道门的设计约束、适用决策/建议/去处条款 → directing-upgrade.md 与适用工艺卡（用了模式卡就只读卡里列的；题材工艺卡名单只在没用卡时适用） → 用户白话含动作/效果/运镜词才查 lexicon/ 对应表：每词一个推荐进表头升级行，意图不清或用户要选方向才给备选（读法/升级写法按 lexicon/README） | 表头 + 八列镜头表；确认后成文 |
+| 多镜新稿：先镜头表 | principles.md → 匹配 modes/ 三卡：whitebox-driven：视频1 是白模或运镜参考视频；dialogue-multi：画里两人以上、有台词，固定机位或慢运镜，机位和运镜由文字定（视频参考先用whitebox-driven，只有一个主体在动转single-creature适用判定）；single-creature：画里一个主体（人、兽、龙）在动，速度快，或身边有大参照物（门洞、巨物、龙卷、崖壁），没有白模也没有运镜参考视频。按这三句选定才读那一张，不开另外两张；无适配则不用。选中卡的必写/可省/禁写、检查参数及卡列依赖照旧→ lessons 先按题材 grep index.md 的两三个分类（摄影触发及按编号回读主库的条件按必须遵守5）→ 案例先索引（只读「索引」节的表，不读文件头的读法段）：类型与素材形态同才读可复用点/关联经验，官方案例按编号读索引详项的原案例结构/精简索引的什么时候选它；抄句式才展开原文，无适配内部记“未参考案例”，不硬凑 → seedance-format.md §2、§9（涉及起点/风格、时间预算补§3/§4相关条款）→ writing-rules.md 成文主规则及五道门的设计约束、适用决策/建议/去处条款 → directing-upgrade.md 与适用工艺卡（用了模式卡就只读卡里列的；题材工艺卡名单只在没用卡时适用） → 用户白话含动作/效果/运镜词才查 lexicon/ 对应表：每词一个推荐进表头升级行，意图不清或用户要选方向才给备选（读法/升级写法按 lexicon/README） | 表头 + 八列镜头表；确认后成文 |
 | 确认后成文；单镜或明确“直接出” | 补读 seedance-format.md 与 writing-rules.md 正文（八条主规则、五道门、决策表、建议行与去处表）尚未读取的适用部分；上一阶段的原理、模式卡、lessons、案例、工艺与词库要求照旧。两阶段均：writing-rules-annex.md 不整读；模式卡所列条号必查，其余只读本次规则所指条及条件/例外；定位条号只搜目标条号（如 `grep -n "^37\. "`），从命中行读到下一条号或组标题前为止（多数条一行，第 62、79–83 条带例句或附表是多行条块），通配标题的正则会带出全文；已确认结构不重开，同版已读范围不重读。单镜/直接出同轮完成前后阶段的适用读取。最终正文检查常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<最终正文.txt>" --task 生成 --labels "<本次素材，逗号分隔>" --report "<本机报告.json>"`；镜头表阶段不运行正文检查，参数取舍见表后命令说明。| 表头 + 完整提示词 + 检查行；单镜或明确“直接出”不等确认 |
-| 改现有提示词 | lessons 先按分类 grep index.md，按编号回读主库条件见必须守住5 → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节；常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整新稿.txt>" --task 生成 --baseline "<完整父稿.txt>" --asks asks.txt --lock "<用户锁定的原文>" --adjudicated adjudicated.txt --report "<本机报告.json>"`，参数取舍见表后说明 | 整份重编版（单独一个代码块，未改镜头逐字同父稿）+ 块外修改标记 + 检查行；不为表头全文加载新稿格式或严格审文件 |
-| 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons/index.md 的 `操作命令/` 及题材分类，按编号回读主库条件见必须守住5；延长常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整操作稿.txt>" --task 延长 --labels "视频1" --report "<本机报告.json>"`；编辑或衔接把任务值换成对应一个值，衔接与其它适用参数按表后说明 | 四段完整操作命令；旧稿修订按父稿外壳 |
+| 改现有提示词 | lessons 先按分类 grep index.md，按编号回读主库条件见必须遵守5 → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节；常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整新稿.txt>" --task 生成 --baseline "<完整父稿.txt>" --asks asks.txt --lock "<用户锁定的原文>" --adjudicated adjudicated.txt --report "<本机报告.json>"`，参数取舍见表后说明 | 整份重编版（单独一个代码块，未改镜头逐字同父稿）+ 块外修改标记 + 检查行；不为表头全文加载新稿格式或严格审文件 |
+| 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons/index.md 的 `操作命令/` 及题材分类，按编号回读主库条件见必须遵守5；延长常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整操作稿.txt>" --task 延长 --labels "视频1" --report "<本机报告.json>"`；编辑或衔接把任务值换成对应一个值，衔接与其它适用参数按表后说明 | 四段完整操作命令；旧稿修订按父稿外壳 |
 | 白模/运镜参考的检查补充（仍沿用新稿、改稿或操作路由） | 只读已选的 whitebox-driven 卡；全量白模且白模拥有全片时长时常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整稿.txt>" --task 生成 --labels "<本次素材，逗号分隔>" --mode 白模 --untimed --shot-seconds "<交接卡每镜秒数，逗号分隔>" --report "<本机报告.json>"`。纯运镜参考不加 `--mode 白模`；秒数从交接卡抄，不能照例子编造。只在原有条件触发时加无时码/重写/父稿等参数，见该卡与表后说明。| 交付阶段与保护沿用所属任务；不新增审批，不把参考视频一律当全量白模 |
 | 输入「自检」 | 原理页先过一眼（[principles.md](references/principles.md)）→ [qa-checklist.md](references/review/qa-checklist.md) + `scripts/check_prompt.py`；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 一句结论 + 问题清单（镜号｜项及来源｜缺口｜影响｜建议）+ 人核提醒 + 脚本行；只出报告不改稿 |
 | 回传视频、截图或生成反馈 | [diagnose.md](references/review/diagnose.md)；需要时用 `scripts/extract_frames.py` 抽帧 | 逐句兑现、归因、最小修法与一条待审观察；获授权才写经验库 |
@@ -85,13 +85,13 @@ principles、seedance-format、writing-rules及附录、seedance-operations、an
 - **L2**（对话、反应、双人）：L1 + 朝向与视线、可见表情变化、对白与必要声音。
 - **L3**（多人、打斗、特效、跨镜接力）：L2 + 空间层次与锚点、动作时序、接触与受力后果、跨镜现状、特效来源/路径/接触/退出、本镜里光的变化。
 
-等级只决定字段深度，不决定轻量或全套路径。素材是否存在、上传顺序、身份、来源与能否读取是事实，不默认、不猜；必要事实缺失或用户锁定互相冲突时集中问一次，能独立完成的设计继续做。交付物、用途、不能动的部分或时长缺失，或有两种理解且会改变结果时，也在开工前一并问：最多五问，每问附推荐答案，用户回「按推荐」即可开工；能自己查到或不影响结果的不问，开工后不为小事中途停。有人物、对白、接触或特效时才启用相应字段，不为填表增加内容。字段是内部设计深度，不是每拍要写满的清单；成文仍按必须守住第 8 条。
+等级只决定字段深度，不决定轻量或全套路径。素材是否存在、上传顺序、身份、来源与能否读取是事实，不默认、不猜；必要事实缺失或用户锁定互相冲突时集中问一次，能独立完成的设计继续做。交付物、用途、不能动的部分或时长缺失，或有两种理解且会改变结果时，也在开工前一并问：最多五问，每问附推荐答案，用户回「按推荐」即可开工；能自己查到或不影响结果的不问，开工后不为小事中途停。有人物、对白、接触或特效时才启用相应字段，不为填表增加内容。字段是内部设计深度，不是每拍要写满的清单；成文仍按必须遵守第 8 条。
 
 ## 流程分级
 
 **轻量路径（默认）**：适用于所有新稿（含 L3）、改稿、成片反馈后的修改和操作命令。按路由读取 → 内部设计（每镜 1–2 个关键事件） → 成文 → 压缩审校 → 头脑核对六域（意图与素材、构图与运镜、动作与表演、节奏与连续性、材质光影与特效、声音与交付）及用户锁、历史要求、成功项 → 对**实际交付正文**运行 `scripts/check_prompt.py --report ~/.aigc-video-gate/<时间戳>.json`。按需参数及含义见 `check_prompt.py --help`；触发条件仍按各模式卡「检查参数」与 revise-rules 第 10、12 节。`--mode 白模` 仅用于全量白模，纯运镜参考仍检查未授权的主体空间与朝向。裁定文件放项目里，与 asks.txt 同目录；行末可加 @sha前8位 绑定本版交付或合成正文，失效不删提醒（seedance-format 第 9 节）。错误修完、警告逐条裁定后交付；全套按 quality-gate 记录例外，轻量不为否定例外建立记录文件，不建 requirements/review、不派独立复核、不跑 verify_delivery。L3 与第一版都不自动触发严格审。
 
-**全套路径**只在用户明确要求“严格审 / 走全套 / 要交付校验”，或双方事先约定了这种技术验收时触发。先看分镜、先选方向这类创作审批只决定交付顺序，不启用全套。触发后必须读取并完整执行 [quality-gate.md](references/review/quality-gate.md)；该文件唯一维护九步流程、requirements/review/independent 结构、逐镜摄影与发音记录、一次独立复核闭环及 `verify_delivery.py` 放行。正文、需求、父稿或采用设计变化后须重绑本版证据并重跑。严格审不改变用户的生成授权。
+**全套路径**只在用户明确要求“严格审 / 走全套 / 要交付校验”，或双方事先约定了这种技术验收时触发。先看分镜、先选方向这类创作审批只决定交付顺序，不启用全套。触发后必须读取并完整执行 [quality-gate.md](references/review/quality-gate.md)；该文件唯一维护九步流程、requirements/review/independent 结构、逐镜摄影与发音记录、一次独立复核与修正及 `verify_delivery.py` 放行。正文、需求、父稿或采用设计变化后须重绑本版证据并重跑。严格审不改变用户的生成授权。
 
 **交付条件**：轻量路径须 `check_prompt` 无错误、警告已裁定、作者六域与保护项核对完成；全套路径须 `verify_delivery` 对本轮最终版本返回 ready。文本检查不等于成片通过。具体表头、镜头表、代码块、检查行与 prompt-only 格式见 [seedance-format.md](references/seedance-format.md) 第 9 节；改稿默认交付整份重编版，块外按镜号、句子标出改动处；只有用户点名只要局部时才交局部并加 --partial，范围见 [revise-rules.md](references/review/revise-rules.md) 第 9 节。
 
