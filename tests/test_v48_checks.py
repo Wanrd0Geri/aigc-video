@@ -27,6 +27,19 @@ def sized_prompt(size):
     return BASE.replace("室内走廊", "室内走廊" + padding)
 
 
+class CommandLineHelp(unittest.TestCase):
+    def test_help_exits_successfully_and_displays_literal_percentage(self):
+        run = subprocess.run(
+            [sys.executable, "-X", "utf8", str(CHECKER), "--help"],
+            capture_output=True, text=True, encoding="utf-8", timeout=15,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertIn("--origin", run.stdout)
+        self.assertIn("30%", run.stdout)
+        self.assertNotIn("30%%", run.stdout)
+        self.assertNotIn("Traceback", run.stdout + run.stderr)
+
+
 class V48Checks(unittest.TestCase):
     def check(self, prompt=BASE, *, baseline=None, origin=None, asks=None,
               adjudicated=None, extra=(), expected_exit=None):

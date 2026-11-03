@@ -1510,7 +1510,7 @@ def main():
     ap.add_argument("--labels", default="", help="本次素材集合，逗号分开；`图1` 与 `图片1` 两种写法都接受（归一成 图N / 视频N / 音频N 再核对）")
     ap.add_argument("--baseline", default=None)
     ap.add_argument("--origin", default=None,
-                    help="本轮起点完整稿（asks.txt 顶部记 # 起点，路径须在此显式传入）；去空白字数比起点多 30% 提醒（推测、待实测），授权重写只报数")
+                    help="本轮起点完整稿（asks.txt 顶部记 # 起点，路径须在此显式传入）；去空白字数比起点多 30%% 提醒（推测、待实测），授权重写只报数")
     ap.add_argument("--partial", action="store_true")
     ap.add_argument("--lock", action="append", default=[], help="逐字保护一段用户原文（仅忽略换行），传原文本身，可重复给多条；不是布尔开关或文件路径，可单独用于新稿，无逐字锁时省略")
     ap.add_argument("--unchanged", default="")
