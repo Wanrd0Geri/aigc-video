@@ -86,7 +86,7 @@ if ($testStatus -ne 0) { throw "存在失败的测试，请查看上方输出" }
 T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的。","stop_hook_active":false}' | AIGC_GATE_DIR=$T python3 -X utf8 ~/.claude/skills/aigc-video/hooks/stop_gate.py; echo "exit=$?"
 ```
 
-期望：输出 `{}` 或无输出，`exit=0`。更多用例见 `hooks/README.md` 的验证清单。Codex 侧的钩子按 `hooks/README.md` 里 Codex 一节配置，那部分只按官方文档写过、没有真实验证，装完要自测。
+期望：输出 `{}` 或无输出，`exit=0`。更多用例见 `hooks/README.md` 的验证清单。Codex 侧的钩子按 `hooks/README.md` 里 Codex 一节配置（挂 `codex_stop_adapter.py`）；验证到哪一步见那一节，换电脑或换宿主版本后装完要自测。
 
 ## 5 日常同步
 

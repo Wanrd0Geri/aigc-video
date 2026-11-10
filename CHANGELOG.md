@@ -2,6 +2,14 @@
 
 版本号是本 Skill 自己的迭代号，不对应即梦或 Seedance 的版本。未标日期的历史版本为 2026-09-21。
 
+## v52 入口里的检查命令搬到 commands.md；Codex 收尾钩子入口进仓库（2026-11-10）
+
+来源：v50 体检后的收尾项。只挪位置和补入口，写作规则一条没改，没有新的成片测试。
+
+- **入口减负**：SKILL.md 任务路由表里四段 check_prompt 命令模板和表后的参数取舍说明，原文搬到新文件 references/commands.md，原位置各留一句指向。SKILL.md 23,833 → 22,003 字节（少 8%）；写稿任务到跑检查那一步要多读 commands.md（2,625 字节）。
+- **Codex 收尾钩子**：新增 hooks/codex_stop_adapter.py（把 Codex 的会话记录转成 stop_gate.py 读得懂的格式，判断仍全在 stop_gate.py）。hooks/README.md 的 Codex 配置改挂它，验证状态改写为实测到的范围（一台 Mac 的真实 codex exec 三次；清单其余项和 Windows 未走）。
+- **测试**：新增 tests/test_codex_adapter.py。
+
 ## v51 整理经验：3 条归档、3 对合并（2026-11-10）
 
 来源：作者 2026-11-10 喊「整理经验」，先跑 rule_stats.py 与 review_lessons.py，再从候选里逐项点选。只动经验库和一处证据栏，没有新的成片测试。

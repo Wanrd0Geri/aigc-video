@@ -46,10 +46,10 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 | 任务 | 本次必读 | 交付 |
 |---|---|---|
 | 多镜新稿：先镜头表 | principles.md → 匹配 modes/ 三卡：whitebox-driven：视频1 是白模或运镜参考视频；dialogue-multi：画里两人以上、有台词，固定机位或慢运镜，机位和运镜由文字定（视频参考先用whitebox-driven，只有一个主体在动转single-creature适用判定）；single-creature：画里一个主体（人、兽、龙）在动，速度快，或身边有大参照物（门洞、巨物、龙卷、崖壁），没有白模也没有运镜参考视频。按这三句选定才读那一张，不开另外两张；无适配则不用。选中卡的必写/可省/禁写、检查参数及卡列依赖照旧→ lessons 先按题材 grep index.md 的两三个分类（摄影触发及按编号回读主库的条件按必须遵守5）→ 案例先索引（只读「索引」节的表，不读文件头的读法段）：类型与素材形态同才读可复用点/关联经验，官方案例按编号读索引详项的原案例结构/精简索引的什么时候选它；抄句式才展开原文，无适配内部记“未参考案例”，不硬凑 → seedance-format.md §2、§9（涉及起点/风格、时间预算补§3/§4相关条款）→ writing-rules.md 成文主规则及五道门的设计约束、适用决策/建议/去处条款 → directing-upgrade.md 与适用工艺卡（用了模式卡就只读卡里列的；题材工艺卡名单只在没用卡时适用） → 用户白话含动作/效果/运镜词才查 lexicon/ 对应表：每词一个推荐进表头升级行，意图不清或用户要选方向才给备选（读法/升级写法按 lexicon/README） | 表头 + 八列镜头表；确认后成文 |
-| 确认后成文；单镜或明确“直接出” | 补读 seedance-format.md 与 writing-rules.md 正文（八条主规则、五道门、决策表、建议行与去处表）尚未读取的适用部分；上一阶段的原理、模式卡、lessons、案例、工艺与词库要求照旧。两阶段均：writing-rules-annex.md 不整读；模式卡所列条号必查，其余只读本次规则所指条及条件/例外；定位条号只搜目标条号（如 `grep -n "^37\. "`），从命中行读到下一条号或组标题前为止（多数条一行，第 62、79–83 条带例句或附表是多行条块），通配标题的正则会带出全文；已确认结构不重开，同版已读范围不重读。单镜/直接出同轮完成前后阶段的适用读取。最终正文检查常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<最终正文.txt>" --task 生成 --labels "<本次素材，逗号分隔>" --report "<本机报告.json>"`；镜头表阶段不运行正文检查，参数取舍见表后命令说明。| 表头 + 完整提示词 + 检查行；单镜或明确“直接出”不等确认 |
-| 改现有提示词 | lessons 先按分类 grep index.md，按编号回读主库条件见必须遵守5 → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节；常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整新稿.txt>" --task 生成 --baseline "<完整父稿.txt>" --asks asks.txt --lock "<用户锁定的原文>" --adjudicated adjudicated.txt --report "<本机报告.json>"`，参数取舍见表后说明 | 整份重编版（单独一个代码块，未改镜头逐字同父稿）+ 块外修改标记 + 检查行；不为表头全文加载新稿格式或严格审文件 |
-| 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons/index.md 的 `操作命令/` 及题材分类，按编号回读主库条件见必须遵守5；延长常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整操作稿.txt>" --task 延长 --labels "视频1" --report "<本机报告.json>"`；编辑或衔接把任务值换成对应一个值，衔接与其它适用参数按表后说明 | 四段完整操作命令；旧稿修订按父稿外壳 |
-| 白模/运镜参考的检查补充（仍沿用新稿、改稿或操作路由） | 只读已选的 whitebox-driven 卡；全量白模且白模拥有全片时长时常用命令：`python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/check_prompt.py --prompt "<完整稿.txt>" --task 生成 --labels "<本次素材，逗号分隔>" --mode 白模 --untimed --shot-seconds "<交接卡每镜秒数，逗号分隔>" --report "<本机报告.json>"`。纯运镜参考不加 `--mode 白模`；秒数从交接卡抄，不能照例子编造。只在原有条件触发时加无时码/重写/父稿等参数，见该卡与表后说明。| 交付阶段与保护沿用所属任务；不新增审批，不把参考视频一律当全量白模 |
+| 确认后成文；单镜或明确“直接出” | 补读 seedance-format.md 与 writing-rules.md 正文（八条主规则、五道门、决策表、建议行与去处表）尚未读取的适用部分；上一阶段的原理、模式卡、lessons、案例、工艺与词库要求照旧。两阶段均：writing-rules-annex.md 不整读；模式卡所列条号必查，其余只读本次规则所指条及条件/例外；定位条号只搜目标条号（如 `grep -n "^37\. "`），从命中行读到下一条号或组标题前为止（多数条一行，第 62、79–83 条带例句或附表是多行条块），通配标题的正则会带出全文；已确认结构不重开，同版已读范围不重读。单镜/直接出同轮完成前后阶段的适用读取。检查命令模板见 references/commands.md〈新稿成文〉；镜头表阶段不运行正文检查，参数取舍见 references/commands.md〈参数取舍〉。| 表头 + 完整提示词 + 检查行；单镜或明确“直接出”不等确认 |
+| 改现有提示词 | lessons 先按分类 grep index.md，按编号回读主库条件见必须遵守5 → [revise-rules.md](references/review/revise-rules.md) → 本次改动涉及的工艺卡；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节；检查命令模板见 references/commands.md〈改现有提示词〉，参数取舍见 references/commands.md〈参数取舍〉 | 整份重编版（单独一个代码块，未改镜头逐字同父稿）+ 块外修改标记 + 检查行；不为表头全文加载新稿格式或严格审文件 |
+| 操作命令 | [seedance-operations.md](references/seedance-operations.md) 第 0.5 节与对应节 → lessons/index.md 的 `操作命令/` 及题材分类，按编号回读主库条件见必须遵守5；检查命令模板见 references/commands.md〈操作命令（延长 / 编辑 / 衔接）〉；编辑或衔接把任务值换成对应一个值，衔接与其它适用参数按 references/commands.md〈参数取舍〉 | 四段完整操作命令；旧稿修订按父稿外壳 |
+| 白模/运镜参考的检查补充（仍沿用新稿、改稿或操作路由） | 只读已选的 whitebox-driven 卡；检查命令模板见 references/commands.md〈白模与运镜参考〉。纯运镜参考不加 `--mode 白模`；秒数从交接卡抄，不能照例子编造。只在原有条件触发时加无时码/重写/父稿等参数，见该卡与 references/commands.md〈参数取舍〉。| 交付阶段与保护沿用所属任务；不新增审批，不把参考视频一律当全量白模 |
 | 输入「自检」 | 原理页先过一眼（[principles.md](references/principles.md)）→ [qa-checklist.md](references/review/qa-checklist.md) + `scripts/check_prompt.py`；涉及整拍重写、装饰层处理，或裁定成文主规则相关提醒时，读 [writing-rules.md](references/writing-rules.md) 的「成文主规则」一节 | 一句结论 + 问题清单（镜号｜项及来源｜缺口｜影响｜建议）+ 人核提醒 + 脚本行；只出报告不改稿 |
 | 回传视频、截图或生成反馈 | [diagnose.md](references/review/diagnose.md)；需要时用 `scripts/extract_frames.py` 抽帧 | 逐句兑现、归因、最小修法与一条待审观察；获授权才写经验库 |
 | 只要打斗或特效设计 | [combat.md](references/craft/combat.md) 或 [vfx.md](references/craft/vfx.md) | 白话设计，不编译提示词 |
@@ -66,6 +66,7 @@ description: 即梦 Seedance 2.5 视频提示词导演。用于：写新提示�
 - cases/my-cases.md、official-cases.md：先精简索引，再按编号展开。
 - lessons/index.md：分类结论；seedance-2.5.md：主库原行；README.md：采用/维护；archive.md：按编号核归档。
 - review/：revise-rules.md改稿，diagnose.md诊断，qa-checklist.md自检，quality-gate.md严格审。
+- commands.md：成文后跑检查时读，检查命令模板与参数取舍。
 - scripts/：check_prompt.py查稿，log_lesson.py记经验，log_outcome.py记成片评价，extract_frames.py抽帧。
 principles、seedance-format、writing-rules及附录、seedance-operations、antipatterns均在references/，完整文件名见上表或所选卡。
 标题定位只在要读的那一个文件里搜 `^## `，不对 references/、craft/、cases/、lexicon/ 整个目录搜；词库只搜命中的那张表。
@@ -73,7 +74,7 @@ principles、seedance-format、writing-rules及附录、seedance-operations、an
 
 命令约定：参考文件里的脚本命令都写成一行 `python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/<脚本>.py …`，Windows 上把 `python3` 换成 `py -3`，其余照抄。
 
-参数含义见 --help，常规任务不必跑 help。以上是带占位符的命令模板：先填入真实路径和事实，Windows把python3换成py -3。--labels按全部实际素材填写，无素材省略；--task按最终命令选一个值，改操作稿仍用编辑/延长/衔接。--lock后传要逐字保留的原文，可重复给多条，不传布尔值或文件名，无逐字锁则省略；--asks第二版起更新后使用；项目的 avoid.txt 记用户明确要求停用的写法，每行「写法 # 原因」，收到这类要求时记入该文件；与 asks.txt 或 adjudicated.txt 放在同目录，检查器会自动读取，也可用 --avoid 显式指定；--adjudicated只传实际已逐条裁定的文件，没有则省略，不为消警告造文件。--baseline取完整真实父稿；--unchanged传未改镜号，逗号分隔（如 1,3），按revise-rules第10节使用；多轮改稿需核对累计增长时带--origin，传本轮开始时固定的起点完整稿路径，asks.txt里的起点注释仍需通过此参数显式传入；局部稿/整镜重写等仅按已有授权和适用条件加参数。白模--untimed/--shot-seconds从卡的条件与真实交接卡取值；衔接按operations要求用无时码与实际每镜秒数。报告对应最终交付正文，沿用本机报告目录；严格审触发与流程不变。
+参数取舍见 references/commands.md〈参数取舍〉。
 
 题材工艺卡：对话/情绪读 `performance.md`、`lighting-color.md`；多人读 `staging.md`；打斗读 `combat.md`、`camera.md`；特效读 `vfx.md`；环境/空镜读 `scene-mood.md`、`lighting-color.md`；动作/追逐/天气读 `motion-physics.md`、`camera.md`；产品/UGC/预演/衔接/文字/音频卡点/一镜到底/教学读 `genre-recipes.md`。没用模式卡时按本名单，用了卡只读卡里列的；采用前判断适用性；工艺卡只拥有专业设计，不拥有公开格式、改稿授权或检查流程。
 

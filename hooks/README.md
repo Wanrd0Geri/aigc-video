@@ -97,7 +97,7 @@ mkdir -p ~/.aigc-video-gate
     "Stop": [
       {
         "hooks": [
-          {"type": "command", "command": "python3 -X utf8 $HOME/.claude/skills/aigc-video/hooks/stop_gate.py", "timeout": 30}
+          {"type": "command", "command": "python3 -X utf8 $HOME/.claude/skills/aigc-video/hooks/codex_stop_adapter.py", "timeout": 30}
         ]
       }
     ]
@@ -105,16 +105,18 @@ mkdir -p ~/.aigc-video-gate
 }
 ```
 
+Codex 挂的是同目录的 `codex_stop_adapter.py`：Codex 的会话记录格式和 Claude Code 不一样，它只负责把记录转成 `stop_gate.py` 读得懂的样子，判断全在 `stop_gate.py` 里。
+
 **这是追加，不是替换。** 两份配置文件里都可能已经有别的 Stop 钩子（状态栏通知、提交提醒之类）：
 `"Stop"` 是一个**数组**，把上面那个 `{"hooks": [...]}` 对象**追加**到数组末尾，原有的项一个都不要删。
 整份覆盖 `settings.json` 会把用户别的钩子和设置一起弄丢。改完用 `python3 -m json.tool ~/.claude/settings.json` 确认还是合法 JSON。
-两个宿主用同一条命令（与 SETUP.md 一致）：`install.sh` 把两边的 `aigc-video` 都软链到同一个仓库，`$HOME/.claude/skills/aigc-video` 也就是 Codex 读的那份。
-Codex 若不展开 `$HOME`，先在本机终端展开 `$HOME/.claude/skills/aigc-video/hooks/stop_gate.py`，再把得到的绝对路径填进钩子配置。
+两个宿主读的是同一份文件（与 SETUP.md 一致）：`install.sh` 把两边的 `aigc-video` 都软链到同一个仓库，`$HOME/.claude/skills/aigc-video` 也就是 Codex 读的那份。
+Codex 若不展开 `$HOME`，先在本机终端展开 `$HOME/.claude/skills/aigc-video/hooks/codex_stop_adapter.py`，再把得到的绝对路径填进钩子配置。
 Codex 的 `matcher` 对 Stop 事件无效，可以不写。
 
-> **Codex 侧尚未在真实 Codex 会话里验证过**：字段、阻止方式都是按上面那份官方文档实现的，本地只用构造的输入自测。
-> Claude Code 侧同样只用构造的 transcript 自测过（`tests/test_stop_gate.py`，71 项），没有在真实会话里跑过。
-> 依赖它之前请按下面的清单在真实宿主里各走一遍。
+> **验证到哪一步**：Codex 侧 2026-11-10 在一台 Mac 的真实 `codex exec` 里经 `codex_stop_adapter.py` 走过三次——普通回复放行、块外四段稿放行、带结尾段的旧壳稿第一次被打回第二次放行；下面清单的其余各项和 Windows 都还没走。
+> Claude Code 侧已挂成全局钩子，在真实会话里放行和打回都出现过；自动测试见 `tests/test_stop_gate.py`。
+> 换一台电脑或换宿主版本后，按下面的清单再走一遍。
 
 ## 环境变量
 

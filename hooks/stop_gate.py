@@ -10,8 +10,8 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
     {"hooks": {"Stop": [{"hooks": [{"type": "command",
       "command": "python3 -X utf8 $HOME/.claude/skills/aigc-video/hooks/stop_gate.py", "timeout": 30}]}]}}
     阻止 = 退出码 2 + stderr（Claude Code 会把 stderr 交给模型继续处理）。
-  Codex        ~/.codex/hooks.json → Stop 事件挂同一脚本（按官方 hooks 文档，Stop 钩子必须输出 JSON）。
-    阻止 = stdout 输出 {"decision": "block", "reason": "..."}。Codex 适配按官方文档字段实现，尚未在真实 Codex 会话验证。
+  Codex        ~/.codex/hooks.json → Stop 事件挂同目录的 codex_stop_adapter.py（它转好会话记录格式后调用本脚本；按官方 hooks 文档，Stop 钩子必须输出 JSON）。
+    阻止 = stdout 输出 {"decision": "block", "reason": "..."}。验证范围见 hooks/README.md 的 Codex 一节。
 两边传入的 stdin JSON 都可能有 transcript_path、last_assistant_message、session_id、stop_hook_active。
 
 交付单元的契约（钩子只按这个契约认东西，SKILL.md「流程分级」、quality-gate.md、hooks/README.md 写的是同一套）：
