@@ -1,6 +1,6 @@
 # aigc-video 换机安装与同步指南（给另一台电脑上的 AI 助手看）
 
-你正在帮用户 Gerry 在一台新电脑上装好 `aigc-video` 这个 skill，并让它和 GitHub 保持同步。按顺序做，每步做完要验证；本文档里的路径不要改。
+你正在帮用户在一台新电脑上装好 `aigc-video` 这个 skill，并让它和 GitHub 保持同步。按顺序做，每步做完要验证；本文档里的路径不要改。
 
 ## 0 这套东西的结构（先理解再动手）
 
@@ -8,14 +8,14 @@
 - **本机唯一副本**：`~/Documents/Codex/aigc-video`，从仓库克隆。
 - **两个宿主的 skills 目录都是软链**：`~/.claude/skills/aigc-video` 和 `~/.codex/skills/aigc-video` → 指向本机副本。两边读同一份文件，经验库 `references/lessons/seedance-2.5.md` 也是同一份。
 - **禁止**：在 skills 目录里放拷贝；用 `git clone` 覆盖软链；手工改软链指向；`git pull` 之外的方式"更新"。
-- **同步动作**：改完文件或写入经验后运行 `bash ~/Documents/Codex/aigc-video/scripts/sync.sh 一句备注`（提交 → 拉取 → 推送）。两台电脑之间不自动同步，在哪台改就在哪台跑；换到另一台用之前先跑一次。Windows 上没有 bash，改跑 `powershell -ExecutionPolicy Bypass -File "$HOME\Documents\Codex\skills-setup\sync.ps1" "一句备注"`（同步全部共用 skill，含本仓库；先拉后推）。
+- **同步动作**：改完文件或写入经验后，用户说推再运行 `bash ~/Documents/Codex/aigc-video/scripts/sync.sh 一句备注`（提交 → 拉取 → 推送）。两台电脑之间由用户决定何时同步；用户说推时在改动所在电脑运行，换到另一台用之前可按第 5 节只拉取。Windows 上没有 bash，改跑 `powershell -ExecutionPolicy Bypass -File "$HOME\Documents\Codex\skills-setup\sync.ps1" "一句备注"`（同步全部共用 skill，含本仓库；先拉后推）。
 
 ## 1 前置条件
 
 - Python 3（`python3 --version`；Windows 用 `py -3 --version`，没有就 `winget install Python.Python.3.12`）。本文和 skill 里的 `python3` 命令在 Windows 上一律换成 `py -3`。
 - ffmpeg（`ffmpeg -version`；没有就 `brew install ffmpeg`，Windows 用 `winget install Gyan.FFmpeg` 或 `choco install ffmpeg`，装完重开终端），成片抽帧用；不在 PATH 时设环境变量 `FFMPEG_DIR` 指向它的 bin 目录。
 - git、GitHub CLI `gh`（没有就 `brew install gh`；Windows 用 `winget install Git.Git`、`winget install GitHub.cli`）。
-- 网络：这台电脑访问 GitHub 是否需要代理，先测 `curl -sI https://github.com --max-time 10`。超时就要代理；用户笔记本上的代理是 `http://127.0.0.1:7897`，新电脑端口可能不同，问用户。
+- 网络：先测这台电脑访问 GitHub 是否需要代理：`curl -sI https://github.com --max-time 10`。超时时读取 `~/.aigc-video-proxy` 中的代理地址；文件缺失时问用户当前电脑的代理地址。
 
 ## 2 登录 GitHub（只有要往仓库推改动的人才需要；只用不改可以跳过）
 
@@ -41,10 +41,30 @@ Windows 上不跑 `install.sh`（bash 脚本），改用 skills-setup 的 `insta
 
 ```bash
 ls -l ~/.claude/skills/aigc-video ~/.codex/skills/aigc-video
-cd ~/.claude/skills/aigc-video && python3 -X utf8 tests/run_check_tests.py | tail -1 && python3 -X utf8 tests/test_revision_checks.py 2>&1 | tail -1 && python3 -X utf8 tests/test_delivery_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_stop_gate.py 2>&1 | tail -1 && python3 -X utf8 tests/test_lesson_scripts.py 2>&1 | tail -1
+cd ~/.claude/skills/aigc-video
+test_status=0
+python3 -X utf8 tests/run_check_tests.py || test_status=1
+for test_file in tests/test_*.py; do
+  python3 -X utf8 "$test_file" || test_status=1
+done
+test "$test_status" -eq 0
 ```
 
-Windows（PowerShell）逐条跑，看每条最后一行：`py -3 -X utf8 $HOME\Documents\Codex\aigc-video\tests\run_check_tests.py`，其余四套把文件名换成 `test_revision_checks.py`、`test_delivery_gate.py`、`test_stop_gate.py`、`test_lesson_scripts.py`。没装 Git Bash 时 install.sh / sync.sh 守门那几项记 SKIP、不算失败。
+Windows（PowerShell）运行 tests/ 下全部测试文件：
+
+```powershell
+Set-Location "$HOME\Documents\Codex\aigc-video"
+$testStatus = 0
+py -3 -X utf8 tests/run_check_tests.py
+if ($LASTEXITCODE -ne 0) { $testStatus = 1 }
+Get-ChildItem tests/test_*.py | Sort-Object Name | ForEach-Object {
+  py -3 -X utf8 $_.FullName
+  if ($LASTEXITCODE -ne 0) { $testStatus = 1 }
+}
+if ($testStatus -ne 0) { throw "存在失败的测试，请查看上方输出" }
+```
+
+没装 Git Bash 时 install.sh / sync.sh 守门那几项记 SKIP、不算失败。
 
 期望：两条 `->` 指向 `~/Documents/Codex/aigc-video`；每行都没有失败（项数随版本增加）。
 
@@ -70,10 +90,10 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 
 ## 5 日常同步
 
-- 改了任何文件、或用 `scripts/log_lesson.py` 写了经验：`bash ~/Documents/Codex/aigc-video/scripts/sync.sh 备注`。
+- 改了任何文件、或用 `scripts/log_lesson.py` 写了经验后，用户说推再跑：`bash ~/Documents/Codex/aigc-video/scripts/sync.sh 备注`。
 - 开始用之前想拿到另一台电脑的改动：跑 `bash ~/Documents/Codex/aigc-video/scripts/sync.sh --pull`（只拉不推；本机有未提交改动时会先列出来让你决定）。
-- Windows：上面两条都改跑 `powershell -ExecutionPolicy Bypass -File "$HOME\Documents\Codex\skills-setup\sync.ps1" "一句备注"`，它对每个 skill 先提交本地改动再拉再推，没有只拉不推的模式。
-- 这台电脑连 GitHub 需要代理的话，把代理地址写进 `~/.aigc-video-proxy`（一行，例如 `http://127.0.0.1:7897`），`sync.sh` 会自动使用；不需要代理就不建这个文件。
+- Windows：用户说推时改跑 `powershell -ExecutionPolicy Bypass -File "$HOME\Documents\Codex\skills-setup\sync.ps1" "一句备注"`，它对每个 skill 先提交本地改动再拉再推，没有只拉不推的模式。
+- 这台电脑连 GitHub 需要代理的话，把代理地址写进 `~/.aigc-video-proxy`（一行，填写当前电脑的实际代理地址），`sync.sh` 会自动使用；不需要代理就不建这个文件。
 - 拉取时报冲突：只会发生在两台电脑改了同一行。经验库冲突时保留双方条目、编号只递增（可用 `scripts/merge_lessons.py` 按编号合并），改完 `git add -A && git rebase --continue` 再 `git push`。不要用 `--force`。（merge_lessons.py 退出码 3 = 有同编号不同内容的条目待人工裁定，合并没算完）
 
 ## 6 常见错误
@@ -88,8 +108,8 @@ T=$(mktemp -d); printf '{"transcript_path":null,"last_assistant_message":"好的
 
 ## 7 做完后报告给用户
 
-一句话说清：软链指向哪里、五套测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
+一句话说清：软链指向哪里、全部测试结果、钩子挂没挂、需不需要代理。不要把 skill 目录换成别的位置，不要改仓库里的路径。
 
 ## 8 维护 skill 本身（改 skill 的人看）
 
-改 skill 的文件在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里改，五套测试跑过之后再合并到 main 并 `sync.sh`。main 是安装位，改到一半的文件不会影响正在使用的会话。
+改 skill 的文件在 `~/Documents/Codex/aigc-video-dev`（dev 分支的工作区）里改，tests/ 下全部测试文件跑过之后再合并到 main；用户说推再运行 `sync.sh`。main 是安装位，改到一半的文件不会影响正在使用的会话。

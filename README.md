@@ -7,9 +7,9 @@
 [![Changelog](https://img.shields.io/badge/%E5%8F%98%E6%9B%B4%E8%AE%B0%E5%BD%95-CHANGELOG-f2b84b.svg)](CHANGELOG.md)
 [![Seedance](https://img.shields.io/badge/即梦-Seedance_2.5-1f6feb.svg)](#能做什么)
 [![Hosts](https://img.shields.io/badge/Claude_Code_·_Codex-通用-blueviolet.svg)](#安装)
-[![Lessons](https://img.shields.io/badge/经验库-122_条-2ea043.svg)](references/lessons/)
+[![Lessons](https://img.shields.io/badge/经验库-持续积累-2ea043.svg)](references/lessons/)
 [![Lexicon](https://img.shields.io/badge/词库-989_条-2ea043.svg)](references/lexicon/)
-[![Tests](https://img.shields.io/badge/回归测试-5_套全过-success.svg)](tests/)
+[![Tests](https://img.shields.io/badge/回归测试-检查结果见测试输出-success.svg)](tests/)
 
 <br>
 
@@ -79,12 +79,12 @@ bash ~/Documents/Codex/aigc-video/install.sh
 | 02 | **写了具体的东西，模型就会把它画出来。** | 写「有房子那么大」，会画出一座房子；写「龙卷风柱」，会画出一根实心柱子 |
 | 03 | **参考图和参考视频，比文字说了算。** | 场景图的构图会出现在开场；白模的方块会被画成立方体，写文字也改不了 |
 | 04 | **要求「一直不变」会让主体在画框里一动不动，要求「全都装下」会把镜头拉远。** | 写「位置大小不变」，主体在画框里一动不动、只剩背景在动；写「露出全身」，模型会自己拉成远景 |
-| 05 | **一条成片说明不了问题；朝向、形状、构图不对，先重跑再改。** | 同一份稿跑三次，朝向和构图本来就会变；只看一条片就改写法，常常改错 |
+| 05 | **一条成片不做归因；朝向、形状、构图不对，先看已有的同稿结果。** | 有同稿的其他结果就一起比较；没有就记为单次观察，要不要再跑一条，报一次用量后由用户按当次项目需要定 |
 | 06 | **时长多长，就写多少内容；塞满了就会丢。** | 一个动作大约 0.5 秒；1 秒里塞两个以上不相连的动作，就会漏拍或糊成一团 |
 | 07 | **白模只用来定怎么动、什么时候动；长相看角色图，环境看场景图和文字。** | 白模的方块和颜色会被原样画出来，所以只拿它定机位、路线和节奏 |
 | 08 | **特效有参考视频，比用文字描述准。** | 文字写的特效形状会乱跳；只能用文字写闪电时，写清数量、粗细、分叉 |
 
-另外几条默认做法：镜头要不要动，看说不说得出理由，说不出就固定机位；一个镜头里不按秒排动作，要卡点时除外；同一个要求换两种写法都没拍出来，就换办法，或者建议接受现在这一版。
+另外几条默认做法：镜头要不要动，看说不说得出理由，说不出就固定机位；一个镜头里不按秒排动作，要卡点时除外；同一个要求换两种写法都没拍出来，就换办法。
 
 ---
 
@@ -148,7 +148,7 @@ references/
   craft/                     10 张工艺卡：镜头、光影、表演、站位、运动物理、打斗、特效、场景氛围、题材配方、导演提案
   lexicon/                   11 张词库 989 条：运镜、动作打斗、运动、光线材质、表演、四张特效表
   cases/                     官方案例库 + 我的成功案例（只给组织方式与句式样板）
-  lessons/                   经验库 122 条 + 自动生成的分类索引 index.md
+  lessons/                   经验库 + 自动生成的分类索引 index.md
   review/                    自检展示、成片诊断、改稿规则、严格审九步
 scripts/
   check_prompt.py            格式、素材、时码、锁定与反模式提醒（参数见 --help）
@@ -158,7 +158,7 @@ scripts/
   log_lesson.py / merge_lessons.py / lint_*.py      经验库与案例库、词库的写入、合并、体检
   log_outcome.py / rule_stats.py / review_lessons.py 成片评价记录与「整理经验」统计
 hooks/                       可选 Stop 钩子（两个宿主通用），本体不依赖它
-tests/                       五套回归：check_prompt 819 项、修订 18、交付放行 69、钩子 71、经验脚本 9、规则统计 2
+tests/                       回归测试：提示词、修订、交付放行、钩子、经验脚本及规则统计等
 ```
 
 </details>

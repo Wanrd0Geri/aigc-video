@@ -42,7 +42,7 @@ CJK = re.compile(r"[一-鿿]+")
 BIG_CAT = 15
 SINGLE_DAYS = 30        # 单次观察满这么多天还没第二个来源就列为复核提醒，不按日历归档。可调
 MERGED_MARK = re.compile(r"【并入\s*(L\d{3,})】")
-SINGLE_MARK = "单次观察"
+SINGLE_MARKS = ("单次观察", "证据一条成片", "证据：一条成片", "单次对照")
 SOURCE_MULTI = re.compile(r"对照|两跑|两次|三版|三跑|多版|各跑|[2-9]\s*条|[两三四五六七八九]条")
 # 来源里像成片定位的东西：有扩展名按扩展名数，没有再按文件名样式数，数到 2 个就算有第二个来源。与 log_lesson.py 同步
 SOURCE_FILE = re.compile(r"\.mp4|\.mov")
@@ -266,7 +266,7 @@ def main():
     for r in rows.values():
         src = r["source"]
         second = has_second_source(src)
-        if SINGLE_MARK not in r["conclusion"] or second:
+        if not any(mark in r["conclusion"] for mark in SINGLE_MARKS) or second:
             continue
         try:
             days = (today - datetime.date.fromisoformat(r["date"])).days

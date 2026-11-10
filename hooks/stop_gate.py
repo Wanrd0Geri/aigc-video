@@ -17,9 +17,8 @@ Stop 钩子（Claude Code 与 Codex 通用）：模型准备结束回复时，�
 交付单元的契约（钩子只按这个契约认东西，SKILL.md「流程分级」、quality-gate.md、hooks/README.md 写的是同一套）：
   - 成品一律放 ```text 代码块（无语言标签、```prompt 同等对待）；这些代码块里像提示词的内容都要验收。
   - 引用旧稿用 ```quote，概念草案用 ```draft，工具输出用 ```diff/```json/```bash/```sh：一律不验收，也不受"原样粘贴"约束。
-  - 代码块之外的纯文本同样扫描：完整稿（≥3 个段落标题，四段新壳与五段 / 六段旧壳都算）、局部镜头（镜头标题）、操作命令（视频N 或
-    旧稿的 @视频N 附近有 编辑/延长/续写/衔接/替换/删除/增加）都算交付单元，不管回复里有没有合法代码块。表头、例外说明、
-    变更摘要、待你定的问题写在代码块外，不会被当成提示词。
+  - 代码块之外的纯文本只识别完整稿（≥3 个段落标题，四段新壳与五段 / 六段旧壳都算）。局部镜头和操作命令放在代码块里识别。
+    表头、例外说明、变更摘要、待你定的问题写在代码块外。
   - 算哈希前先删掉单元里的"交付校验通过（正文 xxxxxxxx｜需求 xxxxxxxx）"和首尾空行，再按 verify_delivery
     的方式规范化（按行拆分再用换行拼回）。
 
@@ -162,8 +161,8 @@ def looks_like_prompt(body):
 
 
 def plain_looks_like_prompt(body):
-    """纯文本只认三类交付单元：完整稿、局部镜头、操作命令。"""
-    return bool(len(SECTION.findall(body)) >= 3 or SHOT_HEAD.search(body) or OPERATION.search(body))
+    """代码块外只识别至少 3 个段落标题的完整稿。"""
+    return len(SECTION.findall(body)) >= 3
 
 
 def delivery_units(text):
@@ -179,13 +178,17 @@ def delivery_units(text):
     rest = FENCE.sub("\n", text)
     run = []
     for para in re.split(r"\n[ \t]*\n", rest):
-        if plain_looks_like_prompt(para):
+        if SECTION.search(para) or (run and looks_like_prompt(para)):
             run.append(para.strip("\n"))
         elif run:
-            units.append("\n\n".join(run))
+            body = "\n\n".join(run)
+            if plain_looks_like_prompt(body):
+                units.append(body)
             run = []
     if run:
-        units.append("\n\n".join(run))
+        body = "\n\n".join(run)
+        if plain_looks_like_prompt(body):
+            units.append(body)
     return units
 
 

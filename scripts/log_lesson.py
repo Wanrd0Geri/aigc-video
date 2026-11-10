@@ -27,6 +27,7 @@ else:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lint_lessons import cats_hint, topic_error, archive_path_for  # 12 个分类的唯一代码副本在 lint_lessons.py（与 README 同步）
+from build_lessons_index import build_index
 
 CONF = ["已试", "未试"]
 SECTION = "## 七、诊断新增"
@@ -135,7 +136,7 @@ def main():
     if any("\n" in x or "\r" in x or " | " in x for x in values if x is not None):
         sys.exit("条目字段不能含换行或字段分隔符")
     path = os.path.abspath(a.file)
-    # 同目录 .lock 文件互斥：读主库、读 archive、取号、拼新文本、写入都在锁内完成
+    # 同目录 .lock 文件互斥：读主库、读 archive、取号、写入与重建索引都在锁内完成
     lock_path = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".lock")
     with open(lock_path, "a+b") as lk, exclusive_lock(lk):
         text = open(path, encoding="utf-8").read()
@@ -175,8 +176,16 @@ def main():
             if os.path.exists(tmp):
                 os.remove(tmp)
             raise
+        index = os.path.join(os.path.dirname(path), "index.md")
+        try:
+            count = build_index(path, index)
+        except (OSError, UnicodeError, ValueError) as exc:
+            print(nid)
+            print(f'索引更新失败：主库已写入 {nid}（{path}），索引 {index} 尚未更新：{exc}。'
+                  f'请用 build_lessons_index.py --file "{path}" 重建，再运行 lint_lessons.py。', file=sys.stderr)
+            sys.exit(1)
     print(nid)
-    print(f'提醒：主库已更新，请用 build_lessons_index.py --file "{path}" 重建同目录 index.md，再运行 lint_lessons.py。', file=sys.stderr)
+    print(f'主库已更新（{path}），build_lessons_index.py 已自动更新索引（{count} 条）：{index}；请运行 lint_lessons.py。', file=sys.stderr)
     for r in ([] if a.supplement else reminders(a, text)):
         print("提醒：" + r, file=sys.stderr)
 

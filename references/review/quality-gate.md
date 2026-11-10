@@ -22,7 +22,7 @@
 8. **最终检查与导出**：运行 verify_delivery.py，带 `--output`、`--report`（写到 `~/.aigc-video-gate/`）和 `--response`。requirements 中的 `complex=true` 表示本次由“严格审/约定的技术验收”触发全套路径，不表示视觉复杂；保持这项映射，供脚本要求独立复核。检查对象必须是实际要交付的那一版；正文、需求、采用设计或父稿改过就重跑，本轮用户消息之前生成的报告不算本轮验收。
 9. **交付导出的正文**：ready=true 后交付 `--response` 生成的成品。提示词正文与检查行原样取自 response 文件；表头、问题、例外和变更摘要留在代码块外。用户只要提示词时加 `--response-mode prompt-only`，内部检查不变。
 
-**交付约定**：成品一律用 ` ```text ` 代码块；引用旧稿用 ` ```quote `，概念草案用 ` ```draft `，工具输出用 ` ```json ` / ` ```bash ` / ` ```diff `。代码块**内**只放成品正文，逐字来自 response 文件；表头（锁定 / 待你定 / 升级 / 翻译）、例外说明、变更摘要、"待你定：第 3 镜要不要换成揭开门口的横移"这类问题写在代码块**外**，不受"原样粘贴"限制。裸文本贴出来的完整稿、局部镜头、操作命令一样按提示词核对。
+**交付约定**：成品一律用 ` ```text ` 代码块；引用旧稿用 ` ```quote `，概念草案用 ` ```draft `，工具输出用 ` ```json ` / ` ```bash ` / ` ```diff `。代码块**内**只放成品正文，逐字来自 response 文件；表头（锁定 / 待你定 / 升级 / 翻译）、例外说明、变更摘要、"待你定：第 3 镜要不要换成揭开门口的横移"这类问题写在代码块**外**，不受"原样粘贴"限制。裸文本贴出来的完整稿（三个以上段落标题）一样按提示词核对；局部镜头、操作命令交付时放 ` ```text ` 代码块，钩子只在代码块里识别它们。
 
 **放行条件（全套路径）**：检查器未执行、执行失败、版本不符、专业问题未解决、那一次必要独立复核未完成时，不能标成已验收成稿。轻量路径的放行条件见 SKILL.md「流程分级」。自己造成的问题先内部修复，复查受影响依赖后重新放行，不把每个修复都交给用户批准。无法补齐的必要缺项明确说明；用户仍要拿到草稿时标为待验证候选，不用"草案"标签偷偷降级用户要求的完整成稿。
 
@@ -118,7 +118,7 @@ kind 只能是 subagent（Claude Code 的 Agent 子代理）、new_session（Cod
 同一上下文里换个名字不算独立；主审读完作者的全部过程和结论、再另存一份“独立结论”也不算。身份声明不是身份证明，应保留对应工具/上下文记录；作者不能自己换名补一个假独立结果。
 
 ```sh
-python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/verify_delivery.py --prompt prompt.txt --requirements requirements.json --review review.json --report $HOME/.aigc-video-gate/2026-09-20T210500.json --output delivered.txt --response response.md
+python3 -X utf8 $HOME/Documents/Codex/aigc-video/scripts/verify_delivery.py --prompt prompt.txt --requirements requirements.json --review review.json --independent-review independent.json --report $HOME/.aigc-video-gate/2026-09-20T210500.json --output delivered.txt --response response.md
 ```
 
 修订增加 `--baseline parent.txt`，局部镜头增加 `--partial`；全套路径增加 `--independent-review independent.json`。用户只要受影响镜头时再加 `--output-scope affected`：仍审查合成完整稿，只导出本次受影响的完整镜头；其 delivered_sha256 与完整 checked_sha256 分别保存。`--response` 只在 ready=true 且写出了 `--output` 时生成，内容是拼好的成品：一个 text 代码块装着正文，下面一行“交付校验通过（正文 xx｜需求 xx）”。提示词正文及生成回执原样取自 response 文件。允许在代码块外写必要表头、问题、例外和变更摘要；这些说明不得混入可复制提示词。用户只要提示词时省略外部说明，内部检查不变。

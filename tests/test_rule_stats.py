@@ -42,3 +42,7 @@ class RuleStatsTests(unittest.TestCase):
         for report in ('same.json', './same.json', str(self.report)):
             with self.subTest(report=report):
                 self.assertIn('有成片结果的 1 份，占 100%', self.stats(report))
+
+
+if __name__ == '__main__':
+    unittest.main()

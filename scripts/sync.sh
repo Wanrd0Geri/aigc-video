@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 一条命令同步 GitHub：提交本地改动 → 拉取合并 → 推送。任一宿主改完文件或写入经验后运行：bash scripts/sync.sh [备注]
+# 一条命令同步 GitHub：提交本地改动 → 拉取合并 → 推送。任一宿主改完文件或写入经验后，用户说推再运行：bash scripts/sync.sh [备注]
 # 只拉不推：bash scripts/sync.sh --pull（本机有未提交改动时先列出来并退出 1，不自动提交；干净时拉取并报变化，不推送）。
 # 需要代理才能连 GitHub 的机器：把代理地址写进 ~/.aigc-video-proxy（一行，如 http://127.0.0.1:7897），脚本会自动使用；没有这个文件就直连。
 # 只在 main 分支上跑：在 dev 工作区（aigc-video-dev）或别的分支上会把没测完的改动一起 add、commit、推上去，所以拒绝执行。

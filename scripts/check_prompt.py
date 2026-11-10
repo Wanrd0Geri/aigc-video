@@ -1500,20 +1500,27 @@ def main():
     ap.add_argument("--prompt", required=True)
     ap.add_argument("--task", default=None, choices=["生成", "编辑", "延长", "衔接", "修订"],
                     help="最终命令的性质；不给时按（合成后）全稿情节段开头的命令区推断，checked 里写出推断结果，建议显式传")
-    ap.add_argument("--format", dest="fmt", default=None, choices=["四段", "五段", "六段", "继承"])
-    ap.add_argument("--total", type=float, default=None)
-    ap.add_argument("--untimed", action="store_true")
+    ap.add_argument("--format", dest="fmt", default=None, choices=["四段", "五段", "六段", "继承"],
+                    help="提示词外壳；新稿默认四段，修订默认按 --baseline 父稿继承；显式选择四段、五段或六段表示采用该外壳，继承须提供父稿")
+    ap.add_argument("--total", type=float, default=None,
+                    help="要求的总时长，单位秒（如 12）；有时码生成稿核对末镜结束时间，无时码稿用 --shot-seconds 之和对照，编辑按原视频区间检查")
+    ap.add_argument("--untimed", action="store_true",
+                    help="按无时码稿检查，配 --shot-seconds 传每镜实际秒数；仅在模式卡条件满足或衔接时使用，衔接自动启用")
     ap.add_argument("--density-line", type=float, default=None, help="字数密度参考线（字/秒），默认取 DENSITY_CHARS_PER_SEC")
     ap.add_argument("--shot-seconds", default="",
                     help="无时码稿（白模、衔接）每镜的实际秒数，逗号分开、按镜号顺序（从白模交接卡的切点抄，如 0.62,0.67,0.75）；"
                          "给了就逐镜算字数密度，和有时码的镜头同一口径。镜头有时码时以时码为准")
     ap.add_argument("--labels", default="", help="本次素材集合，逗号分开；`图1` 与 `图片1` 两种写法都接受（归一成 图N / 视频N / 音频N 再核对）")
-    ap.add_argument("--baseline", default=None)
+    ap.add_argument("--baseline", default=None,
+                    help="真实完整父稿文件路径；改稿用它核对外壳、保护项与长度，局部稿用它合成完整稿")
     ap.add_argument("--origin", default=None,
-                    help="本轮起点完整稿（asks.txt 顶部记 # 起点，路径须在此显式传入）；去空白字数比起点多 30%% 提醒（推测、待实测），授权重写只报数")
-    ap.add_argument("--partial", action="store_true")
+                    help="多轮改稿需核对累计增长时传本轮起点完整稿路径（固定为本轮开始版本）；asks.txt 顶部记 # 起点后仍须显式传入；"
+                         "去空白字数比起点多 30%% 提醒（推测、待实测），授权重写只报数")
+    ap.add_argument("--partial", action="store_true",
+                    help="用户明确只要局部时使用；--prompt 只放改动镜头块，配 --baseline 完整父稿，按原镜号与时码放回父稿合成检查")
     ap.add_argument("--lock", action="append", default=[], help="逐字保护一段用户原文（仅忽略换行），传原文本身，可重复给多条；不是布尔开关或文件路径，可单独用于新稿，无逐字锁时省略")
-    ap.add_argument("--unchanged", default="")
+    ap.add_argument("--unchanged", default="",
+                    help="未改镜号，逗号分隔（如 1,3）；配 --baseline 完整父稿，逐字核对这些镜头")
     ap.add_argument("--asks", default=None,
                     help="多轮任务的要求清单文件（工作目录下 asks.txt）：一行一条 `编号 | 用户提出时间 | 用户原话摘录 | 落点关键词 | 状态`；"
                          "每条「有效」的要求都要在正文里有落点，缺一条报错误")
@@ -2155,7 +2162,7 @@ def main():
         gap = far_near_gap(tbody)
         if gap:
             warnings.append(f"{tag} 同一镜里既有远处位置又有贴镜动作（「{gap[0]}」在前、「{gap[1]}」在后，中间没有逼近或后拉），"
-                            f"确认中间有一拍逼近或后拉把距离接上；那一拍写画框切在哪（“画框下缘切在他的膝盖”），不写“退到能装下整条身形”")
+                            f"确认中间有一拍逼近或后拉把距离接上；那一拍写画框切在哪（“画框下缘切在主体的膝盖”），不写“退到能装下整条身形”")
         # 取景写成“能装下什么”（AP02）：两条正则在反模式表里，文案沿用这条老提醒，末尾标编号与证据。表里第一条（能装下）先列，
         # 第二条（露出 / 看到 + 全身、长身体，L145）和它重叠的不重复列；有露出 / 看到这类命中时句末加注 L145，没有时原文案不变
         nbody = _no_lock(tbody)
@@ -2163,7 +2170,7 @@ def main():
         if fits:
             shows = any(w.startswith(("露出", "看到", "看见")) for w in fits)
             _ap_add(ap02, fits, h[2] or k + 1, f"{tag} 取景写成了“能装下什么”：{''.join(f'「{w}」' for w in fits)}；取景写画框切在哪"
-                            f"（“画框下缘切在他的膝盖”），不写“退到刚够装下整条身形”“拉到能看见全身”，模型可能自己挑一个装得下的大景别"
+                            f"（“画框下缘切在主体的膝盖”），不写“退到刚够装下整条身形”“拉到能看见全身”，模型可能自己挑一个装得下的大景别"
                             f"（writing-rules 决策 D07、L101）" + ("；露出 / 看到 + 全身、长身体同样会把机位拉远（L145）" if shows else "")
                             + f"；反模式 AP02（{ap_label(ap02)}）")
         # 2026-10-01 另外三条（nbody 已去镜头标题、挖掉台词与锁定文字；每镜每条最多一次；原来的 ④⑤ 已并进反模式表 AP01、AP03）
@@ -2333,8 +2340,8 @@ def main():
             pro.append(s[max(0, m.start() - 10):m.end() + 12].strip())
     if pro:
         more = f"…（共 {len(pro)} 句）" if len(pro) > 3 else ""
-        warnings.append(f"代词：{''.join(f'「{x}」' for x in pro[:3])}{more}——他 / 她 / 它会指错人；每镜第一次点名带图号，"
-                        f"之后用固定称呼（seedance-format 第 2 节）")
+        warnings.append(f"代词：{''.join(f'「{x}」' for x in pro[:3])}{more}——多角色时每镜第一次点名带图号，之后用固定称呼；"
+                        f"全稿不用他、她、它指代角色（seedance-format 第 2 节）")
     # 旁白：台词和书名号里的不算；稿里的否定说法（不加任何旁白、旁白不需要）不算；父稿原样的句子不报。
     # 不从要求清单推断「用户要了」，用户要了就裁定保留（只会多提醒，不会漏）
     nar = []

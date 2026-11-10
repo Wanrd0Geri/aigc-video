@@ -85,6 +85,24 @@ class LessonScripts(unittest.TestCase):
             self.assertIn("| L002 |", sec)
             self.assertNotIn("| L001 |", sec)
 
+    def test_review_single_mark_variants_keep_age_and_source_conditions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lib, cases = Path(tmp) / "lessons.md", Path(tmp) / "cases.md"
+            records = []
+            for group, mark in enumerate(("单次观察", "证据一条成片", "证据：一条成片", "单次对照")):
+                base = group * 3 + 1
+                records += [row(f"L{base:03d}", date="2026-08-28", conclusion=mark + "：测试"),
+                            row(f"L{base+1:03d}", date="2026-08-28", conclusion=mark + "：测试", source="a.mp4；b.mov"),
+                            row(f"L{base+2:03d}", date="2026-08-29", conclusion=mark + "：测试")]
+            records.append(row("L013", date="2026-08-01", conclusion="普通结论"))
+            lib.write_text(HEAD + "\n".join(records) + "\n", encoding="utf-8")
+            cases.write_text("# 案例\n", encoding="utf-8")
+            p = run(REVIEW, "--file", lib, "--cases", cases, "--today", "2026-09-27")
+            self.assertEqual(p.returncode, 0, p.stderr)
+            sec = section(p.stdout, "## 六、", "## 七、")
+            actual = {ln.split(" | ")[0].removeprefix("| ") for ln in sec.splitlines() if ln.startswith("| L")}
+            self.assertEqual(actual, {"L001", "L004", "L007", "L010"}, sec)
+
     def test_review_hot_evidence_states(self):
         with tempfile.TemporaryDirectory() as tmp:
             lib, cases = Path(tmp) / "lessons.md", Path(tmp) / "cases.md"
@@ -125,6 +143,7 @@ class LessonScripts(unittest.TestCase):
                 outs.append(out.strip())
             self.assertEqual(sorted(outs), ["L002", "L003", "L004", "L005", "L006"])
             self.assertEqual(len(lesson_rows(lib)), 6)
+            self.assertEqual(run(BUILD, "--file", lib, "--check").returncode, 0)
             self.assertEqual(list(d.glob("*.tmp.*")), [])
 
     # 4. 锁生效：锁被占着时 log_lesson.py 等着，释放后写入成功
@@ -206,9 +225,12 @@ class LessonScripts(unittest.TestCase):
             expected = original.replace("单次观察：测试 | 已试 | a.mp4",
                                         "单次观察：测试【补充 2026-09-27：补充观察】 | 已试 | a.mp4；new.mp4")
             self.assertEqual(lib.read_text(encoding="utf-8"), expected)
+            self.assertEqual(run(BUILD, "--file", lib, "--check").returncode, 0)
+            self.assertIn("补充观察", (Path(tmp) / "index.md").read_text(encoding="utf-8"))
             p = run(LOG, "--file", lib, "--supplement", "L001", "--source", "third.mov")
             self.assertEqual(p.returncode, 0, p.stderr)
             self.assertEqual(lib.read_text(encoding="utf-8"), expected.replace("a.mp4；new.mp4", "a.mp4；new.mp4；third.mov"))
+            self.assertEqual(run(BUILD, "--file", lib, "--check").returncode, 0)
             self.assertEqual(list(Path(tmp).glob("*.tmp.*")), [])
 
     def test_supplement_rejects_missing_archived_and_new_arguments(self):
@@ -435,7 +457,7 @@ class LessonsIndex(unittest.TestCase):
                 module.build_index(self.lib, self.index)
         self.assertEqual(before, self.snapshot())
 
-    def test_log_append_reminds_without_rebuilding_or_changing_stdout(self):
+    def test_log_append_automatically_rebuilds_index_and_preserves_stdout(self):
         self.build()
         before = self.index.read_bytes()
         p = run(LOG, *LOG_ARGS, "--file", self.lib)
@@ -443,10 +465,46 @@ class LessonsIndex(unittest.TestCase):
         self.assertEqual(p.stdout, "L002\n")
         self.assertIn("build_lessons_index.py", p.stderr)
         self.assertIn(str(self.lib), p.stderr)
-        self.assertEqual(before, self.index.read_bytes())
-        self.assertEqual(run(LINT, "--file", self.lib).returncode, 1)
-        self.build()
+        self.assertIn("已自动更新索引", p.stderr)
+        self.assertNotEqual(before, self.index.read_bytes())
+        self.assertIn("L002 | 摄影/测试 | 单次观察：测试 | 已试", self.index.read_text(encoding="utf-8"))
+        self.assertEqual(run(BUILD, "--file", self.lib, "--check").returncode, 0)
         self.assertEqual(run(LINT, "--file", self.lib).returncode, 0)
+
+    def test_log_creates_missing_index_in_library_directory(self):
+        self.assertFalse(self.index.exists())
+        p = run(LOG, *LOG_ARGS, "--file", self.lib)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(p.stdout, "L002\n")
+        self.assertEqual(run(BUILD, "--file", self.lib, "--check").returncode, 0)
+
+    def test_log_failed_index_write_reports_saved_entry_and_recovery(self):
+        self.index.mkdir()
+        p = run(LOG, *LOG_ARGS, "--file", self.lib)
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertEqual(p.stdout, "L002\n")
+        self.assertIn("索引更新失败：主库已写入 L002", p.stderr)
+        self.assertIn(str(self.index), p.stderr)
+        self.assertIn(f'build_lessons_index.py --file "{self.lib}"', p.stderr)
+        self.assertNotIn("已自动更新索引", p.stderr)
+        self.assertEqual(len(lesson_rows(self.lib)), 2)
+        self.assertEqual(list(self.root.glob("*.tmp.*")), [])
+        self.assertEqual(list(self.root.glob(".*.tmp.*")), [])
+        self.index.rmdir()
+        self.build()
+        self.assertEqual(run(BUILD, "--file", self.lib, "--check").returncode, 0)
+
+    def test_log_failed_index_parse_preserves_existing_index_and_saved_entry(self):
+        self.build()
+        before = self.index.read_bytes()
+        self.lib.write_text(self.lib.read_text(encoding="utf-8") + "L002 | 字段不足\n", encoding="utf-8")
+        p = run(LOG, *LOG_ARGS, "--file", self.lib)
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertEqual(p.stdout, "L003\n")
+        self.assertIn("索引更新失败：主库已写入 L003", p.stderr)
+        self.assertIn("九字段条目", p.stderr)
+        self.assertEqual(self.index.read_bytes(), before)
+        self.assertTrue(any(ln.startswith("L003 | ") for ln in lesson_rows(self.lib)))
 
     def test_merge_zero_conflict_only_dry_run_and_rejection_do_not_remind(self):
         src = self.root / "from.md"

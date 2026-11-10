@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """hooks/stop_gate.py 回归：覆盖只读审查的 16 个探针语义（c01–c09、n01–n07）、v7 的本轮绑定、
-代码块契约、纯文本操作命令、交付行一致性，以及 v12 的三层判定（本轮报告 / 钩子代跑完整稿 / 局部与操作命令打回）。
+代码块契约、块外普通说明、交付行一致性，以及 v12 的三层判定（本轮报告 / 钩子代跑完整稿 / 块内局部与操作命令打回）。
 只用构造的 transcript 与报告，不代表真实宿主行为。"""
 import hashlib, json, os, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
@@ -155,17 +155,41 @@ class StopGateTests(unittest.TestCase):
         code, _, err = self.run_hook(self.block(PROMPT) + self.receipt(h, REQ) + "\n另一个版本：\n" + changed)
         self.assertEqual(code, 2); self.assertIn("钩子代跑", err)
 
-    def test_n02_plain_edit_command_blocked(self):
-        self.assertBlock(self.run_hook(EDIT_CMD))
+    def test_n02_plain_edit_command_passes(self):
+        self.assertAllow(self.run_hook(EDIT_CMD))
 
     def test_n02b_plain_edit_command_with_report_passes(self):
         self.report(EDIT_CMD)
         self.assertAllow(self.run_hook(EDIT_CMD))
 
-    def test_v16_plain_edit_command_without_at_is_operation(self):
-        """不带 @ 的纯文本操作命令（编辑视频1，……）同样是交付单元：没有报告按第 3 层打回（v25 D9：提示套四段外壳并自己带 --report）。"""
-        code, _, err = self.run_hook(EDIT_CMD_NO_AT)
+    def test_v16_plain_edit_command_without_at_passes(self):
+        self.assertAllow(self.run_hook(EDIT_CMD_NO_AT))
+
+    def test_v25_fenced_edit_command_still_blocked(self):
+        code, _, err = self.run_hook(self.block(EDIT_CMD_NO_AT))
         self.assertEqual(code, 2); self.assertIn("操作命令要套四段外壳并自己带 --report", err)
+
+    def test_v25_plain_partial_passes(self):
+        self.assertAllow(self.run_hook(PARTIAL))
+
+    def test_v25_diagnosis_passes(self):
+        self.assertAllow(self.run_hook("镜头2：视频1 的编辑没有改变衣服颜色，先核对实际提交稿。"))
+
+    def test_v25_material_description_passes(self):
+        self.assertAllow(self.run_hook("素材说明：视频1 只参考运镜，替换服装时沿用角色图。"))
+
+    def test_v25_header_lock_line_passes(self):
+        self.assertAllow(self.run_hook("锁定：编辑视频1，只改服装，保留原动作、时长和摄影。"))
+
+    def test_v25_method_options_pass(self):
+        self.assertAllow(self.run_hook("换方法选项：\n1. 编辑视频1，只改服装。\n2. 改用服装参考图。"))
+
+    def test_v25_plain_shot_restatement_passes(self):
+        self.assertAllow(self.run_hook("镜头1（0-4秒）：陶杯保持静止。\n镜头2（4-8秒）：摄影机缓推。"))
+
+    def test_v25_plain_four_sections_with_blank_lines_still_blocked(self):
+        self.assertBlock(self.run_hook(BROKEN.replace("\n场景：", "\n\n场景：")
+                                  .replace("\n风格：", "\n\n风格：").replace("\n情节：", "\n\n情节：")))
 
     def test_v16_plain_edit_command_without_at_with_report_passes(self):
         self.report(EDIT_CMD_NO_AT)
@@ -338,10 +362,12 @@ class StopGateTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("--baseline", err); self.assertIn("--partial", err)
 
-    def test_v12_no_report_edit_command_blocked(self):
-        """没有报告 + 纯文本操作命令：同样按第 3 层打回；v25 D9：新写的裸操作命令提示套四段外壳并自己带 --report，
-        改旧稿的操作命令仍提示按父稿外壳加 --baseline。"""
-        code, _, err = self.run_hook(EDIT_CMD)
+    def test_v12_no_report_plain_edit_command_passes(self):
+        self.assertAllow(self.run_hook(EDIT_CMD))
+
+    def test_v25_no_report_fenced_edit_command_blocked(self):
+        """代码块内操作命令继续提示四段外壳；修改旧稿时带 --baseline。"""
+        code, _, err = self.run_hook(self.block(EDIT_CMD))
         self.assertEqual(code, 2)
         self.assertIn("操作命令要套四段外壳并自己带 --report", err); self.assertIn("--baseline", err)
         self.assertNotIn("局部镜头", err)
